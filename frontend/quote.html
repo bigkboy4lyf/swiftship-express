@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Quote | SwiftShip Express</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Additional styles specific to quote page */
+        .quote-hero {
+            background: linear-gradient(rgba(0, 86, 179, 0.85), rgba(0, 162, 255, 0.85)), 
+                        url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 120px 0 60px;
+            text-align: center;
+        }
+        
+        .quote-section {
+            padding: 80px 0;
+        }
+        
+        .quote-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: start;
+        }
+        
+        .quote-form {
+            background-color: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .quote-info {
+            padding: 20px;
+        }
+        
+        .info-box {
+            background-color: rgba(0, 86, 179, 0.05);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .info-box h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .info-box li {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .info-box i {
+            color: var(--accent);
+            margin-top: 3px;
+        }
+        
+        .quote-result {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--accent);
+            display: none;
+        }
+        
+        .quote-result h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        
+        .quote-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .quote-item {
+            padding: 15px;
+            background-color: rgba(0, 86, 179, 0.05);
+            border-radius: 5px;
+        }
+        
+        .quote-label {
+            font-weight: 600;
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .quote-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .quote-total {
+            text-align: center;
+            padding: 20px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .quote-total .quote-label {
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .quote-total .quote-value {
+            color: white;
+            font-size: 1.8rem;
+        }
+        
+        @media (max-width: 992px) {
+            .quote-container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .quote-hero {
+                padding: 100px 0 40px;
+            }
+            
+            .quote-form {
+                padding: 25px;
+            }
+            
+            .quote-section {
+                padding: 60px 0;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header & Navigation -->
+    <header id="header">
+        <div class="container header-container">
+            <a href="index.html" class="logo">
+                <i class="fas fa-shipping-fast"></i>
+                <span>SwiftShip Express</span>
+            </a>
+            
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html#home">Home</a></li>
+                <li><a href="index.html#services">Services</a></li>
+                <li><a href="index.html#features">Features</a></li>
+                <li><a href="index.html#tracking">Tracking</a></li>
+                <li><a href="index.html#testimonials">Testimonials</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+                <li><a href="quote.html" class="btn btn-accent">Get Quote</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="quote-hero" id="home">
+        <div class="container">
+            <h1>Get a Shipping Quote</h1>
+            <p>Get an instant quote for your shipment. Our pricing is transparent with no hidden fees.</p>
+        </div>
+    </section>
+
+    <!-- Quote Section -->
+    <section class="section quote-section" id="quote">
+        <div class="container">
+            <div class="section-title">
+                <h2>Calculate Your Shipping Cost</h2>
+                <p>Fill out the form below to get an accurate shipping quote based on your package details and destination.</p>
+            </div>
+            
+            <div class="quote-container">
+                <div class="quote-form">
+                    <form id="shippingQuoteForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="senderName">Sender Name *</label>
+                                <input type="text" id="senderName" class="form-control" placeholder="Your full name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="senderEmail">Email Address *</label>
+                                <input type="email" id="senderEmail" class="form-control" placeholder="your.email@example.com" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="origin">Origin Country *</label>
+                                <select id="origin" class="form-control" required>
+                                    <option value="">Select country</option>
+                                    <option value="US">United States</option>
+                                    <option value="CA">Canada</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR">France</option>
+                                    <option value="AU">Australia</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="CN">China</option>
+                                    <option value="IN">India</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="destination">Destination Country *</label>
+                                <select id="destination" class="form-control" required>
+                                    <option value="">Select country</option>
+                                    <option value="US">United States</option>
+                                    <option value="CA">Canada</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR">France</option>
+                                    <option value="AU">Australia</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="CN">China</option>
+                                    <option value="IN">India</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="serviceType">Shipping Service *</label>
+                            <select id="serviceType" class="form-control" required>
+                                <option value="">Select service type</option>
+                                <option value="express">Express Delivery (1-3 days)</option>
+                                <option value="standard">Standard Shipping (5-10 days)</option>
+                                <option value="economy">Economy Shipping (10-20 days)</option>
+                                <option value="international">International Priority (3-7 days)</option>
+                                <option value="cargo">Cargo/Freight Shipping</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="weight">Package Weight (kg) *</label>
+                                <input type="number" id="weight" class="form-control" min="0.1" max="1000" step="0.1" placeholder="e.g., 2.5" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="dimensions">Dimensions (cm) *</label>
+                                <input type="text" id="dimensions" class="form-control" placeholder="L x W x H (e.g., 30x20x15)" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="packageType">Package Type</label>
+                            <select id="packageType" class="form-control">
+                                <option value="standard">Standard Box</option>
+                                <option value="envelope">Document Envelope</option>
+                                <option value="tube">Tube</option>
+                                <option value="pallet">Pallet</option>
+                                <option value="custom">Custom Packaging</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="insurance">Insurance Value ($)</label>
+                            <input type="number" id="insurance" class="form-control" min="0" placeholder="Optional insurance value">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-accent" style="flex: 1;">Calculate Quote</button>
+                            <button type="reset" class="btn" style="flex: 1;">Reset Form</button>
+                        </div>
+                    </form>
+                    
+                    <div class="quote-result" id="quoteResult">
+                        <h3>Your Shipping Quote</h3>
+                        <div class="quote-details">
+                            <div class="quote-item">
+                                <div class="quote-label">Service Type</div>
+                                <div class="quote-value" id="resultService">Express Delivery</div>
+                            </div>
+                            <div class="quote-item">
+                                <div class="quote-label">Origin to Destination</div>
+                                <div class="quote-value" id="resultRoute">US to UK</div>
+                            </div>
+                            <div class="quote-item">
+                                <div class="quote-label">Estimated Delivery</div>
+                                <div class="quote-value" id="resultDelivery">3-5 days</div>
+                            </div>
+                            <div class="quote-item">
+                                <div class="quote-label">Base Shipping</div>
+                                <div class="quote-value" id="resultBase">$45.00</div>
+                            </div>
+                            <div class="quote-item">
+                                <div class="quote-label">Insurance</div>
+                                <div class="quote-value" id="resultInsurance">$5.00</div>
+                            </div>
+                            <div class="quote-item">
+                                <div class="quote-label">Fuel Surcharge</div>
+                                <div class="quote-value" id="resultSurcharge">$3.50</div>
+                            </div>
+                        </div>
+                        
+                        <div class="quote-total">
+                            <div class="quote-label">Total Estimated Cost</div>
+                            <div class="quote-value" id="resultTotal">$53.50</div>
+                        </div>
+                        
+                        <div style="margin-top: 25px; text-align: center;">
+                            <p>This quote is valid for 30 days. Taxes and customs duties may apply for international shipments.</p>
+                            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+                                <button class="btn" id="printQuote">Print Quote</button>
+                                <button class="btn btn-accent" id="bookNow">Book Now</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="quote-info">
+                    <div class="info-box">
+                        <h3><i class="fas fa-info-circle"></i> How Quotes Are Calculated</h3>
+                        <ul>
+                            <li><i class="fas fa-check"></i> <strong>Distance:</strong> Shipping rates vary based on origin and destination</li>
+                            <li><i class="fas fa-check"></i> <strong>Weight & Size:</strong> Heavier/larger packages cost more to ship</li>
+                            <li><i class="fas fa-check"></i> <strong>Service Type:</strong> Faster delivery options have higher rates</li>
+                            <li><i class="fas fa-check"></i> <strong>Insurance:</strong> Optional coverage for valuable items</li>
+                            <li><i class="fas fa-check"></i> <strong>Fuel Surcharge:</strong> Applied to all shipments (currently 7.5%)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-box">
+                        <h3><i class="fas fa-percentage"></i> Discounts Available</h3>
+                        <ul>
+                            <li><i class="fas fa-star"></i> <strong>Business Accounts:</strong> Save up to 25% on regular shipments</li>
+                            <li><i class="fas fa-star"></i> <strong>Volume Discounts:</strong> Lower rates for 10+ shipments per month</li>
+                            <li><i class="fas fa-star"></i> <strong>First-Time Customer:</strong> 15% off your first shipment</li>
+                            <li><i class="fas fa-star"></i> <strong>Return Customers:</strong> Loyalty rewards program</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-box">
+                        <h3><i class="fas fa-headset"></i> Need Help?</h3>
+                        <p>Our shipping experts are available to help you with:</p>
+                        <ul>
+                            <li><i class="fas fa-phone"></i> <strong>Phone Support:</strong> +1 (123) 456-7890</li>
+                            <li><i class="fas fa-envelope"></i> <strong>Email:</strong> quotes@swiftship.com</li>
+                            <li><i class="fas fa-comments"></i> <strong>Live Chat:</strong> Available 24/7 on our website</li>
+                            <li><i class="fas fa-clock"></i> <strong>Business Hours:</strong> Mon-Fri: 8AM-8PM, Sat: 9AM-5PM</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-column">
+                    <h3>SwiftShip Express</h3>
+                    <p>Delivering excellence since 2005. We provide reliable shipping solutions with real-time tracking and customer-focused service.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="index.html#home"><i class="fas fa-chevron-right"></i> Home</a></li>
+                        <li><a href="index.html#services"><i class="fas fa-chevron-right"></i> Services</a></li>
+                        <li><a href="index.html#features"><i class="fas fa-chevron-right"></i> Features</a></li>
+                        <li><a href="index.html#tracking"><i class="fas fa-chevron-right"></i> Tracking</a></li>
+                        <li><a href="index.html#testimonials"><i class="fas fa-chevron-right"></i> Testimonials</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Our Services</h3>
+                    <ul class="footer-links">
+                        <li><a href="#"><i class="fas fa-chevron-right"></i> Express Delivery</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i> International Shipping</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i> Cargo & Freight</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i> Same-Day Delivery</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i> Logistics Solutions</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Contact Info</h3>
+                    <ul class="footer-links">
+                        <li><a href="#"><i class="fas fa-map-marker-alt"></i> 123 Shipping Ave, Logistics City</a></li>
+                        <li><a href="tel:+11234567890"><i class="fas fa-phone"></i> +1 (123) 456-7890</a></li>
+                        <li><a href="mailto:info@swiftship.com"><i class="fas fa-envelope"></i> info@swiftship.com</a></li>
+                        <li><a href="#"><i class="fas fa-clock"></i> Mon-Fri: 8AM-8PM, Sat: 9AM-5PM</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="copyright">
+                <p>&copy; 2023 SwiftShip Express. All rights reserved. | <a href="#" style="color: var(--accent);">Privacy Policy</a> | <a href="#" style="color: var(--accent);">Terms of Service</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/quote.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
