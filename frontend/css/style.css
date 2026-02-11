@@ -135,7 +135,7 @@ header {
 /* Hero Section */
 .hero {
     background: linear-gradient(rgba(0, 86, 179, 0.85), rgba(0, 162, 255, 0.85)), 
-                url('https://images.unsplash.com/photo-1562887189-e5d078343de4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
+                url('../img/shipbg2.jpg');
     background-size: cover;
     background-position: center;
     color: white;
@@ -251,7 +251,7 @@ header {
 /* Tracking Section */
 .tracking-section {
     background: linear-gradient(rgba(248, 249, 250, 0.9), rgba(248, 249, 250, 0.9)), 
-                url('https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2050&q=80');
+                url('../img/bg2.jpg');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -398,7 +398,7 @@ header {
 /* Footer */
 footer {
     background: linear-gradient(rgba(33, 37, 41, 0.95), rgba(33, 37, 41, 0.95)), 
-                url('https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
+                url('../img/bg2.jpg');
     background-size: cover;
     background-position: center;
     color: white;
