@@ -22,9 +22,9 @@
             
             <ul class="nav-links" id="navLinks">
                 <li><a href="#home">Home</a></li>
+                <li><a href="#tracking">Tracking</a></li>
                 <li><a href="#services">Services</a></li>
                 <li><a href="#features">Features</a></li>
-                <li><a href="#tracking">Tracking</a></li>
                 <li><a href="#testimonials">Testimonials</a></li>
                 <li><a href="#contact">Contact</a></li>
                 <li><a href="quote.html" class="btn">Get Quote</a></li>
@@ -40,6 +40,36 @@
             <div class="hero-btns">
                 <a href="#tracking" class="btn">Track Your Package</a>
                 <a href="#services" class="btn btn-accent">Our Services</a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Tracking Section -->
+    <section class="section tracking-section" id="tracking">
+        <div class="container">
+            <div class="section-title">
+                <h2>Track Your Shipment</h2>
+                <p>Enter your tracking number to get real-time updates on your package location and estimated delivery time.</p>
+            </div>
+            
+            <div class="tracking-container">
+                <h3>Where is my package?</h3>
+                <p>Track up to 10 shipments at once. Enter tracking numbers separated by commas.</p>
+                
+                <form class="tracking-form" id="trackingForm">
+                    <input type="text" class="tracking-input" placeholder="Enter your tracking number (e.g., SS123456789)" required>
+                    <button type="submit" class="tracking-btn">Track Package</button>
+                </form>
+                
+                <div id="trackingResult" style="margin-top: 25px; text-align: left; display: none;">
+                    <h4>Tracking Results:</h4>
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px; border-left: 4px solid var(--accent);">
+                        <p><strong>Tracking #:</strong> <span id="trackNum">SS123456789</span></p>
+                        <p><strong>Status:</strong> <span id="trackStatus" style="color: var(--accent); font-weight: 600;">In Transit</span></p>
+                        <p><strong>Last Update:</strong> <span id="trackUpdate">Package departed from London distribution center</span></p>
+                        <p><strong>Estimated Delivery:</strong> <span id="trackDelivery">Tomorrow by 5:00 PM</span></p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -156,7 +186,7 @@
     </section>
 
     <!-- Tracking Section -->
-    <section class="section tracking-section" id="tracking">
+    <!--<section class="section tracking-section" id="tracking">
         <div class="container">
             <div class="section-title">
                 <h2>Track Your Shipment</h2>
@@ -183,7 +213,7 @@
                 </div>
             </div>
         </div>
-    </section>
+    </section>-->
 
     <!-- Testimonials Section -->
     <section class="section testimonials-section" id="testimonials">
@@ -252,8 +282,8 @@
                     <div class="social-links">
                         <a href="#"><i class="fab fa-facebook-f"></i></a>
                         <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                        <!--<a href="#"><i class="fab fa-instagram"></i></a>-->
+                        <!--<a href="#"><i class="fab fa-linkedin-in"></i></a>-->
                     </div>
                 </div>
                 
@@ -261,9 +291,9 @@
                     <h3>Quick Links</h3>
                     <ul class="footer-links">
                         <li><a href="#home"><i class="fas fa-chevron-right"></i> Home</a></li>
+                        <li><a href="#tracking"><i class="fas fa-chevron-right"></i> Tracking</a></li>
                         <li><a href="#services"><i class="fas fa-chevron-right"></i> Services</a></li>
                         <li><a href="#features"><i class="fas fa-chevron-right"></i> Features</a></li>
-                        <li><a href="#tracking"><i class="fas fa-chevron-right"></i> Tracking</a></li>
                         <li><a href="#testimonials"><i class="fas fa-chevron-right"></i> Testimonials</a></li>
                     </ul>
                 </div>
@@ -271,11 +301,11 @@
                 <div class="footer-column">
                     <h3>Our Services</h3>
                     <ul class="footer-links">
-                        <li><a href="#"><i class="fas fa-chevron-right"></i> Express Delivery</a></li>
-                        <li><a href="#"><i class="fas fa-chevron-right"></i> International Shipping</a></li>
-                        <li><a href="#"><i class="fas fa-chevron-right"></i> Cargo & Freight</a></li>
-                        <li><a href="#"><i class="fas fa-chevron-right"></i> Same-Day Delivery</a></li>
-                        <li><a href="#"><i class="fas fa-chevron-right"></i> Logistics Solutions</a></li>
+                        <li><a href="express-delivery.html"><i class="fas fa-chevron-right"></i> Express Delivery</a></li>
+                        <li><a href="international-shipping.html"><i class="fas fa-chevron-right"></i> International Shipping</a></li>
+                        <li><a href="cargo-freight.html"><i class="fas fa-chevron-right"></i> Cargo & Freight</a></li>
+                        <li><a href="express-delivery.html"><i class="fas fa-chevron-right"></i> Same-Day Delivery</a></li>
+                        <!--<li><a href="#"><i class="fas fa-chevron-right"></i> Logistics Solutions</a></li>-->
                     </ul>
                 </div>
                 
@@ -284,14 +314,14 @@
                     <ul class="footer-links">
                         <li><a href="#"><i class="fas fa-map-marker-alt"></i> 123 Shipping Ave, Logistics City</a></li>
                         <li><a href="tel:+11234567890"><i class="fas fa-phone"></i> +1 (123) 456-7890</a></li>
-                        <li><a href="mailto:info@swiftship.com"><i class="fas fa-envelope"></i> info@swiftship.com</a></li>
+                        <li><a href="mailto:helpdesk.swiftship@gmail.com"><i class="fas fa-envelope"></i> helpdesk.swiftship@gmail.com</a></li>
                         <li><a href="#"><i class="fas fa-clock"></i> Mon-Fri: 8AM-8PM, Sat: 9AM-5PM</a></li>
                     </ul>
                 </div>
             </div>
             
             <div class="copyright">
-                <p>&copy; 2023 SwiftShip Express. All rights reserved. | <a href="#" style="color: var(--accent);">Privacy Policy</a> | <a href="#" style="color: var(--accent);">Terms of Service</a></p>
+                <p>&copy; 2026 SwiftShip Express. All rights reserved. | <a href="#" style="color: var(--accent);">Privacy Policy</a> | <a href="#" style="color: var(--accent);">Terms of Service</a></p>
             </div>
         </div>
     </footer>
