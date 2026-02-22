@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftShip Express | Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .alert {
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header & Navigation -->
+    <header id="header">
+        <div class="container header-container">
+            <a href="index.html" class="logo">
+                <i class="fas fa-shipping-fast"></i>
+                <span>SwiftShip Express</span>
+            </a>
+            
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+           <ul class="nav-links" id="navLinks">
+                <li><a href="index.html#home">Home</a></li>
+                <li><a href="index.html#tracking">Tracking</a></li>
+                <li><a href="index.html#services">Services</a></li>
+                <li><a href="index.html#features">Features</a></li>
+                <li><a href="index.html#testimonials">Testimonials</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+                <li id="signInItem"><a href="account.html">Sign In</a></li>
+                <li><a href="quote.html" class="btn">Get Quote</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <!-- Login Section -->
+    <section class="section" style="padding: 120px 0 60px; min-height: 100vh; display: flex; align-items: center;">
+        <div class="container">
+            <div style="max-width: 450px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 40px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div class="logo" style="justify-content: center; font-size: 2rem; margin-bottom: 15px;">
+                        <i class="fas fa-shipping-fast"></i>
+                        <span>SwiftShip Express</span>
+                    </div>
+                    <h2 style="color: var(--primary); margin-bottom: 10px;">Welcome Back</h2>
+                    <p style="color: var(--gray);">Login to track your shipments and manage deliveries</p>
+                </div>
+                
+                <div id="alertMessage" class="alert"></div>
+                
+                <form id="loginForm">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Email Address</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <i class="fas fa-envelope" style="position: absolute; left: 15px; color: var(--gray);"></i>
+                            <input type="email" id="email" placeholder="Enter your email" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Password</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <i class="fas fa-lock" style="position: absolute; left: 15px; color: var(--gray);"></i>
+                            <input type="password" id="password" placeholder="Enter your password" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem;">
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: right; margin-bottom: 20px;">
+                        <a href="#" style="color: var(--primary); font-size: 0.9rem;">Forgot password?</a>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="submitBtn" style="width: 100%; padding: 14px; font-size: 1.1rem; margin-bottom: 20px;">Login to Account</button>
+                </form>
+                
+                <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p>Don't have an account? <a href="register.html" style="color: var(--accent); font-weight: 600;">Create Account</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-column">
+                    <h3>SwiftShip Express</h3>
+                    <p>Delivering excellence since 2005. We provide reliable shipping solutions with real-time tracking and customer-focused service.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="index.html#home"><i class="fas fa-chevron-right"></i> Home</a></li>
+                        <li><a href="index.html#tracking"><i class="fas fa-chevron-right"></i> Tracking</a></li>
+                        <li><a href="index.html#services"><i class="fas fa-chevron-right"></i> Services</a></li>
+                        <li><a href="index.html#features"><i class="fas fa-chevron-right"></i> Features</a></li>
+                        <li><a href="index.html#testimonials"><i class="fas fa-chevron-right"></i> Testimonials</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Our Services</h3>
+                    <ul class="footer-links">
+                        <li><a href="express-delivery.html"><i class="fas fa-chevron-right"></i> Express Delivery</a></li>
+                        <li><a href="international-shipping.html"><i class="fas fa-chevron-right"></i> International Shipping</a></li>
+                        <li><a href="cargo-freight.html"><i class="fas fa-chevron-right"></i> Cargo & Freight</a></li>
+                        <li><a href="express-delivery.html"><i class="fas fa-chevron-right"></i> Same-Day Delivery</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Contact Info</h3>
+                    <ul class="footer-links">
+                        <li><a href="#"><i class="fas fa-map-marker-alt"></i> 123 Shipping Ave, Logistics City</a></li>
+                        <li><a href="tel:+11234567890"><i class="fas fa-phone"></i> +1 (123) 456-7890</a></li>
+                        <li><a href="mailto:helpdesk.swiftship@gmail.com"><i class="fas fa-envelope"></i> helpdesk.swiftship@gmail.com</a></li>
+                        <li><a href="#"><i class="fas fa-clock"></i> Mon-Fri: 8AM-8PM, Sat: 9AM-5PM</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="copyright">
+                <p>&copy; 2026 SwiftShip Express. All rights reserved. | <a href="#" style="color: var(--accent);">Privacy Policy</a> | <a href="#" style="color: var(--accent);">Terms of Service</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+    <script src="js/auth-navbar.js"></script>
+    <script>
+    const loginForm = document.getElementById('loginForm');
+    const alertDiv = document.getElementById('alertMessage');
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // UI Loading State
+        submitBtn.classList.add('loading');
+        submitBtn.textContent = 'Verifying...';
+        alertDiv.style.display = 'none';
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            // POST to the Express server route
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Save session data to LocalStorage
+                localStorage.setItem('token', result.data.token);
+                localStorage.setItem('user', JSON.stringify(result.data.user));
+                
+                alertDiv.className = 'alert success';
+                alertDiv.textContent = 'Login successful! Redirecting...';
+                alertDiv.style.display = 'block';
+
+                // Redirect to dashboard
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1200);
+            } else {
+                alertDiv.className = 'alert error';
+                alertDiv.textContent = result.message || 'Login failed';
+                alertDiv.style.display = 'block';
+                submitBtn.classList.remove('loading');
+                submitBtn.textContent = 'Login to Account';
+            }
+        } catch (error) {
+            alertDiv.className = 'alert error';
+            alertDiv.textContent = 'Connection error. Is the server running?';
+            alertDiv.style.display = 'block';
+            submitBtn.classList.remove('loading');
+            submitBtn.textContent = 'Login to Account';
+        }
+    });
+</script>
+</body>
+</html>

@@ -2,7 +2,6 @@
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const navLinks = document.getElementById('navLinks');
 
-// Check if elements exist (for pages that don't have them)
 if (mobileMenuBtn && navLinks) {
     mobileMenuBtn.addEventListener('click', () => {
         navLinks.classList.toggle('active');
@@ -11,7 +10,6 @@ if (mobileMenuBtn && navLinks) {
             : '<i class="fas fa-bars"></i>';
     });
     
-    // Close mobile menu when clicking a link
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.addEventListener('click', () => {
             navLinks.classList.remove('active');
@@ -24,18 +22,17 @@ if (mobileMenuBtn && navLinks) {
 window.addEventListener('scroll', () => {
     const header = document.getElementById('header');
     if (header) {
-        if (window.scrollY > 100) {
-            header.style.backgroundColor = 'rgba(255, 255, 255, 0.98)';
-            header.style.boxShadow = '0 5px 20px rgba(0, 0, 0, 0.1)';
-        } else {
-            header.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-            header.style.boxShadow = '0 2px 15px rgba(0, 0, 0, 0.1)';
-        }
+        header.style.backgroundColor = window.scrollY > 100 
+            ? 'rgba(255, 255, 255, 0.98)' 
+            : 'rgba(255, 255, 255, 0.95)';
+        header.style.boxShadow = window.scrollY > 100 
+            ? '0 5px 20px rgba(0, 0, 0, 0.1)' 
+            : '0 2px 15px rgba(0, 0, 0, 0.1)';
     }
 });
 
 // =============================================
-// MAIN CHANGE: Tracking form - Connect to Backend
+// TRACKING FUNCTIONALITY
 // =============================================
 const trackingForm = document.getElementById('trackingForm');
 const trackingResult = document.getElementById('trackingResult');
@@ -44,7 +41,6 @@ const trackStatus = document.getElementById('trackStatus');
 const trackUpdate = document.getElementById('trackUpdate');
 const trackDelivery = document.getElementById('trackDelivery');
 
-// Keep demo data as fallback
 const demoTrackingData = {
     "SS123456789": {
         status: "In Transit",
@@ -69,211 +65,110 @@ if (trackingForm) {
         const trackingInput = this.querySelector('.tracking-input');
         const trackingNumber = trackingInput.value.trim().toUpperCase();
         
-        // Clear previous results
         trackingResult.style.display = 'none';
         
-        // Try to fetch from backend first
         try {
             const response = await fetch(`/api/shipments/track/${trackingNumber}`);
-            
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
-            }
-            
             const result = await response.json();
             
             if (result.success) {
-                // ✅ Backend tracking successful
-                displayBackendTrackingResult(result.data, trackingNumber);
+                displayTrackingResult(result.data, trackingNumber);
             } else {
-                // Backend returned error
-                console.warn('Backend tracking error:', result.message);
-                // Fall back to demo data
                 checkDemoTrackingData(trackingNumber);
             }
-            
         } catch (error) {
-            // ❌ Network error or server down
-            console.error('Backend connection failed:', error);
-            // Fall back to demo data
             checkDemoTrackingData(trackingNumber);
         }
         
-        // Clear the input
         trackingInput.value = '';
     });
 }
 
-// =============================================
-// Display backend tracking result
-// =============================================
-function displayBackendTrackingResult(trackingData, trackingNumber) {
+function displayTrackingResult(data, trackingNumber) {
     trackNum.textContent = trackingNumber;
-    trackStatus.textContent = trackingData.status || 'Unknown';
+    trackStatus.textContent = data.status || 'Unknown';
     
-    // Get latest tracking update
-    if (trackingData.trackingHistory && trackingData.trackingHistory.length > 0) {
-        const latestUpdate = trackingData.trackingHistory[trackingData.trackingHistory.length - 1];
-        trackUpdate.textContent = `${latestUpdate.description || 'Status updated'} - ${latestUpdate.location || 'Unknown location'}`;
+    if (data.trackingHistory?.length) {
+        const latest = data.trackingHistory[data.trackingHistory.length - 1];
+        trackUpdate.textContent = `${latest.description || 'Status updated'} - ${latest.location || 'Unknown'}`;
     } else {
-        trackUpdate.textContent = trackingData.currentLocation 
-            ? `At ${trackingData.currentLocation.facility || 'facility'} in ${trackingData.currentLocation.city || 'Unknown'}`
-            : 'No tracking updates available';
+        trackUpdate.textContent = data.currentLocation 
+            ? `At ${data.currentLocation.city || 'Unknown'}`
+            : 'No tracking updates';
     }
     
-    // Format delivery date
-    if (trackingData.estimatedDelivery) {
-        const deliveryDate = new Date(trackingData.estimatedDelivery);
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        if (deliveryDate.toDateString() === today.toDateString()) {
-            trackDelivery.textContent = `Today by ${deliveryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-        } else if (deliveryDate.toDateString() === tomorrow.toDateString()) {
-            trackDelivery.textContent = `Tomorrow by ${deliveryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-        } else {
-            trackDelivery.textContent = deliveryDate.toLocaleDateString() + ' by ' + 
-                                       deliveryDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }
-    } else {
-        trackDelivery.textContent = 'Estimated delivery not available';
-    }
+    const date = data.estimatedDelivery ? new Date(data.estimatedDelivery) : null;
+    trackDelivery.textContent = date ? date.toLocaleDateString() : 'Not available';
     
-    // Change status color based on status
-    const statusColors = {
-        'delivered': '#28a745',
-        'out_for_delivery': '#17a2b8',
-        'in_transit': 'var(--accent)',
-        'pending': '#6c757d',
-        'delayed': '#dc3545',
-        'exception': '#dc3545'
-    };
-    
-    trackStatus.style.color = statusColors[trackingData.status] || 'var(--accent)';
-    
-    // Show tracking result
+    trackStatus.style.color = data.status === 'delivered' ? '#28a745' : 'var(--accent)';
     trackingResult.style.display = 'block';
-    
-    // Scroll to results
-    setTimeout(() => {
-        trackingResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 100);
 }
 
-// =============================================
-// Fallback: Check demo tracking data
-// =============================================
 function checkDemoTrackingData(trackingNumber) {
     if (demoTrackingData[trackingNumber]) {
+        const demo = demoTrackingData[trackingNumber];
         trackNum.textContent = trackingNumber;
-        trackStatus.textContent = demoTrackingData[trackingNumber].status;
-        trackUpdate.textContent = demoTrackingData[trackingNumber].update;
-        trackDelivery.textContent = demoTrackingData[trackingNumber].delivery;
-        
-        // Change status color based on status
-        if (demoTrackingData[trackingNumber].status === "Delivered") {
-            trackStatus.style.color = "#28a745";
-        } else if (demoTrackingData[trackingNumber].status === "Out for Delivery") {
-            trackStatus.style.color = "#17a2b8";
-        } else {
-            trackStatus.style.color = "var(--accent)";
-        }
-        
+        trackStatus.textContent = demo.status;
+        trackUpdate.textContent = demo.update;
+        trackDelivery.textContent = demo.delivery;
+        trackStatus.style.color = demo.status === 'Delivered' ? '#28a745' : 'var(--accent)';
         trackingResult.style.display = 'block';
-        
-        // Scroll to results
-        setTimeout(() => {
-            trackingResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
-        
     } else {
-        // Show error for invalid tracking number
         trackNum.textContent = trackingNumber;
         trackStatus.textContent = "Not Found";
         trackStatus.style.color = "#dc3545";
-        trackUpdate.textContent = "We couldn't find a shipment with this tracking number. Please check the number and try again.";
+        trackUpdate.textContent = "Tracking number not found";
         trackDelivery.textContent = "N/A";
-        
         trackingResult.style.display = 'block';
-        
-        // Scroll to results
-        setTimeout(() => {
-            trackingResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
     }
 }
 
-// =============================================
-// Optional: Add test tracking numbers for demo
-// =============================================
-document.addEventListener('DOMContentLoaded', function() {
-    // Add some test tracking numbers to localStorage for demo
-    // This simulates having shipments in the database
-    if (!localStorage.getItem('demoShipments')) {
-        const demoShipments = [
-            {
-                trackingNumber: "SS789012345",
-                status: "in_transit",
-                currentLocation: { city: "New York", facility: "JFK Sorting Center" },
-                trackingHistory: [
-                    {
-                        status: "picked_up",
-                        location: "Los Angeles",
-                        description: "Package picked up from sender",
-                        timestamp: new Date(Date.now() - 2*24*60*60*1000).toISOString()
-                    },
-                    {
-                        status: "in_transit",
-                        location: "Chicago",
-                        description: "Package arrived at distribution center",
-                        timestamp: new Date(Date.now() - 1*24*60*60*1000).toISOString()
-                    }
-                ],
-                estimatedDelivery: new Date(Date.now() + 2*24*60*60*1000).toISOString(),
-                serviceType: "express"
-            },
-            {
-                trackingNumber: "SS345678901",
-                status: "out_for_delivery",
-                currentLocation: { city: "London", facility: "Local Delivery Depot" },
-                trackingHistory: [
-                    {
-                        status: "in_transit",
-                        location: "Paris",
-                        description: "Package cleared customs",
-                        timestamp: new Date(Date.now() - 1*24*60*60*1000).toISOString()
-                    }
-                ],
-                estimatedDelivery: new Date(Date.now() + 4*60*60*1000).toISOString(), // 4 hours from now
-                serviceType: "international"
-            }
-        ];
-        localStorage.setItem('demoShipments', JSON.stringify(demoShipments));
-    }
-    
-    // Auto-fill tracking input with demo number for testing (optional)
-    if (trackingForm && !trackingForm.querySelector('.tracking-input').value) {
-        setTimeout(() => {
-            trackingForm.querySelector('.tracking-input').placeholder = "Try: SS123456789 or SS789012345";
-        }, 1000);
-    }
-});
-
-// Smooth scrolling for anchor links
+// Smooth scrolling
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
         e.preventDefault();
-        
-        const targetId = this.getAttribute('href');
-        if (targetId === '#') return;
-        
-        const targetElement = document.querySelector(targetId);
-        if (targetElement) {
-            window.scrollTo({
-                top: targetElement.offsetTop - 80,
-                behavior: 'smooth'
-            });
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            window.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
         }
     });
 });
+
+// =============================================
+// NAVBAR UPDATE - Runs on all pages
+// =============================================
+function updateNavbar() {
+    const user = localStorage.getItem('user');
+    const signInItem = document.getElementById('signInItem');
+    
+    if (!signInItem) return;
+    
+    // Get current page filename
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    // Don't modify navbar on auth pages
+    if (currentPage === 'login.html' || currentPage === 'register.html') {
+        return;
+    }
+    
+    if (user) {
+        const userData = JSON.parse(user);
+        signInItem.innerHTML = `
+            <a href="dashboard.html" style="display: flex; align-items: center; gap: 5px;">
+                <i class="fas fa-user-circle"></i> ${userData.name || 'Account'}
+            </a>
+        `;
+    } else {
+        signInItem.innerHTML = '<a href="account.html">Sign In</a>';
+    }
+}
+
+// Logout function
+window.logout = function() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    window.location.href = 'index.html';
+};
+
+// Run on page load
+document.addEventListener('DOMContentLoaded', updateNavbar);

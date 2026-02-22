@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftShip Express | Create Account</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .alert {
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none; /* Hidden by default */
+        }
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        .password-strength {
+            height: 5px;
+            margin-top: 5px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <header id="header">
+        <div class="container header-container">
+            <a href="index.html" class="logo">
+                <i class="fas fa-shipping-fast"></i>
+                <span>SwiftShip Express</span>
+            </a>
+            
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html#home">Home</a></li>
+                <li><a href="index.html#tracking">Tracking</a></li>
+                <li><a href="index.html#services">Services</a></li>
+                <li><a href="index.html#features">Features</a></li>
+                <li><a href="index.html#testimonials">Testimonials</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+                <li id="signInItem"><a href="account.html">Sign In</a></li>
+                <li><a href="quote.html" class="btn">Get Quote</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <section class="section" style="padding: 120px 0 60px; min-height: 100vh; display: flex; align-items: center;">
+        <div class="container">
+            <div style="max-width: 550px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 40px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div class="logo" style="justify-content: center; font-size: 2rem; margin-bottom: 15px;">
+                        <i class="fas fa-shipping-fast"></i>
+                        <span>SwiftShip Express</span>
+                    </div>
+                    <h2 style="color: var(--primary); margin-bottom: 10px;">Create Your Account</h2>
+                    <p style="color: var(--gray);">Join SwiftShip Express for faster shipping and tracking</p>
+                </div>
+                
+                <div id="alertMessage" class="alert"></div>
+                
+                <form id="registerForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">First Name</label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <i class="fas fa-user" style="position: absolute; left: 15px; color: var(--gray);"></i>
+                                <input type="text" id="firstName" placeholder="John" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px;">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Last Name</label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <i class="fas fa-user" style="position: absolute; left: 15px; color: var(--gray);"></i>
+                                <input type="text" id="lastName" placeholder="Doe" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Email Address</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <i class="fas fa-envelope" style="position: absolute; left: 15px; color: var(--gray);"></i>
+                            <input type="email" id="email" placeholder="you@example.com" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Phone Number</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <i class="fas fa-phone" style="position: absolute; left: 15px; color: var(--gray);"></i>
+                            <input type="tel" id="phone" placeholder="+1 (123) 456-7890" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Account Type</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <i class="fas fa-tag" style="position: absolute; left: 15px; color: var(--gray); z-index: 1;"></i>
+                            <select id="accountType" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px; background: white; appearance: none;">
+                                <option value="">Select account type</option>
+                                <option value="personal">Personal (For individuals)</option>
+                                <option value="business">Business (For companies)</option>
+                                <option value="enterprise">Enterprise (High volume shipping)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Password</label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <i class="fas fa-lock" style="position: absolute; left: 15px; color: var(--gray);"></i>
+                                <input type="password" id="password" placeholder="Create password" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px;">
+                            </div>
+                            <div id="passwordStrength" class="password-strength" style="background: #eee;"></div>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Confirm Password</label>
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <i class="fas fa-lock" style="position: absolute; left: 15px; color: var(--gray);"></i>
+                                <input type="password" id="confirmPassword" placeholder="Confirm password" required style="width: 100%; padding: 12px 15px 12px 45px; border: 1px solid #ddd; border-radius: 5px;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px;">
+                            <input type="checkbox" id="terms" required style="margin-top: 3px;">
+                            <label for="terms" style="font-size: 0.9rem;">I agree to the <a href="#" style="color: var(--primary);">Terms of Service</a> and <a href="#" style="color: var(--primary);">Privacy Policy</a></label>
+                        </div>
+                        
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <input type="checkbox" id="newsletter" style="margin-top: 3px;">
+                            <label for="newsletter" style="font-size: 0.9rem;">Send me shipping updates and offers via email</label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="submitBtn" style="width: 100%; padding: 14px; font-size: 1.1rem; margin: 20px 0;">Create Account</button>
+                </form>
+                
+                <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p>Already have an account? <a href="login.html" style="color: var(--accent); font-weight: 600;">Sign In</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/script.js"></script>
+    <script src="js/auth-navbar.js"></script>
+    <script>
+        const registerForm = document.getElementById('registerForm');
+        const passwordInput = document.getElementById('password');
+        const confirmInput = document.getElementById('confirmPassword');
+        const alertDiv = document.getElementById('alertMessage');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Password strength checker
+        passwordInput.addEventListener('input', function() {
+            const val = this.value;
+            const strengthBar = document.getElementById('passwordStrength');
+            let strength = 0;
+            if (val.length >= 6) strength += 25;
+            if (val.match(/[a-z]+/)) strength += 25;
+            if (val.match(/[A-Z]+/)) strength += 25;
+            if (val.match(/[0-9]+/)) strength += 25;
+            strengthBar.style.background = strength < 50 ? '#dc3545' : strength < 75 ? '#ffc107' : '#28a745';
+            strengthBar.style.width = strength + '%';
+        });
+
+        // Register form submission
+        registerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Reset UI
+            alertDiv.style.display = 'none';
+            alertDiv.textContent = '';
+            
+            // Validation
+            if (passwordInput.value !== confirmInput.value) {
+                alertDiv.className = 'alert error';
+                alertDiv.textContent = 'Passwords do not match';
+                alertDiv.style.display = 'block';
+                return;
+            }
+
+            const formData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                password: passwordInput.value,
+                accountType: document.getElementById('accountType').value,
+                newsletter: document.getElementById('newsletter').checked
+            };
+            
+            try {
+                submitBtn.classList.add('loading');
+                submitBtn.textContent = 'Creating Account...';
+                
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    localStorage.setItem('token', result.data.token);
+                    localStorage.setItem('user', JSON.stringify(result.data.user));
+                    
+                    alertDiv.className = 'alert success';
+                    alertDiv.textContent = 'Account created! Redirecting to dashboard...';
+                    alertDiv.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                } else {
+                    // This catches "Email already in use" from your backend
+                    alertDiv.className = 'alert error';
+                    alertDiv.textContent = result.message || 'Registration failed. Email may already be in use.';
+                    alertDiv.style.display = 'block';
+                    
+                    submitBtn.classList.remove('loading');
+                    submitBtn.textContent = 'Create Account';
+                }
+            } catch (error) {
+                alertDiv.className = 'alert error';
+                alertDiv.textContent = 'Connection error. Please check your internet.';
+                alertDiv.style.display = 'block';
+                submitBtn.classList.remove('loading');
+                submitBtn.textContent = 'Create Account';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftShip Express | Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-shipping-fast"></i>
+                    <span>SwiftShip</span>
+                </a>
+            </div>
+            
+            <div class="sidebar-menu" id="sidebarMenu">
+                <!-- User Menu -->
+                <div class="sidebar-menu-item active" data-tab="user-dashboard">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </div>
+                <div class="sidebar-menu-item" data-tab="user-shipments">
+                    <i class="fas fa-box"></i>
+                    <span>My Shipments</span>
+                </div>
+                <div class="sidebar-menu-item" data-tab="user-tracking">
+                    <i class="fas fa-search"></i>
+                    <span>Track Package</span>
+                </div>
+                <div class="sidebar-menu-item" data-tab="user-quote">
+                    <i class="fas fa-calculator"></i>
+                    <span>Get Quote</span>
+                </div>
+                <div class="sidebar-menu-item" data-tab="user-addresses">
+                    <i class="fas fa-address-book"></i>
+                    <span>Addresses</span>
+                </div>
+                <div class="sidebar-menu-item" data-tab="user-profile">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </div>
+                
+                <!-- Admin Menu (hidden by default) -->
+                <div class="admin-divider"></div>
+                <div class="admin-label">ADMIN</div>
+                
+                <div class="sidebar-menu-item admin-menu" data-tab="admin-dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Admin Dashboard <span class="admin-badge">Admin</span></span>
+                </div>
+                <div class="sidebar-menu-item admin-menu" data-tab="admin-shipments">
+                    <i class="fas fa-shipping-fast"></i>
+                    <span>All Shipments</span>
+                </div>
+                <div class="sidebar-menu-item admin-menu" data-tab="admin-users">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                </div>
+                <div class="sidebar-menu-item admin-menu" data-tab="admin-reports">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Reports</span>
+                </div>
+                <div class="sidebar-menu-item admin-menu" data-tab="admin-settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header - ALWAYS VISIBLE -->
+            <div class="dashboard-header">
+                <div class="header-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search...">
+                </div>
+                
+                <div class="header-actions">
+                    <div class="notification-badge">
+                        <i class="far fa-bell"></i>
+                        <span class="badge" id="notificationCount">3</span>
+                    </div>
+                    
+                    <div class="user-profile" id="userProfile">
+                        <div class="user-avatar" id="userAvatar">JD</div>
+                        <div class="user-info">
+                            <h4 id="userDisplayName">John Doe</h4>
+                            <p id="userRole">Customer</p>
+                        </div>
+                        <i class="fas fa-chevron-down" style="font-size: 0.8rem; color: #999;"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dashboard Tabs (User/Admin toggle) -->
+            <div class="dashboard-tabs">
+                <button class="tab-btn active" data-role="user">User Dashboard</button>
+                <button class="tab-btn" data-role="admin" id="adminTabBtn">Admin Panel</button>
+            </div>
+            
+            <!-- Content Area - This is what gets hidden/shown -->
+            <div class="content-area">
+                <!-- User Dashboard Tab -->
+                <div class="tab-pane active" id="userDashboard">
+                    <!-- Stats Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalShipments">12</h3>
+                                <p>Total Shipments</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="deliveredShipments">8</h3>
+                                <p>Delivered</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon orange">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="transitShipments">3</h3>
+                                <p>In Transit</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon purple">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="pendingShipments">1</h3>
+                                <p>Pending</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Shipments -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Recent Shipments</h3>
+                            <a href="#" id="viewAllShipments">View All <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                        
+                        <table id="recentShipmentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Tracking #</th>
+                                    <th>Destination</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentShipmentsBody"></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Quick Track -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Track Your Package</h3>
+                        </div>
+                        
+                        <div class="quick-track">
+                            <input type="text" id="quickTrackInput" placeholder="Enter tracking number">
+                            <button class="btn" id="quickTrackBtn">Track</button>
+                        </div>
+                        
+                        <div id="quickTrackResult" class="track-result" style="display: none;"></div>
+                    </div>
+                </div>
+                
+                <!-- Admin Dashboard Tab -->
+                <div class="tab-pane" id="adminDashboard">
+                    <!-- Admin Stats -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalUsers">1,284</h3>
+                                <p>Total Users</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalShipmentsAdmin">3,592</h3>
+                                <p>Total Shipments</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon orange">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="activeShipments">147</h3>
+                                <p>Active Shipments</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon purple">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="revenue">$45,289</h3>
+                                <p>Revenue (MTD)</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- All Shipments (Admin) -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Recent Shipments - All Users</h3>
+                            <button class="btn" id="addShipmentBtn">+ New Shipment</button>
+                        </div>
+                        
+                        <table id="allShipmentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Tracking #</th>
+                                    <th>Customer</th>
+                                    <th>Destination</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allShipmentsBody"></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- User Management (Admin) -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>User Management</h3>
+                            <button class="btn" id="addUserBtn">+ Add User</button>
+                        </div>
+                        
+                        <table id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Hidden Content Sections (shown when sidebar items are clicked) -->
+                <div id="userShipments" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>My Shipments</h3>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tracking #</th>
+                                    <th>Destination</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userShipmentsBody">
+                                <tr><td colspan="5" style="text-align: center;">Loading shipments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="userTracking" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Track Package</h3>
+                        </div>
+                        <div class="quick-track">
+                            <input type="text" id="trackingInput" placeholder="Enter tracking number">
+                            <button class="btn" onclick="window.location.href='tracking.html?number='+document.getElementById('trackingInput').value">Track</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="userQuote" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Get a Quote</h3>
+                        </div>
+                        <p>Quote calculator would go here</p>
+                    </div>
+                </div>
+
+                <div id="userAddresses" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Saved Addresses</h3>
+                        </div>
+                        <p>Your saved addresses would appear here</p>
+                    </div>
+                </div>
+
+                <div id="userProfile" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Profile Settings</h3>
+                        </div>
+                        
+                        <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                            <!-- Profile Info -->
+                            <div style="flex: 2; min-width: 300px;">
+                                <h4 style="margin-bottom: 20px;">Personal Information</h4>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">First Name</label>
+                                        <input type="text" id="profileFirstName" class="profile-input" value="John" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Last Name</label>
+                                        <input type="text" id="profileLastName" class="profile-input" value="Doe" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-bottom: 20px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Email Address</label>
+                                    <input type="email" id="profileEmail" class="profile-input" value="john@example.com" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
+                                </div>
+                                
+                                <div style="margin-bottom: 20px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Phone Number</label>
+                                    <input type="tel" id="profilePhone" class="profile-input" value="+1 (123) 456-7890" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
+                                </div>
+                                
+                                <div style="margin-bottom: 20px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Account Type</label>
+                                    <input type="text" id="profileAccountType" class="profile-input" value="Personal" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn" id="editProfileBtn">Edit Profile</button>
+                                    <button class="btn" id="changePasswordBtn" style="background: transparent; color: var(--primary); border: 1px solid var(--primary);">Change Password</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Avatar/Stats -->
+                            <div style="flex: 1; min-width: 200px; text-align: center;">
+                                <div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                                    <span style="font-size: 3rem; color: white; font-weight: 600;" id="profileAvatar">JD</span>
+                                </div>
+                                
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                                    <h4 style="margin-bottom: 10px;">Account Stats</h4>
+                                    <p><strong>Member Since:</strong> <span id="profileMemberSince">Jan 2026</span></p>
+                                    <p><strong>Total Shipments:</strong> <span id="profileTotalShipments">12</span></p>
+                                    <p><strong>Active Shipments:</strong> <span id="profileActiveShipments">3</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Sections -->
+                <div id="adminShipments" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>All Shipments</h3>
+                            <button class="btn" onclick="document.getElementById('shipmentModal').classList.add('active')">+ New</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tracking #</th>
+                                    <th>Customer</th>
+                                    <th>Destination</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminShipmentsBody">
+                                <tr><td colspan="5" style="text-align: center;">Loading shipments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="adminUsers" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>User Management</h3>
+                            <button class="btn" onclick="document.getElementById('userModal').classList.add('active')">+ New User</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsersBody">
+                                <tr><td colspan="5" style="text-align: center;">Loading users...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="adminReports" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Reports</h3>
+                        </div>
+                        <p>Reporting dashboard would go here</p>
+                    </div>
+                </div>
+
+                <div id="adminSettings" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Settings</h3>
+                        </div>
+                        <p>System settings would go here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <div class="modal" id="shipmentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Shipment</h3>
+                <button class="modal-close" id="closeShipmentModal">&times;</button>
+            </div>
+            
+            <form id="shipmentForm">
+                <div class="form-group">
+                    <label>Tracking Number</label>
+                    <input type="text" id="trackingNumber" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" id="customerName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Destination</label>
+                    <input type="text" id="destination" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="shipmentStatus">
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="in_transit">In Transit</option>
+                        <option value="delivered">Delivered</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn">Save Shipment</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="userModalTitle">Add New User</h3>
+                <button class="modal-close" id="closeUserModal">&times;</button>
+            </div>
+            
+            <form id="userForm">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="userName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="userEmail" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="userRole">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="userStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn">Save User</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script src="js/dashboard-ui.js"></script>
+</body>
+</html>
