@@ -32,38 +32,41 @@ window.addEventListener('scroll', () => {
 });
 
 // =============================================
-// TRACKING FUNCTIONALITY
+// TRACKING FUNCTIONALITY (CHAIN STYLE)
 // =============================================
 const trackingForm = document.getElementById('trackingForm');
 const trackingResult = document.getElementById('trackingResult');
-const trackNum = document.getElementById('trackNum');
-const trackStatus = document.getElementById('trackStatus');
-const trackUpdate = document.getElementById('trackUpdate');
-const trackDelivery = document.getElementById('trackDelivery');
 
 const demoTrackingData = {
     "SS123456789": {
-        status: "In Transit",
+        status: "in_transit",
         update: "Package departed from London distribution center",
-        delivery: "Tomorrow by 5:00 PM"
+        delivery: "Tomorrow by 5:00 PM",
+        location: "London, UK"
     },
     "SS987654321": {
-        status: "Out for Delivery",
+        status: "out_for_delivery",
         update: "Package is with the delivery driver in your area",
-        delivery: "Today by 3:00 PM"
+        delivery: "Today by 3:00 PM",
+        location: "Local Hub"
     },
     "SS567890123": {
-        status: "Delivered",
+        status: "delivered",
         update: "Package was delivered to front door",
-        delivery: "Yesterday at 2:30 PM"
+        delivery: "Yesterday at 2:30 PM",
+        location: "Destination"
     }
 };
 
 if (trackingForm) {
     trackingForm.addEventListener('submit', async function(e) {
+        // e.preventDefault() is necessary for AJAX, but we use 'name' and 'autocomplete' 
+        // in HTML to ensure the browser still tracks the input history.
         e.preventDefault();
-        const trackingInput = this.querySelector('.tracking-input');
+        const trackingInput = document.getElementById('trackingInput');
         const trackingNumber = trackingInput.value.trim().toUpperCase();
+        
+        if (!trackingNumber) return;
         
         trackingResult.style.display = 'none';
         
@@ -80,45 +83,94 @@ if (trackingForm) {
             checkDemoTrackingData(trackingNumber);
         }
         
-        trackingInput.value = '';
+        // Note: Removed trackingInput.value = ''; to help browser autocomplete registration
     });
 }
 
 function displayTrackingResult(data, trackingNumber) {
-    trackNum.textContent = trackingNumber;
-    trackStatus.textContent = data.status || 'Unknown';
+    const trackingContent = document.getElementById('trackingContent');
     
-    if (data.trackingHistory?.length) {
-        const latest = data.trackingHistory[data.trackingHistory.length - 1];
-        trackUpdate.textContent = `${latest.description || 'Status updated'} - ${latest.location || 'Unknown'}`;
+    let statusColor = 'var(--primary)';
+    if (data.status === 'delivered') statusColor = '#28a745';
+    if (data.status === 'delayed' || data.status === 'cancelled') statusColor = '#dc3545';
+    
+    const history = data.trackingHistory || [];
+    let timelineHtml = '';
+    
+    if (history.length === 0) {
+        timelineHtml = '<div class="no-history"><p>No tracking updates available yet.</p></div>';
     } else {
-        trackUpdate.textContent = data.currentLocation 
-            ? `At ${data.currentLocation.city || 'Unknown'}`
-            : 'No tracking updates';
+        const sortedHistory = [...history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        sortedHistory.forEach((entry, index) => {
+            const isLatest = index === 0;
+            const dotClass = isLatest ? 'current' : 'completed';
+            
+            timelineHtml += `
+                <div class="timeline-item">
+                    <div class="timeline-dot ${dotClass}"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-status">${entry.status.replace(/_/g, ' ').toUpperCase()}</div>
+                        ${entry.location ? `<div class="timeline-location"><i class="fas fa-map-marker-alt"></i> ${entry.location}</div>` : ''}
+                        ${entry.description ? `<div class="timeline-description">${entry.description}</div>` : ''}
+                        <div class="timeline-date">
+                            <i class="far fa-clock"></i> ${new Date(entry.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
     }
+
+    trackingContent.innerHTML = `
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Tracking Number</div>
+                <div class="info-value">${trackingNumber}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Current Status</div>
+                <div class="info-value" style="color: ${statusColor}">${(data.status || 'Processing').replace(/_/g, ' ').toUpperCase()}</div>
+            </div>
+        </div>
+        
+        <div class="timeline">
+            <h3 class="timeline-title">Tracking History</h3>
+            ${timelineHtml}
+        </div>
+    `;
     
-    const date = data.estimatedDelivery ? new Date(data.estimatedDelivery) : null;
-    trackDelivery.textContent = date ? date.toLocaleDateString() : 'Not available';
-    
-    trackStatus.style.color = data.status === 'delivered' ? '#28a745' : 'var(--accent)';
     trackingResult.style.display = 'block';
 }
 
 function checkDemoTrackingData(trackingNumber) {
     if (demoTrackingData[trackingNumber]) {
         const demo = demoTrackingData[trackingNumber];
-        trackNum.textContent = trackingNumber;
-        trackStatus.textContent = demo.status;
-        trackUpdate.textContent = demo.update;
-        trackDelivery.textContent = demo.delivery;
-        trackStatus.style.color = demo.status === 'Delivered' ? '#28a745' : 'var(--accent)';
-        trackingResult.style.display = 'block';
+        
+        const mockData = {
+            status: demo.status,
+            trackingHistory: [
+                {
+                    status: demo.status,
+                    location: demo.location,
+                    description: demo.update,
+                    timestamp: new Date().toISOString()
+                },
+                {
+                    status: "manifest_received",
+                    location: "Origin Facility",
+                    description: "Shipment information received",
+                    timestamp: new Date(Date.now() - 86400000).toISOString()
+                }
+            ]
+        };
+        displayTrackingResult(mockData, trackingNumber);
     } else {
-        trackNum.textContent = trackingNumber;
-        trackStatus.textContent = "Not Found";
-        trackStatus.style.color = "#dc3545";
-        trackUpdate.textContent = "Tracking number not found";
-        trackDelivery.textContent = "N/A";
+        document.getElementById('trackingContent').innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #dc3545; margin-bottom: 10px;"></i>
+                <p>Tracking number <strong>${trackingNumber}</strong> not found. Please verify the number and try again.</p>
+            </div>`;
         trackingResult.style.display = 'block';
     }
 }
@@ -135,21 +187,12 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // =============================================
-// NAVBAR UPDATE - Runs on all pages
+// NAVBAR UPDATE
 // =============================================
 function updateNavbar() {
     const user = localStorage.getItem('user');
     const signInItem = document.getElementById('signInItem');
-    
     if (!signInItem) return;
-    
-    // Get current page filename
-    const currentPage = window.location.pathname.split('/').pop();
-    
-    // Don't modify navbar on auth pages
-    if (currentPage === 'login.html' || currentPage === 'register.html') {
-        return;
-    }
     
     if (user) {
         const userData = JSON.parse(user);
@@ -163,12 +206,4 @@ function updateNavbar() {
     }
 }
 
-// Logout function
-window.logout = function() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    window.location.href = 'index.html';
-};
-
-// Run on page load
 document.addEventListener('DOMContentLoaded', updateNavbar);

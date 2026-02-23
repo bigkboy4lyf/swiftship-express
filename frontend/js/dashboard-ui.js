@@ -395,7 +395,7 @@ window.addEventListener('click', function(event) {
 });
 
 // =============================================
-// SHIPMENT ACTIONS
+// SHIPMENT ACTIONS - FIXED STATUS UPDATE
 // =============================================
 window.viewShipment = function(trackingNumber) {
     window.location.href = `tracking.html?number=${trackingNumber}`;
@@ -405,10 +405,38 @@ window.editShipment = function(id) {
     alert('Edit functionality – you can extend this.');
 };
 
+// FIXED: Status update function with proper formatting
 window.updateShipmentStatus = async function(id) {
-    const newStatus = prompt('Enter new status (pending, processing, in_transit, out_for_delivery, delivered):');
+    // Define valid status options
+    const validStatuses = [
+        'pending', 
+        'processing', 
+        'picked_up', 
+        'in_transit', 
+        'out_for_delivery', 
+        'delivered', 
+        'delayed'
+    ];
+    
+    // Show prompt with instructions
+    const newStatus = prompt(
+        'Enter new status:\n' + 
+        'Valid options: pending, processing, picked_up, in_transit, out_for_delivery, delivered, delayed'
+    );
+    
     if (!newStatus) return;
+    
+    // Format the status: lowercase and replace spaces with underscores
+    const formattedStatus = newStatus.toLowerCase().trim().replace(/\s+/g, '_');
+    
+    // Validate the formatted status
+    if (!validStatuses.includes(formattedStatus)) {
+        alert(`❌ Invalid status. Please use one of:\n${validStatuses.join(', ')}`);
+        return;
+    }
+    
     const location = prompt('Enter current location (optional):');
+    
     try {
         const res = await fetch(`/api/dashboard/shipments/${id}/status`, {
             method: 'PATCH',
@@ -416,11 +444,16 @@ window.updateShipmentStatus = async function(id) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify({ status: newStatus, location })
+            body: JSON.stringify({ 
+                status: formattedStatus, 
+                location: location 
+            })
         });
+        
         const result = await res.json();
+        
         if (result.success) {
-            alert('✅ Status updated');
+            alert('✅ Status updated successfully');
             loadAllShipments();
         } else {
             alert('❌ Error: ' + result.message);

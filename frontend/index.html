@@ -6,6 +6,7 @@
     <title>SwiftShip Express | Premium Shipping Services</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/tracking.css">
 </head>
 <body>
     <!-- Header & Navigation -->
@@ -47,33 +48,38 @@
     
     <!-- Tracking Section -->
     <section class="section tracking-section" id="tracking">
-        <div class="container">
-            <div class="section-title">
-                <h2>Track Your Shipment</h2>
-                <p>Enter your tracking number to get real-time updates on your package location and estimated delivery time.</p>
-            </div>
+    <div class="container">
+        <div class="section-title">
+            <h2>Track Your Shipment</h2>
+            <p>Enter your tracking number to get real-time updates on your package location and estimated delivery time.</p>
+        </div>
+        
+        <div class="tracking-container">
+            <h3>Where is my package?</h3>
+            <p>Track up to 10 shipments at once. Enter tracking numbers separated by commas.</p>
             
-            <div class="tracking-container">
-                <h3>Where is my package?</h3>
-                <p>Track up to 10 shipments at once. Enter tracking numbers separated by commas.</p>
-                
-                <form class="tracking-form" id="trackingForm">
-                    <input type="text" class="tracking-input" placeholder="Enter your tracking number (e.g., SS123456789)" required>
-                    <button type="submit" class="tracking-btn">Track Package</button>
-                </form>
-                
-                <div id="trackingResult" style="margin-top: 25px; text-align: left; display: none;">
-                    <h4>Tracking Results:</h4>
-                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px; border-left: 4px solid var(--accent);">
-                        <p><strong>Tracking #:</strong> <span id="trackNum">SS123456789</span></p>
-                        <p><strong>Status:</strong> <span id="trackStatus" style="color: var(--accent); font-weight: 600;">In Transit</span></p>
-                        <p><strong>Last Update:</strong> <span id="trackUpdate">Package departed from London distribution center</span></p>
-                        <p><strong>Estimated Delivery:</strong> <span id="trackDelivery">Tomorrow by 5:00 PM</span></p>
-                    </div>
+            <form class="tracking-form" id="trackingForm" autocomplete="on">
+                <input 
+                    type="text" 
+                    name="trackingNumber" 
+                    id="trackingInput" 
+                    class="tracking-input" 
+                    placeholder="Enter your tracking number (e.g., SS123456789)" 
+                    required 
+                    autocomplete="on"
+                >
+                <button type="submit" class="tracking-btn">Track Package</button>
+            </form>
+            
+            <div id="trackingResult" style="margin-top: 25px; text-align: left; display: none;">
+                <div class="shipment-info">
+                    <div id="trackingContent">
+                        </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
     <!-- Services Section -->
     <section class="section" id="services">
@@ -326,7 +332,7 @@
             </div>
         </div>
     </footer>
-
+    <script src="js/tracking.js"></script>
     <script src="js/script.js"></script>
     <script src="js/auth-navbar.js"></script>
 </body>
