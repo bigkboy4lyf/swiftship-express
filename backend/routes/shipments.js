@@ -2,6 +2,49 @@ const express = require('express');
 const router = express.Router();
 const Shipment = require('../models/Shipment');
 
+
+// =============================================
+// PUBLIC TRACKING - NO AUTHENTICATION NEEDED
+// =============================================
+router.get('/track/:trackingNumber', async (req, res) => {
+    try {
+        const { trackingNumber } = req.params;
+        
+        const shipment = await Shipment.findOne({ 
+            trackingNumber: trackingNumber.toUpperCase() 
+        }).populate('userId', 'name');
+        
+        if (!shipment) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Tracking number not found' 
+            });
+        }
+        
+        // Return only necessary tracking info
+        res.json({
+            success: true,
+            data: {
+                trackingNumber: shipment.trackingNumber,
+                status: shipment.status,
+                estimatedDelivery: shipment.estimatedDelivery,
+                currentLocation: shipment.currentLocation,
+                trackingHistory: shipment.trackingHistory,
+                recipient: {
+                    city: shipment.recipient?.city,
+                    country: shipment.recipient?.country
+                }
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
+    }
+});
+
+
 // =============================================
 // CREATE NEW SHIPMENT
 // =============================================
