@@ -1,3 +1,4 @@
+// BACKEND dashboard.js - Runs on server
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
@@ -26,26 +27,32 @@ const protect = async (req, res, next) => {
 router.get('/stats', protect, async (req, res) => {
     try {
         const isAdmin = req.user.role === 'admin';
-        let totalShipments, deliveredShipments, inTransitShipments, pendingShipments;
+        let totalShipments, deliveredShipments, inTransitShipments, pendingShipments, pendingApproval;
 
         if (isAdmin) {
             totalShipments = await Shipment.countDocuments();
             deliveredShipments = await Shipment.countDocuments({ status: 'delivered' });
             inTransitShipments = await Shipment.countDocuments({ status: { $in: ['in_transit', 'out_for_delivery'] } });
             pendingShipments = await Shipment.countDocuments({ status: { $in: ['pending', 'processing'] } });
+            pendingApproval = await Shipment.countDocuments({ status: 'pending_approval' });
         } else {
             totalShipments = await Shipment.countDocuments({ userId: req.user.id });
             deliveredShipments = await Shipment.countDocuments({ userId: req.user.id, status: 'delivered' });
             inTransitShipments = await Shipment.countDocuments({ userId: req.user.id, status: { $in: ['in_transit', 'out_for_delivery'] } });
-            pendingShipments = await Shipment.countDocuments({ userId: req.user.id, status: { $in: ['pending', 'processing'] } });
+            pendingShipments = await Shipment.countDocuments({ userId: req.user.id, status: { $in: ['pending', 'processing', 'pending_approval'] } });
+            pendingApproval = await Shipment.countDocuments({ userId: req.user.id, status: 'pending_approval' });
         }
 
         let totalUsers = 0, activeShipments = 0, revenue = 45289;
         if (isAdmin) {
             totalUsers = await User.countDocuments();
-            activeShipments = await Shipment.countDocuments({ status: { $ne: 'delivered' } });
-            const shipments = await Shipment.find();
-            revenue = shipments.reduce((sum, s) => sum + (s.package?.value || 0), 0) || 45289;
+            activeShipments = await Shipment.countDocuments({ status: { $nin: ['delivered', 'rejected'] } });
+            
+            // Computes balance natively inside MongoDB to avoid Out-of-Memory crashes
+            const revenueAggregation = await Shipment.aggregate([
+                { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+            ]);
+            revenue = revenueAggregation[0]?.totalRevenue || 45289;
         }
 
         res.json({
@@ -55,6 +62,7 @@ router.get('/stats', protect, async (req, res) => {
                 deliveredShipments,
                 inTransitShipments,
                 pendingShipments,
+                pendingApproval,
                 totalUsers,
                 activeShipments,
                 revenue
@@ -66,23 +74,34 @@ router.get('/stats', protect, async (req, res) => {
 });
 
 // =============================================
-// GET SHIPMENTS (with optional userId filter for admin)
+// GET SHIPMENTS
 // =============================================
 router.get('/shipments', protect, async (req, res) => {
     try {
-        const { limit = 10, userId } = req.query;
+        const { limit = 100, userId, status } = req.query;
         const isAdmin = req.user.role === 'admin';
         let query = {};
 
+        // Filter by status if provided
+        if (status) {
+            query.status = status;
+        }
+
+        // Filter by user
         if (userId && isAdmin) {
             query.userId = userId;
         } else if (!isAdmin) {
             query.userId = req.user.id;
+            // Customers see all their shipments including pending_approval
         }
+
+    // Safeguards against NaN query injection crashing Mongoose parsing chains
+        const parsedLimit = parseInt(limit, 10);
+        const finalLimit = isNaN(parsedLimit) || parsedLimit <= 0 ? 100 : parsedLimit;
 
         const shipments = await Shipment.find(query)
             .sort({ createdAt: -1 })
-            .limit(parseInt(limit))
+            .limit(finalLimit)
             .populate('userId', 'name email');
 
         res.json({ success: true, data: shipments });
@@ -92,29 +111,41 @@ router.get('/shipments', protect, async (req, res) => {
 });
 
 // =============================================
-// CREATE NEW SHIPMENT (Admin only)
+// CREATE NEW SHIPMENT (Customers & Admin)
 // =============================================
 router.post('/shipments', protect, async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({ success: false, message: 'Forbidden' });
+        const { role, id } = req.user;
+        const shipmentData = req.body;
+
+        // If customer, force userId to their own ID (security)
+        if (role !== 'admin') {
+            shipmentData.userId = id;
         }
 
-        const shipmentData = req.body;
         if (!shipmentData.userId) {
             return res.status(400).json({ success: false, message: 'User ID is required' });
         }
 
-        // Generate tracking number if not provided
+        // Set status based on role (Forced to 'pending' for automatic customer tracking)
+        if (!shipmentData.status) {
+            shipmentData.status = 'pending';
+        }
+
+        // Generate tracking number
         if (!shipmentData.trackingNumber) {
             shipmentData.trackingNumber = 'SS' + Date.now().toString().slice(-9);
         }
 
         // Add initial tracking history
+        const statusDesc = shipmentData.status === 'pending_approval' 
+            ? 'Awaiting admin approval' 
+            : 'Shipment created';
+        
         shipmentData.trackingHistory = [{
-            status: shipmentData.status || 'pending',
+            status: shipmentData.status,
             location: shipmentData.currentLocation?.city || 'Processing Center',
-            description: 'Shipment created',
+            description: statusDesc,
             timestamp: new Date()
         }];
 
@@ -128,10 +159,81 @@ router.post('/shipments', protect, async (req, res) => {
 });
 
 // =============================================
-// UPDATE SHIPMENT STATUS
+// ADMIN APPROVE SHIPMENT
+// =============================================
+router.patch('/shipments/:id/approve', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const shipment = await Shipment.findById(req.params.id);
+        if (!shipment) {
+            return res.status(404).json({ success: false, message: 'Shipment not found' });
+        }
+
+        if (shipment.status !== 'pending_approval') {
+            return res.status(400).json({ success: false, message: 'Shipment is not pending approval' });
+        }
+
+        shipment.status = 'pending';
+        shipment.trackingHistory.push({
+            status: 'pending',
+            location: shipment.currentLocation?.city || 'Processing Center',
+            description: 'Approved by admin',
+            timestamp: new Date()
+        });
+
+        await shipment.save();
+        res.json({ success: true, data: shipment });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// ADMIN REJECT SHIPMENT
+// =============================================
+router.patch('/shipments/:id/reject', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const shipment = await Shipment.findById(req.params.id);
+        if (!shipment) {
+            return res.status(404).json({ success: false, message: 'Shipment not found' });
+        }
+
+        if (shipment.status !== 'pending_approval') {
+            return res.status(400).json({ success: false, message: 'Shipment is not pending approval' });
+        }
+
+        shipment.status = 'rejected';
+        shipment.trackingHistory.push({
+            status: 'rejected',
+            location: shipment.currentLocation?.city || 'Processing Center',
+            description: 'Rejected by admin',
+            timestamp: new Date()
+        });
+
+        await shipment.save();
+        res.json({ success: true, data: shipment });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// UPDATE SHIPMENT STATUS (Secured & Type Checked)
 // =============================================
 router.patch('/shipments/:id/status', protect, async (req, res) => {
     try {
+        // Enforce strict administrative authorization barrier
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Access Denied: Administrative privileges required.' });
+        }
+
         const { status, location, description } = req.body;
         const shipment = await Shipment.findById(req.params.id);
         if (!shipment) {
@@ -141,15 +243,17 @@ router.patch('/shipments/:id/status', protect, async (req, res) => {
         shipment.status = status;
         shipment.trackingHistory.push({
             status,
-            location: location || shipment.currentLocation?.city,
+            location: location ? String(location) : shipment.currentLocation?.city,
             description: description || `Status updated to ${status}`,
             timestamp: new Date()
         });
 
         if (location) {
+            // Converts input payload explicitly to string to block split function crashes
+            const locationStr = String(location);
             shipment.currentLocation = {
-                facility: location,
-                city: location.split(',')[0].trim(),
+                facility: locationStr,
+                city: locationStr.includes(',') ? locationStr.split(',')[0].trim() : locationStr.trim(),
                 timestamp: new Date()
             };
         }

@@ -232,6 +232,17 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Pending Approvals (Admin) -->
+                    <div class="card" id="pendingApprovalsCard">
+                        <div class="card-header">
+                            <h3>📋 Pending Approvals</h3>
+                            <span id="pendingCount" style="background: #ff9800; color: white; padding: 2px 10px; border-radius: 20px; font-size: 0.8rem;">0</span>
+                        </div>
+                        <div id="pendingApprovalsContainer">
+                            <p>Loading...</p>
+                        </div>
+                    </div>
                     
                     <!-- All Shipments (Admin) -->
                     <div class="card">
@@ -314,9 +325,165 @@
                 <div id="userQuote" class="dashboard-section" style="display: none;">
                     <div class="card">
                         <div class="card-header">
-                            <h3>Get a Quote</h3>
+                            <h3>Get a Shipping Quote</h3>
+                            <p style="font-size: 0.9rem; color: #666; margin-top: 5px;">Fill in the details below for an instant shipping quote</p>
                         </div>
-                        <p>Quote calculator would go here</p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+                            <!-- Quote Form -->
+                            <div>
+                                <form id="dashboardQuoteForm">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Sender Name *</label>
+                                            <input type="text" id="dashSenderName" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" placeholder="Your full name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Email *</label>
+                                            <input type="email" id="dashSenderEmail" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" placeholder="your@email.com" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Origin Country *</label>
+                                            <select id="dashOrigin" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" required>
+                                                <option value="">Select country</option>
+                                                <option value="US">United States</option>
+                                                <option value="CA">Canada</option>
+                                                <option value="UK">United Kingdom</option>
+                                                <option value="DE">Germany</option>
+                                                <option value="FR">France</option>
+                                                <option value="AU">Australia</option>
+                                                <option value="JP">Japan</option>
+                                                <option value="CN">China</option>
+                                                <option value="IN">India</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Destination Country *</label>
+                                            <select id="dashDestination" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" required>
+                                                <option value="">Select country</option>
+                                                <option value="US">United States</option>
+                                                <option value="CA">Canada</option>
+                                                <option value="UK">United Kingdom</option>
+                                                <option value="DE">Germany</option>
+                                                <option value="FR">France</option>
+                                                <option value="AU">Australia</option>
+                                                <option value="JP">Japan</option>
+                                                <option value="CN">China</option>
+                                                <option value="IN">India</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group" style="margin-top: 15px;">
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Shipping Service *</label>
+                                        <select id="dashServiceType" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" required>
+                                            <option value="">Select service type</option>
+                                            <option value="express">Express Delivery (1-3 days)</option>
+                                            <option value="standard">Standard Shipping (5-10 days)</option>
+                                            <option value="economy">Economy Shipping (10-20 days)</option>
+                                            <option value="international">International Priority (3-7 days)</option>
+                                            <option value="cargo">Cargo/Freight Shipping</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Weight (kg) *</label>
+                                            <input type="number" id="dashWeight" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" min="0.1" max="1000" step="0.1" placeholder="2.5" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Dimensions (cm)</label>
+                                            <input type="text" id="dashDimensions" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" placeholder="30x20x15">
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Package Type</label>
+                                            <select id="dashPackageType" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                                <option value="standard">Standard Box</option>
+                                                <option value="envelope">Document Envelope</option>
+                                                <option value="tube">Tube</option>
+                                                <option value="pallet">Pallet</option>
+                                                <option value="custom">Custom Packaging</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Insurance Value ($)</label>
+                                            <input type="number" id="dashInsurance" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" min="0" placeholder="Optional">
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                        <button type="submit" class="btn" style="flex: 1; background: var(--primary); color: white;">Calculate Quote</button>
+                                        <button type="reset" class="btn" style="flex: 1; background: transparent; border: 1px solid #ddd;">Reset</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Quote Result -->
+                            <div>
+                                <div id="dashQuoteResult" style="display: none; background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid var(--primary);">
+                                    <h4 style="color: var(--primary); margin-bottom: 15px;">Your Shipping Quote</h4>
+                                    
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                        <div style="background: white; padding: 10px; border-radius: 5px;">
+                                            <div style="font-size: 0.8rem; color: #666;">Service Type</div>
+                                            <div style="font-weight: 700; color: var(--primary);" id="dashResultService">Express</div>
+                                        </div>
+                                        <div style="background: white; padding: 10px; border-radius: 5px;">
+                                            <div style="font-size: 0.8rem; color: #666;">Route</div>
+                                            <div style="font-weight: 700; color: var(--primary);" id="dashResultRoute">US → UK</div>
+                                        </div>
+                                        <div style="background: white; padding: 10px; border-radius: 5px;">
+                                            <div style="font-size: 0.8rem; color: #666;">Delivery</div>
+                                            <div style="font-weight: 700; color: var(--primary);" id="dashResultDelivery">1-3 days</div>
+                                        </div>
+                                        <div style="background: white; padding: 10px; border-radius: 5px;">
+                                            <div style="font-size: 0.8rem; color: #666;">Base Price</div>
+                                            <div style="font-weight: 700; color: var(--primary);" id="dashResultBase">$45.00</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                        <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                            <div style="font-size: 0.7rem; color: #666;">Insurance</div>
+                                            <div style="font-weight: 600; color: var(--primary);" id="dashResultInsurance">$5.00</div>
+                                        </div>
+                                        <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                            <div style="font-size: 0.7rem; color: #666;">Surcharge</div>
+                                            <div style="font-weight: 600; color: var(--primary);" id="dashResultSurcharge">$3.50</div>
+                                        </div>
+                                        <div style="background: var(--primary); padding: 10px; border-radius: 5px; text-align: center; color: white;">
+                                            <div style="font-size: 0.7rem; opacity: 0.9;">Total</div>
+                                            <div style="font-weight: 700; font-size: 1.2rem;" id="dashResultTotal">$53.50</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                        <button class="btn" id="dashPrintQuote" style="flex: 1; background: transparent; border: 1px solid #ddd;">Print</button>
+                                        <button class="btn" id="dashBookNow" style="flex: 1; background: var(--accent); color: white;">Book Now</button>
+                                    </div>
+                                    <p style="font-size: 0.7rem; color: #999; margin-top: 10px; text-align: center;">Quote valid for 30 days. Taxes may apply.</p>
+                                </div>
+                                
+                                <!-- Info Box -->
+                                <div style="background: #e8f4fd; border-radius: 10px; padding: 20px; border-left: 4px solid var(--primary); margin-top: 20px;">
+                                    <h4 style="color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                                        <i class="fas fa-info-circle"></i> How Quotes Are Calculated
+                                    </h4>
+                                    <ul style="list-style: none; padding-left: 0; font-size: 0.9rem;">
+                                        <li style="margin-bottom: 5px;"><i class="fas fa-check" style="color: var(--accent);"></i> <strong>Distance:</strong> Rates vary based on origin and destination</li>
+                                        <li style="margin-bottom: 5px;"><i class="fas fa-check" style="color: var(--accent);"></i> <strong>Weight & Size:</strong> Heavier packages cost more</li>
+                                        <li style="margin-bottom: 5px;"><i class="fas fa-check" style="color: var(--accent);"></i> <strong>Service Type:</strong> Faster delivery = higher rates</li>
+                                        <li style="margin-bottom: 5px;"><i class="fas fa-check" style="color: var(--accent);"></i> <strong>Insurance:</strong> Optional coverage for valuable items</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

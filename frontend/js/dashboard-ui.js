@@ -237,7 +237,6 @@ function loadProfileData() {
     document.getElementById('profileActiveShipments').textContent = document.getElementById('transitShipments')?.textContent || '0';
 }
 
-// Edit profile modal
 document.getElementById('editProfileBtn')?.addEventListener('click', () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const nameParts = (user.name || '').split(' ');
@@ -324,10 +323,8 @@ document.getElementById('addShipmentBtn')?.addEventListener('click', async funct
     document.getElementById('shipmentModal').classList.add('active');
 });
 
-// Handle shipment form submission
 const shipmentForm = document.getElementById('shipmentForm');
 if (shipmentForm) {
-    // Remove any existing listeners by cloning
     const newForm = shipmentForm.cloneNode(true);
     shipmentForm.parentNode.replaceChild(newForm, shipmentForm);
 
@@ -380,7 +377,6 @@ if (shipmentForm) {
     });
 }
 
-// Close modal
 document.getElementById('closeShipmentModal')?.addEventListener('click', function() {
     document.getElementById('shipmentModal').classList.remove('active');
     document.getElementById('modalTitle').textContent = 'Add New Shipment';
@@ -395,7 +391,7 @@ window.addEventListener('click', function(event) {
 });
 
 // =============================================
-// SHIPMENT ACTIONS - FIXED STATUS UPDATE
+// SHIPMENT ACTIONS - STATUS MANAGEMENT
 // =============================================
 window.viewShipment = function(trackingNumber) {
     window.location.href = `tracking.html?number=${trackingNumber}`;
@@ -405,31 +401,13 @@ window.editShipment = function(id) {
     alert('Edit functionality – you can extend this.');
 };
 
-// FIXED: Status update function with proper formatting
 window.updateShipmentStatus = async function(id) {
-    // Define valid status options
-    const validStatuses = [
-        'pending', 
-        'processing', 
-        'picked_up', 
-        'in_transit', 
-        'out_for_delivery', 
-        'delivered', 
-        'delayed'
-    ];
-    
-    // Show prompt with instructions
-    const newStatus = prompt(
-        'Enter new status:\n' + 
-        'Valid options: pending, processing, picked_up, in_transit, out_for_delivery, delivered, delayed'
-    );
+    const validStatuses = ['pending', 'processing', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'delayed'];
+    const newStatus = prompt('Enter new status:\nValid options: pending, processing, picked_up, in_transit, out_for_delivery, delivered, delayed');
     
     if (!newStatus) return;
-    
-    // Format the status: lowercase and replace spaces with underscores
     const formattedStatus = newStatus.toLowerCase().trim().replace(/\s+/g, '_');
     
-    // Validate the formatted status
     if (!validStatuses.includes(formattedStatus)) {
         alert(`❌ Invalid status. Please use one of:\n${validStatuses.join(', ')}`);
         return;
@@ -444,14 +422,10 @@ window.updateShipmentStatus = async function(id) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify({ 
-                status: formattedStatus, 
-                location: location 
-            })
+            body: JSON.stringify({ status: formattedStatus, location: location })
         });
         
         const result = await res.json();
-        
         if (result.success) {
             alert('✅ Status updated successfully');
             loadAllShipments();
@@ -486,7 +460,6 @@ window.editUser = function(id) {
     alert('Edit user – implement as needed.');
 };
 
-// Quick Track
 document.getElementById('quickTrackBtn')?.addEventListener('click', function() {
     const input = document.getElementById('quickTrackInput');
     if (input.value) {
@@ -496,4 +469,107 @@ document.getElementById('quickTrackBtn')?.addEventListener('click', function() {
 
 document.getElementById('quickTrackInput')?.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') document.getElementById('quickTrackBtn').click();
+});
+
+// =============================================
+// CUSTOM NOTIFICATION SYSTEM
+// =============================================
+function showLoggedTrackingPopup(trackingNumber) {
+    const overlay = document.createElement('div');
+    overlay.id = 'trackingPopupOverlay';
+    
+    Object.assign(overlay.style, {
+        position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)', display: 'flex',
+        justifyContent: 'center', alignItems: 'center', zIndex: '9999'
+    });
+
+    const modal = document.createElement('div');
+    Object.assign(modal.style, {
+        backgroundColor: '#ffffff', padding: '25px', borderRadius: '8px',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.2)', textAlign: 'center',
+        maxWidth: '400px', width: '90%', fontFamily: 'Arial, sans-serif'
+    });
+
+    modal.innerHTML = `
+        <div style="font-size: 2.5rem; color: #2e7d32; margin-bottom: 12px;"><i class="fas fa-check-circle"></i></div>
+        <h3 style="color: #222; margin: 0 0 8px 0; font-size: 1.3rem;">Shipment Requirement Received</h3>
+        
+        <p style="color: #555; font-size: 0.9rem; line-height: 1.4; margin-bottom: 18px;">
+            Your shipment requirement has been received, and support will write to you to get more details on the shipping and how to go about it.
+        </p>
+        
+        <div style="background: #f4f6f8; padding: 12px; border-radius: 6px; border: 1px dashed #b2dfdb; margin-bottom: 20px;">
+            <span style="font-size: 0.7rem; text-transform: uppercase; color: #666; display: block; margin-bottom: 2px;">Assigned Tracking Number</span>
+            <strong style="font-size: 1.25rem; color: #0056b3; letter-spacing: 0.5px;">${trackingNumber}</strong>
+        </div>
+        
+        <button id="dismissTrackingPopupBtn" style="width: 100%; background: #0056b3; color: white; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Acknowledge</button>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    document.getElementById('dismissTrackingPopupBtn').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        const formElement = document.getElementById('quoteForm') || document.querySelector('#userQuote form');
+        if (formElement) formElement.reset();
+    });
+}
+
+// =============================================
+// QUOTE SUBMISSION & SHIPMENT PIPELINE
+// =============================================
+document.addEventListener('submit', async function(e) {
+    const quoteContainer = document.getElementById('userQuote');
+    if (!quoteContainer || !quoteContainer.contains(e.target)) return;
+    
+    e.preventDefault();
+    const form = e.target;
+
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user')) || {};
+
+    const originCity = document.getElementById('dashOrigin')?.value || 'Origin Hub';
+    const destCity = document.getElementById('dashDestination')?.value || '';
+    const service = document.getElementById('dashServiceType')?.value || 'standard';
+    const pkgWeight = parseFloat(document.getElementById('dashWeight')?.value) || 1;
+    const notes = document.getElementById('dashDimensions')?.value || 'N/A';
+
+    if (!destCity) {
+        alert('Please provide a destination city.');
+        return;
+    }
+
+    const payload = {
+        userId: user.id || user._id,
+        serviceType: service,
+        sender: { name: user.name || 'Customer', city: originCity, country: originCity },
+        recipient: { name: user.name || 'Customer Reference', city: destCity, country: destCity },
+        packageDetails: { weight: pkgWeight, description: `Package parameters: ${notes}` }
+    };
+
+    try {
+        const res = await fetch('/api/shipments/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+            showLoggedTrackingPopup(result.data.trackingNumber);
+            if (typeof loadDashboardData === 'function') {
+                loadDashboardData(token, user);
+            }
+        } else {
+            alert('Could not process requirement: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error contacting shipping terminal:', error);
+    }
 });

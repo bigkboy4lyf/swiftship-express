@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const trackingHistorySchema = new mongoose.Schema({
     status: {
         type: String,
-        enum: ['pending', 'processing', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'delayed'],
+        enum: ['pending_approval', 'pending', 'processing', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'delayed', 'rejected'],
         required: true
     },
     location: String,
@@ -16,10 +16,11 @@ const shipmentSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'delayed'],
-        default: 'pending'
+        enum: ['pending_approval', 'pending', 'processing', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'delayed', 'rejected'],
+        default: 'pending_approval'
     },
-    serviceType: { type: String, enum: ['express', 'standard', 'international'], default: 'standard' },
+    serviceType: { type: String, enum: ['express', 'standard', 'international', 'economy', 'cargo'], default: 'standard' },
+    totalPrice: { type: Number, default: 0 },
     sender: {
         name: String,
         company: String,

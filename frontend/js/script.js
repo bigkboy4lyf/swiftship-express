@@ -100,10 +100,12 @@ function displayTrackingResult(data, trackingNumber) {
     if (history.length === 0) {
         timelineHtml = '<div class="no-history"><p>No tracking updates available yet.</p></div>';
     } else {
-        const sortedHistory = [...history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        // FIXED: Sorts oldest to newest (up-to-down) to match the dashboard timeline
+        const sortedHistory = [...history].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         
         sortedHistory.forEach((entry, index) => {
-            const isLatest = index === 0;
+            // FIXED: Marks the very last item in the chronological array as the current active status
+            const isLatest = index === sortedHistory.length - 1;
             const dotClass = isLatest ? 'current' : 'completed';
             
             timelineHtml += `

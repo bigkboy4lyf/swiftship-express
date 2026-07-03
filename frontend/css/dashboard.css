@@ -487,3 +487,31 @@ td {
         width: 200px;
     }
 }
+
+/* Pending Approvals */
+#pendingApprovalsCard {
+    border-left: 4px solid #ff9800;
+}
+
+#pendingApprovalsContainer {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#pendingApprovalsContainer .pending-item {
+    border: 1px solid #eee;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background: #fff8e1;
+    transition: all 0.3s ease;
+}
+
+#pendingApprovalsContainer .pending-item:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.status-pending_approval {
+    background: #fff3cd;
+    color: #856404;
+}
