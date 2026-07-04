@@ -15,6 +15,7 @@ const quoteRoutes = require('./routes/quotes');
 const shipmentRoutes = require('./routes/shipments');
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard'); // ✅ ADDED
+const addressRoutes = require('./routes/addresses'); // ✅ Added
 
 // Initialize Express app
 const app = express();
@@ -34,7 +35,8 @@ app.use('/img', express.static(path.join(__dirname, '../frontend/img')));
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/shipments', shipmentRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', dashboardRoutes); // ✅ ADDED
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/addresses', addressRoutes);
 
 // ✅ Serve HTML files
 app.get('/', (req, res) => {

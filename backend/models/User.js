@@ -42,6 +42,18 @@ const userSchema = new mongoose.Schema({
         enum: ['active', 'inactive', 'suspended'],
         default: 'active'
     },
+    addresses: {
+        type: [
+            {
+                street: { type: String, required: true },
+                city: { type: String, required: true },
+                state: { type: String, required: true },
+                zipCode: { type: String, required: true },
+                Country: { type: String, required: true }
+            }
+        ],
+        validate: [val => val.length <= 3, 'Exceeds the limit of 3 addresses']
+    },
     newsletter: {
         type: Boolean,
         default: false

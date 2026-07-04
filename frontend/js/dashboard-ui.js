@@ -68,6 +68,10 @@ function setupTabSwitching() {
                 if (tabId === 'admin-shipments') loadAllShipments();
                 if (tabId === 'admin-users') loadAllUsers();
                 if (tabId === 'user-profile') setTimeout(loadProfileData, 100);
+                if (tabId === 'user-addresses') {
+                    fetchAddresses(); // Injected hook to automatically load database entries
+                    document.getElementById('add-address-form').addEventListener('submit', handleAddAddress);
+                }
             }
         });
     });
@@ -573,3 +577,203 @@ document.addEventListener('submit', async function(e) {
         console.error('Error contacting shipping terminal:', error);
     }
 });
+
+// =============================================
+// ENHANCED ADDRESS INTERFACE MANAGEMENT PIPELINE
+// =============================================
+const ADDR_API = '/api/addresses';
+const getHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+});
+
+// Helper to create and show functional feedback status banners
+function showAddressAlert(message, type = 'success') {
+    const targetContainer = document.getElementById('userAddresses') || document.getElementById('address-list-container');
+    if (!targetContainer) return;
+
+    // Remove old alerts to prevent cluttering
+    document.querySelectorAll('.address-alert-banner').forEach(el => el.remove());
+
+    const alertEl = document.createElement('div');
+    alertEl.className = `address-alert-banner alert alert-${type === 'success' ? 'success' : 'danger'} mb-3`;
+    Object.assign(alertEl.style, {
+        padding: '12px 20px',
+        borderRadius: '6px',
+        fontWeight: '6px',
+        fontSize: '0.9rem',
+        backgroundColor: type === 'success' ? '#e8f5e9' : '#ffebee',
+        color: type === 'success' ? '#2e7d32' : '#c62828',
+        border: `1px solid ${type === 'success' ? '#a5d6a7' : '#ef9a9a'}`,
+        marginBottom: '15px'
+    });
+    alertEl.innerHTML = `<strong>${type === 'success' ? '✅ Success:' : '❌ Error:'}</strong> ${message}`;
+    
+    targetContainer.insertBefore(alertEl, targetContainer.firstChild);
+    setTimeout(() => alertEl.remove(), 4000);
+}
+
+async function fetchAddresses() {
+    try {
+        const res = await fetch(ADDR_API, { headers: getHeaders() });
+        if (!res.ok) throw new Error('Could not pull saved entries');
+        const data = await res.json();
+        renderAddresses(data);
+    } catch (err) {
+        console.error('Failed to load addresses:', err);
+    }
+}
+
+function renderAddresses(addresses) {
+    const mainSection = document.getElementById('userAddresses');
+    if (!mainSection) return;
+
+    // Clean build the primary list container layout structure programmatically
+    mainSection.innerHTML = `
+        <div id="address-view-list" class="card p-4 shadow-sm" style="border: none; border-radius: 8px; background: #fff;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: #333; margin: 0;">
+                    Saved Addresses (<span id="address-count">${addresses.length}</span>/3)
+                </h3>
+                <button id="show-add-form-btn" class="btn btn-primary" style="background-color: #0056b3; border: none; font-weight: 600; padding: 8px 16px;">
+                    + Add Address
+                </button>
+            </div>
+            <div id="address-list-container"></div>
+        </div>
+        
+        <!-- Dynamic Overlay Input Form View Section -->
+        <div id="address-view-form" class="card p-4 shadow-sm" style="display: none; border: none; border-radius: 8px; background: #fff;">
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: #333; margin-bottom: 20px;">Add New Address</h3>
+            <form id="add-address-form">
+                <div class="mb-3" style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color:#555;">Street Address</label>
+                    <input type="text" id="addr-street" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" required>
+                </div>
+                <div class="row" style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label style="display:block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color:#555;">City</label>
+                        <input type="text" id="addr-city" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display:block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color:#555;">State / Region</label>
+                        <input type="text" id="addr-state" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" required>
+                    </div>
+                </div>
+                <div class="row" style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <div style="flex: 1;">
+                        <label style="display:block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color:#555;">Zip / Postal Code</label>
+                        <input type="text" id="addr-zip" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display:block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color:#555;">Country</label>
+                        <input type="text" id="addr-country" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" required>
+                    </div>
+                </div>
+                <div class="d-flex gap-2" style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success" style="background-color: #2e7d32; color: white; border: none; padding: 10px 20px; font-weight: 600; border-radius: 4px; cursor: pointer;">Save Address</button>
+                    <button type="button" id="cancel-address-btn" class="btn btn-secondary" style="background-color: #757575; color: white; border: none; padding: 10px 20px; font-weight: 600; border-radius: 4px; cursor: pointer;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    const container = document.getElementById('address-list-container');
+    const toggleFormBtn = document.getElementById('show-add-form-btn');
+
+    if (addresses.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: #888; padding: 40px 0;">
+                <i class="fas fa-map-marked-alt" style="font-size: 3rem; margin-bottom: 12px; color: #ddd;"></i>
+                <p style="margin: 0;">No saved addresses discovered. Click the button above to add one.</p>
+            </div>`;
+    } else {
+        addresses.forEach(addr => {
+            const card = document.createElement('div');
+            card.className = 'address-card d-flex justify-content-between align-items-center mb-3';
+            Object.assign(card.style, {
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '15px',
+                border: '1px solid #e0e0e0',
+                borderRadius: '6px',
+                marginBottom: '12px',
+                backgroundColor: '#fafafa'
+            });
+            card.innerHTML = `
+                <div>
+                    <strong style="color: #222; font-size: 0.95rem;">${addr.street}</strong><br>
+                    <span style="color: #666; font-size: 0.85rem;">${addr.city}, ${addr.state} ${addr.zipCode}</span><br>
+                    <small style="color: #999; text-transform: uppercase; font-weight: bold; font-size: 0.7rem;">${addr.Country || ''}</small>
+                </div>
+                <button onclick="deleteAddress('${addr._id}')" class="btn btn-danger btn-sm" style="background-color: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                    <i class="fas fa-trash-alt"></i> Delete
+                </button>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // Completely hide add controls if user hits the database limit constraint
+    if (addresses.length >= 3) {
+        if (toggleFormBtn) toggleFormBtn.style.display = 'none';
+    } else {
+        // Wire up interface view toggle swaps
+        toggleFormBtn?.addEventListener('click', () => {
+            document.getElementById('address-view-list').style.display = 'none';
+            document.getElementById('address-view-form').style.display = 'block';
+        });
+    }
+
+    // Attach runtime hooks to dynamic document instances
+    document.getElementById('cancel-address-btn')?.addEventListener('click', () => {
+        document.getElementById('address-view-form').style.display = 'none';
+        document.getElementById('address-view-list').style.display = 'block';
+    });
+
+    document.getElementById('add-address-form')?.addEventListener('submit', handleAddAddress);
+}
+
+async function handleAddAddress(e) {
+    e.preventDefault();
+    const payload = {
+        street: document.getElementById('addr-street').value,
+        city: document.getElementById('addr-city').value,
+        state: document.getElementById('addr-state').value,
+        zipCode: document.getElementById('addr-zip').value,
+        country: document.getElementById('addr-country').value
+    };
+
+    try {
+        const res = await fetch(ADDR_API, { 
+            method: 'POST', 
+            headers: getHeaders(), 
+            body: JSON.stringify(payload) 
+        });
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.message || 'Server interface rejection');
+        
+        renderAddresses(data);
+        showAddressAlert('Address stored successfully in profile ecosystem.', 'success');
+    } catch (err) {
+        showAddressAlert(err.message, 'error');
+    }
+}
+
+async function deleteAddress(id) {
+    if (!confirm('Are you absolute sure you want to remove this address?')) return;
+    try {
+        const res = await fetch(`${ADDR_API}/${id}`, { method: 'DELETE', headers: getHeaders() });
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error('Database deletion transaction failed');
+        
+        renderAddresses(data);
+        showAddressAlert('Address safely expunged from database records.', 'success');
+    } catch (err) {
+        showAddressAlert(err.message, 'error');
+    }
+}
+
