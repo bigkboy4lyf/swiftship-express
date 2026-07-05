@@ -27,6 +27,12 @@ const userSchema = new mongoose.Schema({
         trim: true,
         default: ''
     },
+    avatar: {
+        // Stored as a base64 data URI (e.g. "data:image/jpeg;base64,...").
+        // Kept small (resized client-side) since it lives directly on the document.
+        type: String,
+        default: ''
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],

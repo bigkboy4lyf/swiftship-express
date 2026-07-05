@@ -88,8 +88,11 @@
                         <span class="badge" id="notificationCount">3</span>
                     </div>
                     
-                    <div class="user-profile" id="userProfile">
-                        <div class="user-avatar" id="userAvatar">JD</div>
+                    <div class="user-profile" id="userProfileMenu">
+                        <div class="user-avatar" id="userAvatar">
+                            <img id="userAvatarImg" src="" alt="Avatar" style="display:none;">
+                            <span id="userAvatarInitial">JD</span>
+                        </div>
                         <div class="user-info">
                             <h4 id="userDisplayName">John Doe</h4>
                             <p id="userRole">Customer</p>
@@ -540,60 +543,60 @@
                 </div>
 
                 <div id="userProfile" class="dashboard-section" style="display: none;">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Profile Settings</h3>
-                        </div>
-                        
-                        <div style="display: flex; gap: 30px; flex-wrap: wrap;">
-                            <!-- Profile Info -->
-                            <div style="flex: 2; min-width: 300px;">
-                                <h4 style="margin-bottom: 20px;">Personal Information</h4>
-                                
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                                    <div>
-                                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">First Name</label>
-                                        <input type="text" id="profileFirstName" class="profile-input" value="John" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
-                                    </div>
-                                    <div>
-                                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Last Name</label>
-                                        <input type="text" id="profileLastName" class="profile-input" value="Doe" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
-                                    </div>
+                    <div class="profile-layout">
+                        <!-- Summary card: avatar, name, quick stats -->
+                        <div class="card profile-summary-card">
+                            <div class="profile-summary-avatar">
+                                <img id="profileAvatarImg" src="" alt="Avatar" style="display:none;">
+                                <span id="profileAvatar">JD</span>
+                            </div>
+                            <h3 class="profile-summary-name" id="profileNameDisplay">John Doe</h3>
+                            <span class="profile-summary-badge" id="profileAccountTypeBadge">Personal</span>
+
+                            <div class="profile-summary-divider"></div>
+
+                            <div class="profile-summary-stats">
+                                <div>
+                                    <strong id="profileTotalShipments">12</strong>
+                                    <span>Shipments</span>
                                 </div>
-                                
-                                <div style="margin-bottom: 20px;">
-                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Email Address</label>
-                                    <input type="email" id="profileEmail" class="profile-input" value="john@example.com" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
-                                </div>
-                                
-                                <div style="margin-bottom: 20px;">
-                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Phone Number</label>
-                                    <input type="tel" id="profilePhone" class="profile-input" value="+1 (123) 456-7890" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
-                                </div>
-                                
-                                <div style="margin-bottom: 20px;">
-                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Account Type</label>
-                                    <input type="text" id="profileAccountType" class="profile-input" value="Personal" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" disabled>
-                                </div>
-                                
-                                <div style="display: flex; gap: 10px;">
-                                    <button class="btn" id="editProfileBtn">Edit Profile</button>
-                                    <button class="btn" id="changePasswordBtn" style="background: transparent; color: var(--primary); border: 1px solid var(--primary);">Change Password</button>
+                                <div>
+                                    <strong id="profileActiveShipments">3</strong>
+                                    <span>Active</span>
                                 </div>
                             </div>
-                            
-                            <!-- Avatar/Stats -->
-                            <div style="flex: 1; min-width: 200px; text-align: center;">
-                                <div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                                    <span style="font-size: 3rem; color: white; font-weight: 600;" id="profileAvatar">JD</span>
+
+                            <p class="profile-summary-meta">Member since <span id="profileMemberSince">Jan 2026</span></p>
+
+                            <button class="btn profile-edit-btn" id="editProfileBtn"><i class="fas fa-pen"></i> Edit Profile</button>
+                        </div>
+
+                        <!-- Details card: contact info + security, read-only until Edit is used -->
+                        <div class="card profile-details-card">
+                            <div class="card-header">
+                                <h3>Contact Information</h3>
+                            </div>
+                            <dl class="profile-detail-list">
+                                <div class="profile-detail-row">
+                                    <dt>Email Address</dt>
+                                    <dd id="profileEmailDisplay">john@example.com</dd>
                                 </div>
-                                
-                                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
-                                    <h4 style="margin-bottom: 10px;">Account Stats</h4>
-                                    <p><strong>Member Since:</strong> <span id="profileMemberSince">Jan 2026</span></p>
-                                    <p><strong>Total Shipments:</strong> <span id="profileTotalShipments">12</span></p>
-                                    <p><strong>Active Shipments:</strong> <span id="profileActiveShipments">3</span></p>
+                                <div class="profile-detail-row">
+                                    <dt>Phone Number</dt>
+                                    <dd id="profilePhoneDisplay">Not set</dd>
                                 </div>
+                                <div class="profile-detail-row">
+                                    <dt>Account Type</dt>
+                                    <dd id="profileAccountTypeDisplay">Personal</dd>
+                                </div>
+                            </dl>
+
+                            <div class="card-header profile-section-header">
+                                <h3>Security</h3>
+                            </div>
+                            <div class="profile-detail-row">
+                                <dt>Password</dt>
+                                <dd><button class="btn profile-secondary-btn" id="changePasswordBtn">Change Password</button></dd>
                             </div>
                         </div>
                     </div>
@@ -741,6 +744,68 @@
                 </div>
                 
                 <button type="submit" class="btn">Save User</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="editProfileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Profile</h3>
+                <button class="modal-close" onclick="closeEditProfileModal()">&times;</button>
+            </div>
+
+            <form id="editProfileForm">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        <img id="editAvatarPreview" src="" alt="Avatar" style="width:100%; height:100%; object-fit: cover; display:none;">
+                        <span id="editAvatarInitial" style="font-size: 2rem; color: white; font-weight: 600;">JD</span>
+                    </div>
+                    <input type="file" id="editAvatarInput" accept="image/*" style="display:none;">
+                    <button type="button" class="btn" id="chooseAvatarBtn" style="background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 6px 14px; font-size: 0.85rem;">Change Photo</button>
+                    <button type="button" id="removeAvatarBtn" style="background: none; border: none; color: #dc3545; font-size: 0.8rem; margin-left: 8px; cursor: pointer; display:none;">Remove</button>
+                </div>
+
+                <div class="form-group">
+                    <label>First Name</label>
+                    <input type="text" id="editFirstName" required>
+                </div>
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <input type="text" id="editLastName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="editEmail" disabled style="background:#f5f5f5; cursor: not-allowed;">
+                    <small style="color:#999;">Contact support to change your email.</small>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="editPhone">
+                </div>
+
+                <button type="submit" class="btn" id="saveProfileBtn">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change Password</h3>
+                <button class="modal-close" onclick="closeChangePasswordModal()">&times;</button>
+            </div>
+
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="newPassword" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" id="confirmNewPassword" required minlength="6">
+                </div>
+                <button type="submit" class="btn">Update Password</button>
             </form>
         </div>
     </div>

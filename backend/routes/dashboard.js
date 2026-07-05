@@ -288,6 +288,70 @@ router.delete('/shipments/:id', protect, async (req, res) => {
 });
 
 // =============================================
+// GET CURRENT USER'S PROFILE
+// =============================================
+router.get('/profile', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.json({ success: true, data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// UPDATE CURRENT USER'S PROFILE (name, phone, avatar)
+// =============================================
+const MAX_AVATAR_LENGTH = 1.5 * 1024 * 1024; // ~1.5MB of base64 text, i.e. a small resized photo
+
+router.patch('/profile', protect, async (req, res) => {
+    try {
+        const { firstName, lastName, phone, avatar } = req.body;
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Name: only touch it if the caller sent name parts
+        if (firstName !== undefined || lastName !== undefined) {
+            const currentParts = (user.name || '').split(' ');
+            const newFirst = (firstName !== undefined ? firstName : currentParts[0] || '').trim();
+            const newLast = (lastName !== undefined ? lastName : currentParts.slice(1).join(' ')).trim();
+            const combined = `${newFirst} ${newLast}`.trim();
+            if (!combined) {
+                return res.status(400).json({ success: false, message: 'Name cannot be empty' });
+            }
+            user.name = combined;
+        }
+
+        if (phone !== undefined) {
+            user.phone = String(phone).trim();
+        }
+
+        // Avatar: '' clears it, a data URI replaces it, undefined leaves it untouched
+        if (avatar !== undefined) {
+            if (avatar === '') {
+                user.avatar = '';
+            } else if (typeof avatar !== 'string' || !avatar.startsWith('data:image/')) {
+                return res.status(400).json({ success: false, message: 'Avatar must be an image' });
+            } else if (avatar.length > MAX_AVATAR_LENGTH) {
+                return res.status(400).json({ success: false, message: 'That image is too large. Please choose a smaller photo.' });
+            } else {
+                user.avatar = avatar;
+            }
+        }
+
+        await user.save();
+        res.json({ success: true, data: user });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
 // GET ALL USERS (Admin only)
 // =============================================
 router.get('/users', protect, async (req, res) => {

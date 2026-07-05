@@ -13,8 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set Profile Info
     document.getElementById('userDisplayName').textContent = user.name || 'User';
-    document.getElementById('userAvatar').textContent = (user.name || 'U').charAt(0).toUpperCase();
     document.getElementById('userRole').textContent = user.role === 'admin' ? 'Administrator' : 'Customer';
+    applyAvatar(user.name, user.avatar);
+    window.currentAvatarDataUrl = user.avatar || '';
 
     // Show/hide admin menu based on role
     const adminMenus = document.querySelectorAll('.admin-menu');
@@ -30,6 +31,33 @@ document.addEventListener('DOMContentLoaded', function() {
     setupTabSwitching();
     loadDashboardData(token, user);
 });
+
+// =============================================
+// AVATAR HELPER (shows the real photo if set, else initials)
+// =============================================
+function applyAvatar(name, avatarUrl) {
+    const initial = (name || 'U').charAt(0).toUpperCase();
+    const targets = [
+        { img: 'userAvatarImg', span: 'userAvatarInitial' },
+        { img: 'profileAvatarImg', span: 'profileAvatar' },
+        { img: 'editAvatarPreview', span: 'editAvatarInitial' }
+    ];
+    targets.forEach(t => {
+        const imgEl = document.getElementById(t.img);
+        const spanEl = document.getElementById(t.span);
+        if (spanEl) spanEl.textContent = initial;
+        if (!imgEl) return;
+        if (avatarUrl) {
+            imgEl.src = avatarUrl;
+            imgEl.style.display = 'block';
+            if (spanEl) spanEl.style.display = 'none';
+        } else {
+            imgEl.style.display = 'none';
+            imgEl.src = '';
+            if (spanEl) spanEl.style.display = '';
+        }
+    });
+}
 
 // =============================================
 // TAB SWITCHING
@@ -160,6 +188,41 @@ function renderRecentShipments(shipments) {
     `).join('');
 }
 
+// =============================================
+// MY SHIPMENTS (logged-in user's own shipments)
+// =============================================
+async function loadUserShipments() {
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch('/api/dashboard/shipments?limit=50', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        if (result.success) renderUserShipments(result.data);
+    } catch (err) {
+        console.error('Error loading your shipments:', err);
+    }
+}
+
+function renderUserShipments(shipments) {
+    const tbody = document.getElementById('userShipmentsBody');
+    if (!tbody) return;
+    if (!shipments.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No shipments found</td></tr>';
+        return;
+    }
+    // Column order matches the #userShipments table headers: Tracking #, Destination, Status, Date, Action
+    tbody.innerHTML = shipments.map(s => `
+        <tr>
+            <td><strong>${s.trackingNumber || 'N/A'}</strong></td>
+            <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
+            <td><span class="status-badge status-${s.status}">${(s.status || '').replace('_', ' ').toUpperCase()}</span></td>
+            <td>${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
+            <td><button class="action-btn" onclick="viewShipment('${s.trackingNumber}')" title="Track"><i class="fas fa-search"></i></button></td>
+        </tr>
+    `).join('');
+}
+
 async function loadAllShipments() {
     const token = localStorage.getItem('token');
     try {
@@ -229,25 +292,63 @@ function renderUsers(users) {
 // =============================================
 // PROFILE FUNCTIONS
 // =============================================
-function loadProfileData() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    document.getElementById('profileFirstName').value = (user.name || '').split(' ')[0] || '';
-    document.getElementById('profileLastName').value = (user.name || '').split(' ').slice(1).join(' ') || '';
-    document.getElementById('profileEmail').value = user.email || '';
-    document.getElementById('profilePhone').value = user.phone || '';
-    document.getElementById('profileAccountType').value = user.accountType || 'Personal';
-    document.getElementById('profileAvatar').textContent = (user.name || 'U').charAt(0).toUpperCase();
-    document.getElementById('profileTotalShipments').textContent = document.getElementById('totalShipments')?.textContent || '0';
-    document.getElementById('profileActiveShipments').textContent = document.getElementById('transitShipments')?.textContent || '0';
+async function loadProfileData() {
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch('/api/dashboard/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Could not load profile');
+
+        const user = result.data;
+
+        // Keep localStorage's copy of the user in sync with the server
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        localStorage.setItem('user', JSON.stringify({ ...storedUser, ...user, id: user._id }));
+
+        document.getElementById('profileNameDisplay').textContent = user.name || 'Unnamed User';
+        document.getElementById('profileEmailDisplay').textContent = user.email || '—';
+        document.getElementById('profilePhoneDisplay').textContent = user.phone || 'Not set';
+
+        const accountTypeLabel = user.accountType
+            ? user.accountType.charAt(0).toUpperCase() + user.accountType.slice(1)
+            : 'Personal';
+        document.getElementById('profileAccountTypeDisplay').textContent = accountTypeLabel;
+        document.getElementById('profileAccountTypeBadge').textContent = accountTypeLabel;
+
+        const memberSinceEl = document.getElementById('profileMemberSince');
+        if (memberSinceEl) {
+            memberSinceEl.textContent = user.createdAt
+                ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                : '—';
+        }
+        document.getElementById('profileTotalShipments').textContent = document.getElementById('totalShipments')?.textContent || '0';
+        document.getElementById('profileActiveShipments').textContent = document.getElementById('transitShipments')?.textContent || '0';
+
+        window.currentAvatarDataUrl = user.avatar || '';
+        applyAvatar(user.name, user.avatar);
+    } catch (err) {
+        console.error('Error loading profile:', err);
+    }
 }
 
 document.getElementById('editProfileBtn')?.addEventListener('click', () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const nameParts = (user.name || '').split(' ');
+    const fullName = document.getElementById('profileNameDisplay').textContent.trim();
+    const nameParts = fullName.split(' ');
+    const email = document.getElementById('profileEmailDisplay').textContent.trim();
+    const phone = document.getElementById('profilePhoneDisplay').textContent.trim();
+
     document.getElementById('editFirstName').value = nameParts[0] || '';
     document.getElementById('editLastName').value = nameParts.slice(1).join(' ') || '';
-    document.getElementById('editEmail').value = user.email || '';
-    document.getElementById('editPhone').value = user.phone || '';
+    document.getElementById('editEmail').value = email;
+    document.getElementById('editPhone').value = phone === 'Not set' ? '' : phone;
+
+    window.pendingAvatarDataUrl = window.currentAvatarDataUrl || '';
+    window.avatarRemoved = false;
+    applyAvatar(fullName, window.currentAvatarDataUrl);
+    document.getElementById('removeAvatarBtn').style.display = window.currentAvatarDataUrl ? 'inline' : 'none';
+
     document.getElementById('editProfileModal').classList.add('active');
 });
 
@@ -258,24 +359,110 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', () => {
 window.closeEditProfileModal = () => document.getElementById('editProfileModal').classList.remove('active');
 window.closeChangePasswordModal = () => document.getElementById('changePasswordModal').classList.remove('active');
 
+// Photo picker: resize client-side so we don't ship a multi-megabyte image to the server
+document.getElementById('chooseAvatarBtn')?.addEventListener('click', () => {
+    document.getElementById('editAvatarInput').click();
+});
+
+document.getElementById('editAvatarInput')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        alert('Please choose an image file.');
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Please choose an image smaller than 5MB.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+            const maxSize = 300;
+            let { width, height } = img;
+            if (width > height && width > maxSize) {
+                height *= maxSize / width;
+                width = maxSize;
+            } else if (height > maxSize) {
+                width *= maxSize / height;
+                height = maxSize;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+            window.pendingAvatarDataUrl = dataUrl;
+            window.avatarRemoved = false;
+            document.getElementById('editAvatarPreview').src = dataUrl;
+            document.getElementById('editAvatarPreview').style.display = 'block';
+            document.getElementById('editAvatarInitial').style.display = 'none';
+            document.getElementById('removeAvatarBtn').style.display = 'inline';
+        };
+        img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('removeAvatarBtn')?.addEventListener('click', () => {
+    window.pendingAvatarDataUrl = '';
+    window.avatarRemoved = true;
+    document.getElementById('editAvatarPreview').style.display = 'none';
+    document.getElementById('editAvatarInitial').style.display = '';
+    document.getElementById('removeAvatarBtn').style.display = 'none';
+});
+
 document.getElementById('editProfileForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const updatedUser = {
-        ...user,
-        name: document.getElementById('editFirstName').value + ' ' + document.getElementById('editLastName').value,
-        email: document.getElementById('editEmail').value,
-        phone: document.getElementById('editPhone').value
-    };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    document.getElementById('profileFirstName').value = document.getElementById('editFirstName').value;
-    document.getElementById('profileLastName').value = document.getElementById('editLastName').value;
-    document.getElementById('profileEmail').value = document.getElementById('editEmail').value;
-    document.getElementById('profilePhone').value = document.getElementById('editPhone').value;
-    document.getElementById('profileAvatar').textContent = updatedUser.name.charAt(0).toUpperCase();
-    document.getElementById('userDisplayName').textContent = updatedUser.name;
-    alert('Profile updated!');
-    closeEditProfileModal();
+    const saveBtn = document.getElementById('saveProfileBtn');
+    const firstName = document.getElementById('editFirstName').value.trim();
+    const lastName = document.getElementById('editLastName').value.trim();
+    const phone = document.getElementById('editPhone').value.trim();
+
+    if (!firstName) {
+        alert('First name is required.');
+        return;
+    }
+
+    const payload = { firstName, lastName, phone };
+    if (window.avatarRemoved) {
+        payload.avatar = '';
+    } else if (window.pendingAvatarDataUrl && window.pendingAvatarDataUrl !== window.currentAvatarDataUrl) {
+        payload.avatar = window.pendingAvatarDataUrl;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    try {
+        const res = await fetch('/api/dashboard/profile', {
+            method: 'PATCH',
+            headers: getHeaders(),
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Could not update profile');
+
+        const updatedUser = result.data;
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        localStorage.setItem('user', JSON.stringify({ ...storedUser, ...updatedUser, id: updatedUser._id }));
+
+        document.getElementById('profileNameDisplay').textContent = updatedUser.name;
+        document.getElementById('profilePhoneDisplay').textContent = updatedUser.phone || 'Not set';
+        document.getElementById('userDisplayName').textContent = updatedUser.name;
+
+        window.currentAvatarDataUrl = updatedUser.avatar || '';
+        applyAvatar(updatedUser.name, updatedUser.avatar);
+
+        closeEditProfileModal();
+    } catch (err) {
+        alert('❌ ' + err.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+    }
 });
 
 document.getElementById('changePasswordForm')?.addEventListener('submit', (e) => {
