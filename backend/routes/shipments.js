@@ -62,11 +62,11 @@ router.post('/create', async (req, res) => {
             sender,
             recipient,
             package: packageDetails,
-            status: 'pending',
+            status: 'pending_approval',
             trackingHistory: [{
-                status: 'pending',
+                status: 'pending_approval',
                 location: sender.city,
-                description: 'Shipment information received'
+                description: 'Awaiting admin approval'
             }]
         });
 

@@ -7,6 +7,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        /* Subtle pulse for placeholders until real data replaces them */
+        .loading {
+            opacity: 0.35;
+            animation: statPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes statPulse {
+            0%, 100% { opacity: 0.35; }
+            50% { opacity: 0.6; }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -119,7 +130,7 @@
                                 <i class="fas fa-box"></i>
                             </div>
                             <div class="stat-info">
-                                <h3 id="totalShipments">12</h3>
+                                <h3 id="totalShipments" class="stat-value loading">&ndash;</h3>
                                 <p>Total Shipments</p>
                             </div>
                         </div>
@@ -129,7 +140,7 @@
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="stat-info">
-                                <h3 id="deliveredShipments">8</h3>
+                                <h3 id="deliveredShipments" class="stat-value loading">&ndash;</h3>
                                 <p>Delivered</p>
                             </div>
                         </div>
@@ -139,7 +150,7 @@
                                 <i class="fas fa-truck"></i>
                             </div>
                             <div class="stat-info">
-                                <h3 id="transitShipments">3</h3>
+                                <h3 id="transitShipments" class="stat-value loading">&ndash;</h3>
                                 <p>In Transit</p>
                             </div>
                         </div>
@@ -149,7 +160,7 @@
                                 <i class="fas fa-clock"></i>
                             </div>
                             <div class="stat-info">
-                                <h3 id="pendingShipments">1</h3>
+                                <h3 id="pendingShipments" class="stat-value loading">&ndash;</h3>
                                 <p>Pending</p>
                             </div>
                         </div>
@@ -200,7 +211,7 @@
                                 <i class="fas fa-users"></i>
                             </div>
                             <div class="stat-info">
-                                <h3 id="totalUsers">1,284</h3>
+                                <h3 id="totalUsers" class="stat-value loading">&ndash;</h3>
                                 <p>Total Users</p>
                             </div>
                         </div>
@@ -210,7 +221,7 @@
                                 <i class="fas fa-box"></i>
                             </div>
                             <div class="stat-info">
-                                <h3 id="totalShipmentsAdmin">3,592</h3>
+                                <h3 id="totalShipmentsAdmin" class="stat-value loading">&ndash;</h3>
                                 <p>Total Shipments</p>
                             </div>
                         </div>
@@ -220,7 +231,7 @@
                                 <i class="fas fa-clock"></i>
                             </div>
                             <div class="stat-info">
-                                <h3 id="activeShipments">147</h3>
+                                <h3 id="activeShipments" class="stat-value loading">&ndash;</h3>
                                 <p>Active Shipments</p>
                             </div>
                         </div>
@@ -230,7 +241,7 @@
                                 <i class="fas fa-dollar-sign"></i>
                             </div>
                             <div class="stat-info">
-                                <h3 id="revenue">$45,289</h3>
+                                <h3 id="revenue" class="stat-value loading">&ndash;</h3>
                                 <p>Revenue (MTD)</p>
                             </div>
                         </div>
@@ -550,23 +561,23 @@
                                 <img id="profileAvatarImg" src="" alt="Avatar" style="display:none;">
                                 <span id="profileAvatar">JD</span>
                             </div>
-                            <h3 class="profile-summary-name" id="profileNameDisplay">John Doe</h3>
-                            <span class="profile-summary-badge" id="profileAccountTypeBadge">Personal</span>
+                            <h3 class="profile-summary-name loading" id="profileNameDisplay">&ndash;</h3>
+                            <span class="profile-summary-badge loading" id="profileAccountTypeBadge">&ndash;</span>
 
                             <div class="profile-summary-divider"></div>
 
                             <div class="profile-summary-stats">
                                 <div>
-                                    <strong id="profileTotalShipments">12</strong>
+                                    <strong id="profileTotalShipments" class="stat-value loading">&ndash;</strong>
                                     <span>Shipments</span>
                                 </div>
                                 <div>
-                                    <strong id="profileActiveShipments">3</strong>
+                                    <strong id="profileActiveShipments" class="stat-value loading">&ndash;</strong>
                                     <span>Active</span>
                                 </div>
                             </div>
 
-                            <p class="profile-summary-meta">Member since <span id="profileMemberSince">Jan 2026</span></p>
+                            <p class="profile-summary-meta">Member since <span id="profileMemberSince" class="loading">&ndash;</span></p>
 
                             <button class="btn profile-edit-btn" id="editProfileBtn"><i class="fas fa-pen"></i> Edit Profile</button>
                         </div>
@@ -579,15 +590,15 @@
                             <dl class="profile-detail-list">
                                 <div class="profile-detail-row">
                                     <dt>Email Address</dt>
-                                    <dd id="profileEmailDisplay">john@example.com</dd>
+                                    <dd id="profileEmailDisplay" class="loading">&ndash;</dd>
                                 </div>
                                 <div class="profile-detail-row">
                                     <dt>Phone Number</dt>
-                                    <dd id="profilePhoneDisplay">Not set</dd>
+                                    <dd id="profilePhoneDisplay" class="loading">&ndash;</dd>
                                 </div>
                                 <div class="profile-detail-row">
                                     <dt>Account Type</dt>
-                                    <dd id="profileAccountTypeDisplay">Personal</dd>
+                                    <dd id="profileAccountTypeDisplay" class="loading">&ndash;</dd>
                                 </div>
                             </dl>
 

@@ -92,9 +92,21 @@ function setupTabSwitching() {
             // Show selected section
             if (contentSections[tabId]) {
                 contentSections[tabId].style.display = 'block';
-                if (tabId === 'user-shipments') loadUserShipments();
-                if (tabId === 'admin-shipments') loadAllShipments();
-                if (tabId === 'admin-users') loadAllUsers();
+                if (tabId === 'user-shipments') {
+                    const usBody = document.getElementById('userShipmentsBody');
+                    if (usBody) usBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading your shipments...</td></tr>';
+                    loadUserShipments();
+                }
+                if (tabId === 'admin-shipments') {
+                    const asBody = document.getElementById('allShipmentsBody');
+                    if (asBody) asBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading shipments...</td></tr>';
+                    loadAllShipments();
+                }
+                if (tabId === 'admin-users') {
+                    const auBody = document.getElementById('usersBody');
+                    if (auBody) auBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading users...</td></tr>';
+                    loadAllUsers();
+                }
                 if (tabId === 'user-profile') setTimeout(loadProfileData, 100);
                 if (tabId === 'user-addresses') {
                     fetchAddresses(); // Injected hook to automatically load database entries
@@ -125,8 +137,25 @@ function setupTabSwitching() {
 // DATA LOADING
 // =============================================
 async function loadDashboardData(token, user) {
-    await loadDashboardStats(token);
-    await loadRecentShipments(token, user);
+    // Every call here is an independent GET that renders into its own part of
+    // the page -- none of them depend on another one finishing first. Awaiting
+    // them one at a time (as this used to) means the total wait is the SUM of
+    // every round trip; running them together means it's roughly the slowest
+    // single one. This is the main fix for "the dashboard takes forever to load."
+    const calls = [
+        loadDashboardStats(token),
+        loadRecentShipments(token, user)
+    ];
+
+    // Admins land on the Admin Dashboard overview, which has its own
+    // "Recent Shipments - All Users" and "User Management" tables.
+    // Load them up front so the overview isn't empty until you happen
+    // to visit the All Shipments / Users tabs first.
+    if (user.role === 'admin') {
+        calls.push(loadAllShipments(), loadAllUsers(), loadPendingApprovals());
+    }
+
+    await Promise.all(calls);
 }
 
 async function loadDashboardStats(token) {
@@ -142,10 +171,13 @@ async function loadDashboardStats(token) {
             setElementText('transitShipments', stats.inTransitShipments || 0);
             setElementText('pendingShipments', stats.pendingShipments || 0);
             setElementText('totalUsers', stats.totalUsers || 0);
-            setElementText('totalShipmentsAdmin', stats.totalShipments || 0);
+            setElementText('totalShipmentsAdmin', stats.totalShipmentsOrg || 0);
             setElementText('activeShipments', stats.activeShipments || 0);
             const revenueEl = document.getElementById('revenue');
-            if (revenueEl) revenueEl.textContent = `$${(stats.revenue || 45289).toLocaleString()}`;
+            if (revenueEl) {
+                revenueEl.textContent = `$${(stats.revenue || 45289).toLocaleString()}`;
+                revenueEl.classList.remove('loading');
+            }
         }
     } catch (err) {
         console.error('Error loading stats:', err);
@@ -154,14 +186,17 @@ async function loadDashboardStats(token) {
 
 function setElementText(id, value) {
     const el = document.getElementById(id);
-    if (el) el.textContent = value;
+    if (!el) return;
+    el.textContent = value;
+    el.classList.remove('loading');
 }
 
 async function loadRecentShipments(token, user) {
     try {
-        const url = user.role === 'admin'
-            ? '/api/dashboard/shipments?limit=5'
-            : `/api/dashboard/shipments?limit=5&userId=${user.id}`;
+        // This feeds the customer-side "Recent Shipments" widget, so it's always
+        // scoped to the logged-in user's own shipments -- admins included, since
+        // an admin can also hold shipments as a customer.
+        const url = `/api/dashboard/shipments?limit=5&userId=${user.id}`;
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         const result = await res.json();
         if (result.success) renderRecentShipments(result.data);
@@ -193,8 +228,11 @@ function renderRecentShipments(shipments) {
 // =============================================
 async function loadUserShipments() {
     const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
     try {
-        const res = await fetch('/api/dashboard/shipments?limit=50', {
+        // "My Shipments" is the customer-side view -- always the logged-in user's
+        // own shipments, admin or not.
+        const res = await fetch(`/api/dashboard/shipments?limit=50&userId=${user.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await res.json();
@@ -237,13 +275,16 @@ async function loadAllShipments() {
 }
 
 function renderAllShipments(shipments) {
-    const tbody = document.getElementById('allShipmentsBody');
-    if (!tbody) return;
-    if (!shipments.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No shipments found</td></tr>';
-        return;
-    }
-    tbody.innerHTML = shipments.map(s => `
+    // Two tables show this same data: the overview-pane preview (allShipmentsBody)
+    // and the dedicated "Shipments" sidebar tab (adminShipmentsBody). Keep both in sync.
+    const tbodies = ['allShipmentsBody', 'adminShipmentsBody']
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+    if (!tbodies.length) return;
+
+    const html = !shipments.length
+        ? '<tr><td colspan="5" style="text-align:center;">No shipments found</td></tr>'
+        : shipments.map(s => `
         <tr>
             <td><strong>${s.trackingNumber || 'N/A'}</strong></td>
             <td>${s.userId?.name || 'N/A'}</td>
@@ -256,6 +297,86 @@ function renderAllShipments(shipments) {
             </td>
         </tr>
     `).join('');
+
+    tbodies.forEach(tbody => tbody.innerHTML = html);
+}
+
+// =============================================
+// PENDING APPROVALS (Admin only)
+// =============================================
+async function loadPendingApprovals() {
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch('/api/dashboard/shipments?status=pending_approval&limit=100', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        if (result.success) renderPendingApprovals(result.data);
+    } catch (err) {
+        console.error('Error loading pending approvals:', err);
+    }
+}
+
+function renderPendingApprovals(shipments) {
+    const container = document.getElementById('pendingApprovalsContainer');
+    const countEl = document.getElementById('pendingCount');
+    if (countEl) countEl.textContent = shipments.length;
+    if (!container) return;
+
+    if (!shipments.length) {
+        container.innerHTML = '<p style="color:#888; padding: 12px 0; margin: 0;">No shipments awaiting approval.</p>';
+        return;
+    }
+
+    container.innerHTML = shipments.map(s => `
+        <div class="pending-approval-row" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #eee;">
+            <div>
+                <strong>${s.trackingNumber || 'N/A'}</strong>
+                <span style="color:#666;"> — ${s.userId?.name || 'Unknown customer'}</span><br>
+                <small style="color:#999;">${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''} · Requested ${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</small>
+            </div>
+            <div style="display:flex; gap:8px; flex-shrink:0;">
+                <button class="btn" style="background:#2e7d32; color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer;" onclick="approveShipment('${s._id}')">Approve</button>
+                <button class="btn" style="background:#d32f2f; color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer;" onclick="rejectShipment('${s._id}')">Reject</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function approveShipment(id) {
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`/api/dashboard/shipments/${id}/approve`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Could not approve shipment');
+
+        // Approval changes the shipment's status (now counts as active) and
+        // removes it from the pending list, so refresh everything it touches
+        // -- these three are independent, run them together.
+        await Promise.all([loadPendingApprovals(), loadDashboardStats(token), loadAllShipments()]);
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
+}
+
+async function rejectShipment(id) {
+    if (!confirm('Reject this shipment request? It will be permanently deleted and cannot be undone.')) return;
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`/api/dashboard/shipments/${id}/reject`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Could not reject shipment');
+
+        await Promise.all([loadPendingApprovals(), loadDashboardStats(token), loadAllShipments()]);
+    } catch (err) {
+        alert('❌ ' + err.message);
+    }
 }
 
 async function loadAllUsers() {
@@ -272,13 +393,16 @@ async function loadAllUsers() {
 }
 
 function renderUsers(users) {
-    const tbody = document.getElementById('usersBody');
-    if (!tbody) return;
-    if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No users found</td></tr>';
-        return;
-    }
-    tbody.innerHTML = users.map(u => `
+    // Two tables show this same data: the overview-pane preview (usersBody)
+    // and the dedicated "Users" sidebar tab (adminUsersBody). Keep both in sync.
+    const tbodies = ['usersBody', 'adminUsersBody']
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+    if (!tbodies.length) return;
+
+    const html = !users.length
+        ? '<tr><td colspan="5" style="text-align:center;">No users found</td></tr>'
+        : users.map(u => `
         <tr>
             <td>${u.name || 'N/A'}</td>
             <td>${u.email || 'N/A'}</td>
@@ -287,6 +411,8 @@ function renderUsers(users) {
             <td><button class="action-btn" onclick="editUser('${u._id}')" title="Edit"><i class="fas fa-edit"></i></button></td>
         </tr>
     `).join('');
+
+    tbodies.forEach(tbody => tbody.innerHTML = html);
 }
 
 // =============================================
@@ -294,6 +420,8 @@ function renderUsers(users) {
 // =============================================
 async function loadProfileData() {
     const token = localStorage.getItem('token');
+    const editBtn = document.getElementById('editProfileBtn');
+    if (editBtn) editBtn.disabled = true;
     try {
         const res = await fetch('/api/dashboard/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -307,29 +435,62 @@ async function loadProfileData() {
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
         localStorage.setItem('user', JSON.stringify({ ...storedUser, ...user, id: user._id }));
 
-        document.getElementById('profileNameDisplay').textContent = user.name || 'Unnamed User';
-        document.getElementById('profileEmailDisplay').textContent = user.email || '—';
-        document.getElementById('profilePhoneDisplay').textContent = user.phone || 'Not set';
+        const nameEl = document.getElementById('profileNameDisplay');
+        nameEl.textContent = user.name || 'Unnamed User';
+        nameEl.classList.remove('loading');
+
+        const emailEl = document.getElementById('profileEmailDisplay');
+        emailEl.textContent = user.email || '—';
+        emailEl.classList.remove('loading');
+
+        const phoneEl = document.getElementById('profilePhoneDisplay');
+        phoneEl.textContent = user.phone || 'Not set';
+        phoneEl.classList.remove('loading');
 
         const accountTypeLabel = user.accountType
             ? user.accountType.charAt(0).toUpperCase() + user.accountType.slice(1)
             : 'Personal';
-        document.getElementById('profileAccountTypeDisplay').textContent = accountTypeLabel;
-        document.getElementById('profileAccountTypeBadge').textContent = accountTypeLabel;
+        const accountTypeDisplayEl = document.getElementById('profileAccountTypeDisplay');
+        accountTypeDisplayEl.textContent = accountTypeLabel;
+        accountTypeDisplayEl.classList.remove('loading');
+
+        const accountTypeBadgeEl = document.getElementById('profileAccountTypeBadge');
+        accountTypeBadgeEl.textContent = accountTypeLabel;
+        accountTypeBadgeEl.classList.remove('loading');
 
         const memberSinceEl = document.getElementById('profileMemberSince');
         if (memberSinceEl) {
             memberSinceEl.textContent = user.createdAt
                 ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
                 : '—';
+            memberSinceEl.classList.remove('loading');
         }
         document.getElementById('profileTotalShipments').textContent = document.getElementById('totalShipments')?.textContent || '0';
-        document.getElementById('profileActiveShipments').textContent = document.getElementById('transitShipments')?.textContent || '0';
+        document.getElementById('profileTotalShipments').classList.remove('loading');
+
+        // Active Shipments here must reflect actual active status (approved and
+        // not yet delivered), not "In Transit" -- fetch it fresh so an approval
+        // that just happened shows up immediately, even without a full reload.
+        try {
+            const statsRes = await fetch('/api/dashboard/stats', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const statsResult = await statsRes.json();
+            if (statsResult.success) {
+                const el = document.getElementById('profileActiveShipments');
+                el.textContent = statsResult.data.activeShipmentsPersonal ?? 0;
+                el.classList.remove('loading');
+            }
+        } catch (statsErr) {
+            console.error('Error loading active shipment count:', statsErr);
+        }
 
         window.currentAvatarDataUrl = user.avatar || '';
         applyAvatar(user.name, user.avatar);
     } catch (err) {
         console.error('Error loading profile:', err);
+    } finally {
+        if (editBtn) editBtn.disabled = false;
     }
 }
 

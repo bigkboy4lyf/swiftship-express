@@ -625,6 +625,11 @@ td {
     gap: 8px;
 }
 
+.profile-edit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .profile-details-card .profile-section-header {
     margin-top: 28px;
 }

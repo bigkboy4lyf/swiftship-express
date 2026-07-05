@@ -5,6 +5,19 @@ const jwt = require('jsonwebtoken');
 const Shipment = require('../models/Shipment');
 const User = require('../models/User');
 
+// A shipment stops being "active" once it's fully resolved -- delivered to the
+// customer, or rejected (rejected requests are deleted outright, so this is
+// mostly defensive for any legacy data). If a new terminal status is ever
+// added, add it here.
+const TERMINAL_STATUSES = ['delivered', 'rejected'];
+
+// A shipment sitting at 'pending_approval' hasn't been accepted into the
+// pipeline yet -- nothing is actually happening with it, so it does NOT count
+// as active. The moment an admin approves it (status -> 'pending'), it starts
+// counting as active from then on. If rejected, the record is deleted, so it
+// stops existing entirely rather than lingering as an inactive status.
+const AWAITING_DECISION_STATUSES = ['pending_approval'];
+
 // Protection Middleware
 const protect = async (req, res, next) => {
     try {
@@ -27,45 +40,81 @@ const protect = async (req, res, next) => {
 router.get('/stats', protect, async (req, res) => {
     try {
         const isAdmin = req.user.role === 'admin';
-        let totalShipments, deliveredShipments, inTransitShipments, pendingShipments, pendingApproval;
 
-        if (isAdmin) {
-            totalShipments = await Shipment.countDocuments();
-            deliveredShipments = await Shipment.countDocuments({ status: 'delivered' });
-            inTransitShipments = await Shipment.countDocuments({ status: { $in: ['in_transit', 'out_for_delivery'] } });
-            pendingShipments = await Shipment.countDocuments({ status: { $in: ['pending', 'processing'] } });
-            pendingApproval = await Shipment.countDocuments({ status: 'pending_approval' });
-        } else {
-            totalShipments = await Shipment.countDocuments({ userId: req.user.id });
-            deliveredShipments = await Shipment.countDocuments({ userId: req.user.id, status: 'delivered' });
-            inTransitShipments = await Shipment.countDocuments({ userId: req.user.id, status: { $in: ['in_transit', 'out_for_delivery'] } });
-            pendingShipments = await Shipment.countDocuments({ userId: req.user.id, status: { $in: ['pending', 'processing', 'pending_approval'] } });
-            pendingApproval = await Shipment.countDocuments({ userId: req.user.id, status: 'pending_approval' });
-        }
+        // Personal stats: always computed for the logged-in user's own shipments,
+        // regardless of role. This is what powers the customer-side dashboard cards
+        // and "My Shipments" tab -- an admin acting as a customer should see their
+        // own numbers here, not the whole organization's.
+        // None of these six queries depend on each other, so run them together
+        // instead of waiting for each one before starting the next.
+        const [
+            totalShipments,
+            deliveredShipments,
+            inTransitShipments,
+            pendingShipments,
+            pendingApproval,
+            activeShipmentsPersonal
+        ] = await Promise.all([
+            Shipment.countDocuments({ userId: req.user.id }),
+            Shipment.countDocuments({ userId: req.user.id, status: 'delivered' }),
+            Shipment.countDocuments({ userId: req.user.id, status: { $in: ['in_transit', 'out_for_delivery'] } }),
+            // 'pending_approval' belongs in "Pending," not "Active" -- see
+            // AWAITING_DECISION_STATUSES above. It only becomes active once an
+            // admin approves it.
+            Shipment.countDocuments({ userId: req.user.id, status: { $in: ['pending', 'processing', 'pending_approval'] } }),
+            Shipment.countDocuments({ userId: req.user.id, status: 'pending_approval' }),
+            // A shipment is "active" for this user the moment it's approved (status
+            // moves off pending_approval) and stays active until it's delivered or
+            // removed -- same rule as the org-wide count below, just scoped to this
+            // one user. This is what the Profile page's "Active Shipments" reads.
+            Shipment.countDocuments({
+                userId: req.user.id,
+                status: { $nin: [...TERMINAL_STATUSES, ...AWAITING_DECISION_STATUSES] }
+            })
+        ]);
 
-        let totalUsers = 0, activeShipments = 0, revenue = 45289;
+        // Org-wide stats: only meaningful for admins, and only used by the
+        // admin-only cards (Total Users, Total Shipments (org), Active Shipments, Revenue).
+        // Same idea -- these five are independent of each other too.
+        let totalUsers = 0, totalShipmentsOrg = 0, activeShipments = 0, revenue = 45289, pendingApprovalOrg = 0;
         if (isAdmin) {
-            totalUsers = await User.countDocuments();
-            activeShipments = await Shipment.countDocuments({ status: { $nin: ['delivered', 'rejected'] } });
-            
-            // Computes balance natively inside MongoDB to avoid Out-of-Memory crashes
-            const revenueAggregation = await Shipment.aggregate([
-                { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+            const [
+                totalUsersResult,
+                totalShipmentsOrgResult,
+                activeShipmentsResult,
+                pendingApprovalOrgResult,
+                revenueAggregation
+            ] = await Promise.all([
+                User.countDocuments(),
+                Shipment.countDocuments(),
+                Shipment.countDocuments({ status: { $nin: [...TERMINAL_STATUSES, ...AWAITING_DECISION_STATUSES] } }),
+                Shipment.countDocuments({ status: 'pending_approval' }),
+                // Computes balance natively inside MongoDB to avoid Out-of-Memory crashes
+                Shipment.aggregate([{ $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }])
             ]);
+            totalUsers = totalUsersResult;
+            totalShipmentsOrg = totalShipmentsOrgResult;
+            activeShipments = activeShipmentsResult;
+            pendingApprovalOrg = pendingApprovalOrgResult;
             revenue = revenueAggregation[0]?.totalRevenue || 45289;
         }
 
         res.json({
             success: true,
             data: {
+                // Personal (customer-side) numbers -- always the requesting user's own
                 totalShipments,
                 deliveredShipments,
                 inTransitShipments,
                 pendingShipments,
                 pendingApproval,
+                activeShipmentsPersonal,
+                // Org-wide (admin-side) numbers -- only populated for admins
                 totalUsers,
+                totalShipmentsOrg,
                 activeShipments,
-                revenue
+                revenue,
+                pendingApprovalOrg
             }
         });
     } catch (error) {
@@ -127,9 +176,10 @@ router.post('/shipments', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'User ID is required' });
         }
 
-        // Set status based on role (Forced to 'pending' for automatic customer tracking)
+        // Set status based on role: customer-created shipments need admin
+        // sign-off first; shipments an admin creates directly don't.
         if (!shipmentData.status) {
-            shipmentData.status = 'pending';
+            shipmentData.status = role === 'admin' ? 'pending' : 'pending_approval';
         }
 
         // Generate tracking number
@@ -176,6 +226,8 @@ router.patch('/shipments/:id/approve', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Shipment is not pending approval' });
         }
 
+        // This is the exact moment the shipment starts counting as "active" --
+        // see AWAITING_DECISION_STATUSES above.
         shipment.status = 'pending';
         shipment.trackingHistory.push({
             status: 'pending',
@@ -209,16 +261,11 @@ router.patch('/shipments/:id/reject', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Shipment is not pending approval' });
         }
 
-        shipment.status = 'rejected';
-        shipment.trackingHistory.push({
-            status: 'rejected',
-            location: shipment.currentLocation?.city || 'Processing Center',
-            description: 'Rejected by admin',
-            timestamp: new Date()
-        });
+        // Rejecting an unapproved request removes it outright -- there's no
+        // lingering 'rejected' shipment sitting in the system afterward.
+        await Shipment.findByIdAndDelete(req.params.id);
 
-        await shipment.save();
-        res.json({ success: true, data: shipment });
+        res.json({ success: true, message: 'Shipment request rejected and removed', data: { _id: req.params.id } });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
