@@ -353,6 +353,10 @@ document.getElementById('editProfileBtn')?.addEventListener('click', () => {
 });
 
 document.getElementById('changePasswordBtn')?.addEventListener('click', () => {
+    document.getElementById('changePasswordForm').reset();
+    const errorEl = document.getElementById('passwordFormError');
+    errorEl.style.display = 'none';
+    errorEl.style.color = '#dc3545';
     document.getElementById('changePasswordModal').classList.add('active');
 });
 
@@ -465,16 +469,60 @@ document.getElementById('editProfileForm')?.addEventListener('submit', async (e)
     }
 });
 
-document.getElementById('changePasswordForm')?.addEventListener('submit', (e) => {
+document.getElementById('changePasswordForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const newPass = document.getElementById('newPassword').value;
-    const confirm = document.getElementById('confirmNewPassword').value;
-    if (newPass !== confirm) {
-        alert('Passwords do not match!');
+    const errorEl = document.getElementById('passwordFormError');
+    const saveBtn = document.getElementById('savePasswordBtn');
+    errorEl.style.display = 'none';
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmNewPassword').value;
+
+    const showError = (msg) => {
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+    };
+
+    if (newPassword.length < 6) {
+        showError('New password must be at least 6 characters.');
         return;
     }
-    alert('Password changed (demo)');
-    closeChangePasswordModal();
+    if (newPassword !== confirmPassword) {
+        showError('New passwords do not match.');
+        return;
+    }
+    if (newPassword === currentPassword) {
+        showError('New password must be different from your current password.');
+        return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Updating...';
+    try {
+        const res = await fetch('/api/dashboard/password', {
+            method: 'PATCH',
+            headers: getHeaders(),
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Could not update password');
+
+        errorEl.style.color = '#2e7d32';
+        errorEl.textContent = '✅ Password updated successfully.';
+        errorEl.style.display = 'block';
+        e.target.reset();
+        setTimeout(() => {
+            errorEl.style.color = '#dc3545';
+            errorEl.style.display = 'none';
+            closeChangePasswordModal();
+        }, 1200);
+    } catch (err) {
+        showError(err.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Update Password';
+    }
 });
 
 // =============================================

@@ -352,6 +352,79 @@ router.patch('/profile', protect, async (req, res) => {
 });
 
 // =============================================
+// CHANGE CURRENT USER'S PASSWORD
+// =============================================
+router.patch('/change-password', protect, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Current and new password are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+
+        // Password has select:false on the schema, so it must be explicitly requested here
+        const user = await User.findById(req.user.id).select('+password');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ success: false, message: 'New password must be different from your current password' });
+        }
+
+        user.password = newPassword; // the pre-save hook in User.js hashes this automatically
+        await user.save();
+
+        res.json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// CHANGE CURRENT USER'S PASSWORD
+// =============================================
+router.patch('/password', protect, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Current and new password are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+
+        // Password has select:false on the schema, so it must be explicitly requested here
+        const user = await User.findById(req.user.id).select('+password');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+
+        // Assigning to .password (not save-as-is) lets the existing pre('save') hook re-hash it
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
 // GET ALL USERS (Admin only)
 // =============================================
 router.get('/users', protect, async (req, res) => {

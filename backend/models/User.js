@@ -33,6 +33,17 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    resetCodeHash: {
+        // bcrypt hash of the current 6-digit reset code, never the plain code itself
+        type: String,
+        select: false,
+        default: null
+    },
+    resetCodeExpires: {
+        type: Date,
+        select: false,
+        default: null
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],

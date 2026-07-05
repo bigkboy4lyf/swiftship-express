@@ -29,6 +29,40 @@
             opacity: 0.7;
             pointer-events: none;
         }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 10px;
+            padding: 35px;
+            max-width: 420px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .modal-box-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            color: var(--gray);
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -90,7 +124,7 @@
                     </div>
                     
                     <div style="text-align: right; margin-bottom: 20px;">
-                        <a href="#" style="color: var(--primary); font-size: 0.9rem;">Forgot password?</a>
+                        <a href="#" id="forgotPasswordLink" style="color: var(--primary); font-size: 0.9rem;">Forgot password?</a>
                     </div>
                     
                     <button type="submit" class="btn" id="submitBtn" style="width: 100%; padding: 14px; font-size: 1.1rem; margin-bottom: 20px;">Login to Account</button>
@@ -102,6 +136,58 @@
             </div>
         </div>
     </section>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="forgotModalOverlay">
+        <div class="modal-box">
+            <button type="button" class="modal-box-close" id="forgotModalClose">&times;</button>
+
+            <!-- Step 1: request a code -->
+            <div id="forgotStep1">
+                <h3 style="margin-bottom: 10px; color: var(--primary);">Reset your password</h3>
+                <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 20px;">Enter the email on your account and we'll send you a 6-digit reset code.</p>
+                <div id="forgotAlert1" class="alert"></div>
+                <form id="forgotStep1Form">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display:block; margin-bottom:8px; font-weight:600;">Email Address</label>
+                        <input type="email" id="forgotEmail" required style="width:100%; padding:12px 15px; border:1px solid #ddd; border-radius:5px; font-size:1rem;">
+                    </div>
+                    <button type="submit" class="btn" id="forgotStep1Btn" style="width:100%; padding:12px;">Send Reset Code</button>
+                </form>
+            </div>
+
+            <!-- Step 2: enter code + choose new password -->
+            <div id="forgotStep2" style="display:none;">
+                <h3 style="margin-bottom: 10px; color: var(--primary);">Enter your code</h3>
+                <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 20px;">We sent a 6-digit code to <strong id="forgotEmailDisplay"></strong>. It expires in 15 minutes.</p>
+                <div id="forgotAlert2" class="alert"></div>
+                <form id="forgotStep2Form">
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; margin-bottom:8px; font-weight:600;">6-Digit Code</label>
+                        <input type="text" id="resetCode" maxlength="6" inputmode="numeric" required style="width:100%; padding:12px 15px; border:1px solid #ddd; border-radius:5px; letter-spacing:4px; text-align:center; font-size:1.2rem;">
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; margin-bottom:8px; font-weight:600;">New Password</label>
+                        <input type="password" id="resetNewPassword" required minlength="6" style="width:100%; padding:12px 15px; border:1px solid #ddd; border-radius:5px;">
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; margin-bottom:8px; font-weight:600;">Confirm New Password</label>
+                        <input type="password" id="resetConfirmPassword" required minlength="6" style="width:100%; padding:12px 15px; border:1px solid #ddd; border-radius:5px;">
+                    </div>
+                    <button type="submit" class="btn" id="forgotStep2Btn" style="width:100%; padding:12px; margin-bottom:12px;">Reset Password</button>
+                    <button type="button" id="resendCodeBtn" style="width:100%; background:none; border:none; color: var(--primary); font-size:0.85rem; cursor:pointer;">Didn't get a code? Resend</button>
+                </form>
+            </div>
+
+            <!-- Step 3: success -->
+            <div id="forgotStep3" style="display:none; text-align:center;">
+                <i class="fas fa-check-circle" style="font-size:3rem; color:#28a745; margin-bottom:15px;"></i>
+                <h3 style="margin-bottom:10px; color: var(--primary);">Password reset!</h3>
+                <p style="color: var(--gray); margin-bottom:20px;">You can now log in with your new password.</p>
+                <button type="button" class="btn" id="forgotDoneBtn" style="width:100%; padding:12px;">Back to Login</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer id="contact">
@@ -208,6 +294,137 @@
             alertDiv.style.display = 'block';
             submitBtn.classList.remove('loading');
             submitBtn.textContent = 'Login to Account';
+        }
+    });
+</script>
+
+<script>
+    // ===== Forgot Password Flow (independent of the login form above) =====
+    const forgotOverlay = document.getElementById('forgotModalOverlay');
+    const forgotLink = document.getElementById('forgotPasswordLink');
+    let forgotEmailValue = '';
+
+    function showForgotStep(step) {
+        document.getElementById('forgotStep1').style.display = step === 1 ? 'block' : 'none';
+        document.getElementById('forgotStep2').style.display = step === 2 ? 'block' : 'none';
+        document.getElementById('forgotStep3').style.display = step === 3 ? 'block' : 'none';
+    }
+
+    function openForgotModal() {
+        document.getElementById('forgotStep1Form').reset();
+        document.getElementById('forgotAlert1').style.display = 'none';
+        showForgotStep(1);
+        forgotOverlay.classList.add('active');
+    }
+
+    function closeForgotModal() {
+        forgotOverlay.classList.remove('active');
+    }
+
+    function showForgotAlert(id, type, message) {
+        const el = document.getElementById(id);
+        el.className = 'alert ' + type;
+        el.textContent = message;
+        el.style.display = 'block';
+    }
+
+    forgotLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        openForgotModal();
+    });
+
+    document.getElementById('forgotModalClose')?.addEventListener('click', closeForgotModal);
+    document.getElementById('forgotDoneBtn')?.addEventListener('click', closeForgotModal);
+    forgotOverlay?.addEventListener('click', (e) => {
+        if (e.target === forgotOverlay) closeForgotModal();
+    });
+
+    // Step 1: request a code
+    document.getElementById('forgotStep1Form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('forgotStep1Btn');
+        const email = document.getElementById('forgotEmail').value.trim();
+        document.getElementById('forgotAlert1').style.display = 'none';
+
+        btn.classList.add('loading');
+        btn.textContent = 'Sending...';
+        try {
+            const res = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const result = await res.json();
+            if (!result.success) throw new Error(result.message || 'Something went wrong');
+
+            forgotEmailValue = email;
+            document.getElementById('forgotEmailDisplay').textContent = email;
+            document.getElementById('forgotStep2Form').reset();
+            document.getElementById('forgotAlert2').style.display = 'none';
+            showForgotStep(2);
+        } catch (err) {
+            showForgotAlert('forgotAlert1', 'error', err.message);
+        } finally {
+            btn.classList.remove('loading');
+            btn.textContent = 'Send Reset Code';
+        }
+    });
+
+    // Resend code
+    document.getElementById('resendCodeBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('resendCodeBtn');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        try {
+            await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: forgotEmailValue })
+            });
+            showForgotAlert('forgotAlert2', 'success', 'A new code has been sent.');
+        } catch (err) {
+            showForgotAlert('forgotAlert2', 'error', 'Could not resend the code. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Didn't get a code? Resend";
+        }
+    });
+
+    // Step 2: submit code + new password
+    document.getElementById('forgotStep2Form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('forgotStep2Btn');
+        const code = document.getElementById('resetCode').value.trim();
+        const newPassword = document.getElementById('resetNewPassword').value;
+        const confirmPassword = document.getElementById('resetConfirmPassword').value;
+        document.getElementById('forgotAlert2').style.display = 'none';
+
+        if (newPassword !== confirmPassword) {
+            showForgotAlert('forgotAlert2', 'error', 'Passwords do not match.');
+            return;
+        }
+        if (newPassword.length < 6) {
+            showForgotAlert('forgotAlert2', 'error', 'Password must be at least 6 characters.');
+            return;
+        }
+
+        btn.classList.add('loading');
+        btn.textContent = 'Resetting...';
+        try {
+            const res = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: forgotEmailValue, code, newPassword })
+            });
+            const result = await res.json();
+            if (!result.success) throw new Error(result.message || 'Could not reset password');
+
+            showForgotStep(3);
+        } catch (err) {
+            showForgotAlert('forgotAlert2', 'error', err.message);
+        } finally {
+            btn.classList.remove('loading');
+            btn.textContent = 'Reset Password';
         }
     });
 </script>
