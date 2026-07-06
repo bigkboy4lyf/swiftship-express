@@ -13,9 +13,11 @@ const TERMINAL_STATUSES = ['delivered', 'rejected'];
 
 // A shipment sitting at 'pending_approval' hasn't been accepted into the
 // pipeline yet -- nothing is actually happening with it, so it does NOT count
-// as active. The moment an admin approves it (status -> 'pending'), it starts
-// counting as active from then on. If rejected, the record is deleted, so it
-// stops existing entirely rather than lingering as an inactive status.
+// as active. The moment an admin approves it (status -> 'processing', at the
+// sorting facility), it starts counting as active from then on. If rejected,
+// the record is deleted, so it stops existing entirely rather than lingering
+// as an inactive status. 'pending' is no longer assigned anywhere in this
+// pipeline -- it's kept only for any legacy records that already have it.
 const AWAITING_DECISION_STATUSES = ['pending_approval'];
 
 // Protection Middleware
@@ -177,9 +179,11 @@ router.post('/shipments', protect, async (req, res) => {
         }
 
         // Set status based on role: customer-created shipments need admin
-        // sign-off first; shipments an admin creates directly don't.
+        // sign-off first (pending_approval). Shipments an admin creates
+        // directly skip that step and go straight into the pipeline at
+        // 'processing', same place an approved customer shipment lands.
         if (!shipmentData.status) {
-            shipmentData.status = role === 'admin' ? 'pending' : 'pending_approval';
+            shipmentData.status = role === 'admin' ? 'processing' : 'pending_approval';
         }
 
         // Generate tracking number
@@ -187,14 +191,20 @@ router.post('/shipments', protect, async (req, res) => {
             shipmentData.trackingNumber = 'SS' + Date.now().toString().slice(-9);
         }
 
+        // Admin-created shipments enter directly at the sorting facility,
+        // same as a freshly-approved customer shipment.
+        if (shipmentData.status === 'processing' && !shipmentData.currentLocation) {
+            shipmentData.currentLocation = { facility: 'Sorting Facility', city: 'Sorting Facility', timestamp: new Date() };
+        }
+
         // Add initial tracking history
-        const statusDesc = shipmentData.status === 'pending_approval' 
-            ? 'Awaiting admin approval' 
-            : 'Shipment created';
-        
+        const statusDesc = shipmentData.status === 'pending_approval'
+            ? 'Awaiting shipment confirmation'
+            : 'Shipment created - now processing at sorting facility';
+
         shipmentData.trackingHistory = [{
             status: shipmentData.status,
-            location: shipmentData.currentLocation?.city || 'Processing Center',
+            location: shipmentData.currentLocation?.city || 'Sorting Facility',
             description: statusDesc,
             timestamp: new Date()
         }];
@@ -227,12 +237,19 @@ router.patch('/shipments/:id/approve', protect, async (req, res) => {
         }
 
         // This is the exact moment the shipment starts counting as "active" --
-        // see AWAITING_DECISION_STATUSES above.
-        shipment.status = 'pending';
+        // see AWAITING_DECISION_STATUSES above. Approval sends it straight into
+        // the pipeline at the sorting facility rather than sitting in a second,
+        // separate "pending" holding state.
+        shipment.status = 'processing';
+        shipment.currentLocation = {
+            facility: 'Sorting Facility',
+            city: 'Sorting Facility',
+            timestamp: new Date()
+        };
         shipment.trackingHistory.push({
-            status: 'pending',
-            location: shipment.currentLocation?.city || 'Processing Center',
-            description: 'Approved by admin',
+            status: 'processing',
+            location: 'Sorting Facility',
+            description: 'Shipment confirmed - now processing at sorting facility',
             timestamp: new Date()
         });
 

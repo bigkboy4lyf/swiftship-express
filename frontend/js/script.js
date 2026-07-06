@@ -32,6 +32,28 @@ window.addEventListener('scroll', () => {
 });
 
 // =============================================
+// STATUS LABELS (matches tracking.js / dashboard-ui.js wording)
+// =============================================
+var STATUS_LABELS = {
+    pending_approval: 'Awaiting Confirmation',
+    pending: 'Pending',
+    processing: 'Processing',
+    picked_up: 'Picked Up',
+    in_transit: 'In Transit',
+    out_for_delivery: 'Out For Delivery',
+    delivered: 'Delivered',
+    delayed: 'Delayed',
+    rejected: 'Rejected',
+    manifest_received: 'Manifest Received'
+};
+
+function getStatusLabel(status) {
+    if (STATUS_LABELS[status]) return STATUS_LABELS[status];
+    // Fallback for any status not in the map above, so nothing ever renders blank
+    return (status || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// =============================================
 // TRACKING FUNCTIONALITY (CHAIN STYLE)
 // =============================================
 const trackingForm = document.getElementById('trackingForm');
@@ -112,7 +134,7 @@ function displayTrackingResult(data, trackingNumber) {
                 <div class="timeline-item">
                     <div class="timeline-dot ${dotClass}"></div>
                     <div class="timeline-content">
-                        <div class="timeline-status">${entry.status.replace(/_/g, ' ').toUpperCase()}</div>
+                        <div class="timeline-status">${getStatusLabel(entry.status)}</div>
                         ${entry.location ? `<div class="timeline-location"><i class="fas fa-map-marker-alt"></i> ${entry.location}</div>` : ''}
                         ${entry.description ? `<div class="timeline-description">${entry.description}</div>` : ''}
                         <div class="timeline-date">
@@ -132,7 +154,7 @@ function displayTrackingResult(data, trackingNumber) {
             </div>
             <div class="info-item">
                 <div class="info-label">Current Status</div>
-                <div class="info-value" style="color: ${statusColor}">${(data.status || 'Processing').replace(/_/g, ' ').toUpperCase()}</div>
+                <div class="info-value" style="color: ${statusColor}">${getStatusLabel(data.status || 'processing')}</div>
             </div>
         </div>
         

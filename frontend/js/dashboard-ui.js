@@ -2,6 +2,43 @@
 // DASHBOARD UI - CONNECTED TO BACKEND
 // =============================================
 
+// =============================================
+// STATUS DISPLAY LABELS
+// =============================================
+// The database status codes (pending_approval, in_transit, etc.) are stable
+// identifiers used in queries and business logic -- they're not meant to be
+// shown to the user as-is. This is the single place that controls what's
+// actually displayed on a status badge.
+//
+// Customers and admins see DIFFERENT wording for the same underlying status.
+// An admin needs to know a shipment is sitting there waiting on a decision --
+// that's actionable information for them. A customer should never see any
+// hint that a human has to sign off on their order; to them it should just
+// look like the normal first step of the pipeline. Same status code, two
+// audiences, two labels.
+const ADMIN_STATUS_LABELS = {
+    pending_approval: 'Awaiting Confirmation',
+    pending: 'Pending',
+    processing: 'Processing',
+    picked_up: 'Picked Up',
+    in_transit: 'In Transit',
+    out_for_delivery: 'Out For Delivery',
+    delivered: 'Delivered',
+    delayed: 'Delayed',
+    rejected: 'Rejected'
+};
+
+const CUSTOMER_STATUS_LABELS = {
+    ...ADMIN_STATUS_LABELS
+};
+
+function getStatusLabel(status, audience = 'admin') {
+    const map = audience === 'customer' ? CUSTOMER_STATUS_LABELS : ADMIN_STATUS_LABELS;
+    if (map[status]) return map[status];
+    // Fallback for any status not in the map above, so nothing ever renders blank
+    return (status || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user'));
@@ -217,7 +254,7 @@ function renderRecentShipments(shipments) {
             <td><strong>${s.trackingNumber || 'N/A'}</strong></td>
             <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
             <td>${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
-            <td><span class="status-badge status-${s.status}">${(s.status || '').replace('_', ' ').toUpperCase()}</span></td>
+            <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status, 'customer').toUpperCase()}</span></td>
             <td><button class="action-btn" onclick="viewShipment('${s.trackingNumber}')" title="Track"><i class="fas fa-search"></i></button></td>
         </tr>
     `).join('');
@@ -254,7 +291,7 @@ function renderUserShipments(shipments) {
         <tr>
             <td><strong>${s.trackingNumber || 'N/A'}</strong></td>
             <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
-            <td><span class="status-badge status-${s.status}">${(s.status || '').replace('_', ' ').toUpperCase()}</span></td>
+            <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status, 'customer').toUpperCase()}</span></td>
             <td>${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
             <td><button class="action-btn" onclick="viewShipment('${s.trackingNumber}')" title="Track"><i class="fas fa-search"></i></button></td>
         </tr>
@@ -289,7 +326,7 @@ function renderAllShipments(shipments) {
             <td><strong>${s.trackingNumber || 'N/A'}</strong></td>
             <td>${s.userId?.name || 'N/A'}</td>
             <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
-            <td><span class="status-badge status-${s.status}">${(s.status || '').replace('_', ' ').toUpperCase()}</span></td>
+            <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status, 'admin').toUpperCase()}</span></td>
             <td>
                 <button class="action-btn" onclick="editShipment('${s._id}')" title="Edit"><i class="fas fa-edit"></i></button>
                 <button class="action-btn" onclick="updateShipmentStatus('${s._id}')" title="Update Status"><i class="fas fa-truck"></i></button>
@@ -802,6 +839,8 @@ window.editShipment = function(id) {
 };
 
 window.updateShipmentStatus = async function(id) {
+    // 'delayed' is the status an admin sets manually when a shipment needs to
+    // flag a hold-up. 'pending' is available for manual use too.
     const validStatuses = ['pending', 'processing', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'delayed'];
     const newStatus = prompt('Enter new status:\nValid options: pending, processing, picked_up, in_transit, out_for_delivery, delivered, delayed');
     
@@ -914,8 +953,34 @@ function showLoggedTrackingPopup(trackingNumber) {
         document.body.removeChild(overlay);
         const formElement = document.getElementById('quoteForm') || document.querySelector('#userQuote form');
         if (formElement) formElement.reset();
+
+        // Return to the "Start a Quote" card instead of leaving the form open
+        const formState = document.getElementById('quoteFormState');
+        const ctaState = document.getElementById('quoteCtaState');
+        if (formState) formState.style.display = 'none';
+        if (ctaState) ctaState.style.display = 'block';
+        const result = document.getElementById('dashQuoteResult');
+        if (result) result.style.display = 'none';
     });
 }
+
+// =============================================
+// QUOTE TAB: click-to-open form
+// =============================================
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#openQuoteFormBtn')) {
+        document.getElementById('quoteCtaState').style.display = 'none';
+        document.getElementById('quoteFormState').style.display = 'grid';
+    }
+    if (e.target.closest('#closeQuoteFormBtn')) {
+        document.getElementById('quoteFormState').style.display = 'none';
+        document.getElementById('quoteCtaState').style.display = 'block';
+        const form = document.getElementById('dashboardQuoteForm');
+        if (form) form.reset();
+        const result = document.getElementById('dashQuoteResult');
+        if (result) result.style.display = 'none';
+    }
+});
 
 // =============================================
 // QUOTE SUBMISSION & SHIPMENT PIPELINE
