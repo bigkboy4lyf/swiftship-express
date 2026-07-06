@@ -1,0 +1,1004 @@
+:root {
+    --sidebar-width: 260px;
+    --header-height: 70px;
+}
+
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    background: #f5f7fa;
+}
+
+/* Sidebar */
+.sidebar {
+    width: var(--sidebar-width);
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.sidebar-header .logo {
+    font-size: 1.5rem;
+    justify-content: center;
+}
+
+.sidebar-menu {
+    padding: 20px 0;
+}
+
+.sidebar-menu-item {
+    padding: 12px 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #555;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-menu-item:hover {
+    background: #f0f7ff;
+    color: var(--primary);
+}
+
+.sidebar-menu-item.active {
+    background: #f0f7ff;
+    color: var(--primary);
+    border-left-color: var(--primary);
+    font-weight: 600;
+}
+
+.sidebar-menu-item i {
+    width: 22px;
+    font-size: 1.2rem;
+}
+
+.admin-badge {
+    background: var(--accent);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+}
+
+.admin-divider {
+    border-top: 1px solid #eee;
+    margin: 20px 0;
+}
+
+.admin-label {
+    padding: 0 25px;
+    margin-bottom: 10px;
+    color: #999;
+    font-size: 0.8rem;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    padding: 20px;
+}
+
+/* Top Header */
+.dashboard-header {
+    background: white;
+    border-radius: 10px;
+    padding: 15px 25px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.header-search {
+    display: flex;
+    align-items: center;
+    background: #f5f7fa;
+    border-radius: 30px;
+    padding: 8px 20px;
+    width: 300px;
+}
+
+.header-search i {
+    color: #999;
+    margin-right: 10px;
+}
+
+.header-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.notification-badge {
+    position: relative;
+}
+
+.notification-badge i {
+    font-size: 1.3rem;
+    color: #555;
+    cursor: pointer;
+}
+
+.badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--accent);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+}
+
+.user-profile:hover {
+    background: #f5f7fa;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    overflow: hidden;
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-info {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .user-info {
+        display: block;
+        line-height: 1.3;
+    }
+    
+    .user-info h4 {
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+    }
+    
+    .user-info p {
+        font-size: 0.75rem;
+        color: #999;
+    }
+}
+
+/* Dashboard Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.stat-icon.blue { background: #e6f0ff; color: var(--primary); }
+.stat-icon.green { background: #e0f7e9; color: #28a745; }
+.stat-icon.orange { background: #fff0e6; color: var(--accent); }
+.stat-icon.purple { background: #f0e6ff; color: #6f42c1; }
+
+.stat-info h3 {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+}
+
+.stat-info p {
+    color: #777;
+    font-size: 0.9rem;
+}
+
+/* Cards */
+.card {
+    background: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    margin-bottom: 25px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.card-header h3 {
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.card-header a {
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    text-align: left;
+    padding: 12px 0;
+    color: #777;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-bottom: 2px solid #eee;
+}
+
+td {
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.status-delivered { background: #d4edda; color: #155724; }
+.status-in_transit { background: #fff3cd; color: #856404; }
+.status-pending { background: #f8d7da; color: #721c24; }
+.status-processing { background: #cce5ff; color: #004085; }
+/* Picked up sits between "processing" (blue) and "in transit" (yellow) in the
+   pipeline -- a teal reads as "moving, not yet en route" without being
+   confused for either neighbor. */
+.status-picked_up { background: #cff4fc; color: #055160; }
+/* Out for delivery sits between "in transit" (yellow) and "delivered"
+   (green) -- an amber signals "almost there" without repeating in_transit's
+   yellow. */
+.status-out_for_delivery { background: #ffe8cc; color: #7a4a00; }
+/* Delayed is manually set by an admin and should read as more urgent than
+   the standard "pending" pink, so it's a deeper, more saturated red. */
+.status-delayed { background: #f1aeb5; color: #58151c; font-weight: 700; }
+/* Rejected shipments are deleted on rejection going forward, so this mostly
+   covers older tracking-history entries created before that change. */
+.status-rejected { background: #e2e3e5; color: #41464b; }
+
+.action-btn {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 1rem;
+    margin: 0 5px;
+    transition: color 0.3s ease;
+}
+
+.action-btn:hover {
+    color: var(--primary);
+}
+
+.action-btn.delete:hover {
+    color: #dc3545;
+}
+
+/* Tabs */
+.dashboard-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    background: #f0f7ff;
+    color: var(--primary);
+}
+
+.tab-btn.active {
+    background: var(--primary);
+    color: white;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Quick Track */
+.quick-track {
+    display: flex;
+    gap: 10px;
+}
+
+.quick-track input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.track-result {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.track-result.success {
+    background: #f0f7ff;
+    border-left: 4px solid var(--primary);
+}
+
+.track-result.error {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 70px;
+        overflow: visible;
+    }
+    
+    .sidebar .logo span,
+    .sidebar-menu-item span {
+        display: none;
+    }
+    
+    .sidebar-menu-item {
+        padding: 15px;
+        justify-content: center;
+    }
+    
+    .sidebar-menu-item i {
+        margin: 0;
+    }
+    
+    .admin-label {
+        display: none;
+    }
+    
+    .main-content {
+        margin-left: 70px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-search {
+        width: 200px;
+    }
+}
+
+/* Pending Approvals */
+#pendingApprovalsCard {
+    border-left: 4px solid #ff9800;
+}
+
+#pendingApprovalsContainer {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#pendingApprovalsContainer .pending-item {
+    border: 1px solid #eee;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background: #fff8e1;
+    transition: all 0.3s ease;
+}
+
+#pendingApprovalsContainer .pending-item:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* Awaiting Confirmation reads as an early, calm "in review" state -- it's a
+   soft indigo so it doesn't get confused with the in_transit yellow or the
+   processing blue elsewhere in the pipeline. */
+.status-pending_approval {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+/* =============================================
+   Profile Tab
+   ============================================= */
+.profile-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.profile-summary-card {
+    text-align: center;
+    padding: 30px 25px;
+}
+
+.profile-summary-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 2.1rem;
+    color: white;
+    font-weight: 600;
+}
+
+.profile-summary-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-summary-name {
+    font-size: 1.15rem;
+    color: #222;
+    margin-bottom: 8px;
+}
+
+.profile-summary-badge {
+    display: inline-block;
+    background: #eef4ff;
+    color: var(--primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 14px;
+    border-radius: 20px;
+}
+
+.profile-summary-divider {
+    border-top: 1px solid #eee;
+    margin: 22px 0 20px;
+}
+
+.profile-summary-stats {
+    display: flex;
+    justify-content: center;
+    gap: 36px;
+    margin-bottom: 18px;
+}
+
+.profile-summary-stats > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-summary-stats strong {
+    font-size: 1.4rem;
+    color: #222;
+}
+
+.profile-summary-stats span {
+    font-size: 0.72rem;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+}
+
+.profile-summary-meta {
+    font-size: 0.8rem;
+    color: #999;
+    margin-bottom: 22px;
+}
+
+.profile-edit-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.profile-edit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.profile-details-card .profile-section-header {
+    margin-top: 28px;
+}
+
+.profile-detail-list {
+    margin: 0;
+}
+
+.profile-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 20px;
+}
+
+.profile-detail-row:last-child {
+    border-bottom: none;
+}
+
+.profile-detail-row dt {
+    color: #888;
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.profile-detail-row dd {
+    margin: 0;
+    color: #222;
+    font-size: 0.95rem;
+    text-align: right;
+    word-break: break-word;
+}
+
+.profile-secondary-btn {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.profile-secondary-btn:hover {
+    background: var(--primary);
+    color: white;
+}
+/* =============================================
+   Quote Tab
+   ============================================= */
+.quote-subtitle {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Collapsed "start a quote" state */
+.quote-cta {
+    text-align: center;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 50px 20px 30px;
+}
+
+.quote-cta-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #e6f0ff;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    margin: 0 auto 18px;
+}
+
+.quote-cta h4 {
+    font-size: 1.15rem;
+    color: #222;
+    margin-bottom: 8px;
+}
+
+.quote-cta p {
+    color: #777;
+    font-size: 0.9rem;
+    margin-bottom: 22px;
+}
+
+.quote-cta-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.quote-cta-btn:hover {
+    opacity: 0.9;
+}
+
+/* Expanded form + result layout */
+.quote-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+    .quote-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.quote-form .form-group label {
+    font-size: 0.9rem;
+}
+
+.quote-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+@media (max-width: 560px) {
+    .quote-field-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.quote-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Buttons get an explicit color instead of inheriting .btn's default text
+   color -- a transparent-background button with no color set here is how
+   the Reset button ended up invisible (white text on white background). */
+.quote-btn-primary {
+    flex: 1;
+    background: var(--primary);
+    color: white;
+    border: none;
+}
+
+.quote-btn-secondary {
+    flex: 1;
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+
+.quote-btn-accent {
+    flex: 1;
+    background: var(--accent);
+    color: white;
+    border: none;
+}
+
+.quote-btn-text {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0 6px;
+}
+
+.quote-btn-text:hover {
+    color: #555;
+    text-decoration: underline;
+}
+
+/* Quote result panel */
+.quote-result {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    border-left: 4px solid var(--primary);
+}
+
+.quote-result h4 {
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+.quote-result-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.quote-result-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+@media (max-width: 480px) {
+    .quote-result-grid-2,
+    .quote-result-grid-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.quote-result-tile {
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.quote-result-tile.center {
+    text-align: center;
+}
+
+.quote-result-tile.total {
+    background: var(--primary);
+    color: white;
+}
+
+.quote-result-tile-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.quote-result-tile-label.small {
+    font-size: 0.7rem;
+}
+
+.quote-result-tile.total .quote-result-tile-label {
+    color: white;
+    opacity: 0.9;
+}
+
+.quote-result-tile-value {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.quote-result-tile-value.small {
+    font-size: 0.9rem;
+}
+
+.quote-result-tile.total .quote-result-tile-value {
+    color: white;
+    font-size: 1.2rem;
+}
+
+.quote-fineprint {
+    font-size: 0.7rem;
+    color: #999;
+    margin-top: 10px;
+    text-align: center;
+}
+
+.quote-info-box {
+    background: #e8f4fd;
+    border-radius: 10px;
+    padding: 20px;
+    border-left: 4px solid var(--primary);
+    margin-top: 20px;
+}
+
+.quote-info-box h4 {
+    color: var(--primary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quote-info-box ul {
+    list-style: none;
+    padding-left: 0;
+    font-size: 0.9rem;
+}
+
+.quote-info-box li {
+    margin-bottom: 5px;
+}
+
+.quote-info-box li i {
+    color: var(--accent);
+}
+
+.address-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.address-card {
+    background: #f8f9fa;
+    border: 1px solid #eef0f2;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.address-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.address-card-details {
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.address-card-details strong {
+    color: #111;
+    font-size: 1.05rem;
+}
+
+.address-card-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.address-card-actions .btn-delete {
+    background: #fff5f5;
+    color: #e53e3e;
+    border: 1px solid #fed7d7;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.address-card-actions .btn-delete:hover {
+    background: #e53e3e;
+    color: white;
+    border-color: #e53e3e;
+}
