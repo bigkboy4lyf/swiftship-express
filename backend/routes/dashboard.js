@@ -503,4 +503,107 @@ router.get('/users', protect, async (req, res) => {
     }
 });
 
+// =============================================
+// CREATE USER (Admin only)
+// =============================================
+router.post('/users', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const { name, email, password, phone, role, accountType, status } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
+        }
+
+        const user = new User({ name, email, password, phone, role, accountType, status });
+        await user.save(); // pre('save') hook hashes the password
+
+        const created = user.toObject();
+        delete created.password;
+
+        res.status(201).json({ success: true, data: created });
+    } catch (error) {
+        // Mongoose duplicate-key error on the unique email index
+        if (error.code === 11000) {
+            return res.status(400).json({ success: false, message: 'A user with that email already exists' });
+        }
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// UPDATE USER (Admin only)
+// =============================================
+router.put('/users/:id', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const { name, email, phone, role, accountType, status, password } = req.body;
+        const isSelf = req.user.id === req.params.id;
+
+        // An admin editing their own account can't demote themselves or lock
+        // themselves out -- otherwise a single click could strand every admin
+        // with no way back in.
+        if (isSelf && role && role !== 'admin') {
+            return res.status(400).json({ success: false, message: "You can't remove your own admin role" });
+        }
+        if (isSelf && status && status !== 'active') {
+            return res.status(400).json({ success: false, message: "You can't deactivate your own account" });
+        }
+
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        if (name !== undefined) user.name = name;
+        if (email !== undefined) user.email = email;
+        if (phone !== undefined) user.phone = phone;
+        if (role !== undefined) user.role = role;
+        if (accountType !== undefined) user.accountType = accountType;
+        if (status !== undefined) user.status = status;
+        if (password) user.password = password; // pre('save') hook re-hashes it
+
+        await user.save();
+
+        const updated = user.toObject();
+        delete updated.password;
+
+        res.json({ success: true, data: updated });
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ success: false, message: 'A user with that email already exists' });
+        }
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// DELETE USER (Admin only)
+// =============================================
+router.delete('/users/:id', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+        if (req.user.id === req.params.id) {
+            return res.status(400).json({ success: false, message: "You can't delete your own account" });
+        }
+
+        const user = await User.findByIdAndDelete(req.params.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;

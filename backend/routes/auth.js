@@ -76,6 +76,17 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
+        // Checked only after the password is confirmed correct, so a wrong
+        // guess never reveals whether an account is deactivated.
+        if (user.status && user.status !== 'active') {
+            return res.status(403).json({
+                success: false,
+                message: user.status === 'suspended'
+                    ? 'This account has been suspended. Please contact support.'
+                    : 'This account is inactive. Please contact support to reactivate it.'
+            });
+        }
+
         const token = createToken(user);
 
         res.json({

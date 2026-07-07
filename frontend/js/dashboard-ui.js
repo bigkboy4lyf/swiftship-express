@@ -423,11 +423,18 @@ async function loadAllUsers() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await res.json();
-        if (result.success) renderUsers(result.data);
+        if (result.success) {
+            lastLoadedUsers = result.data;
+            renderUsers(result.data);
+        }
     } catch (err) {
         console.error('Error loading users:', err);
     }
 }
+
+// Populated by loadAllUsers(); lets editUser()/toggleUserStatus() find a
+// record by id without firing off another network request.
+let lastLoadedUsers = [];
 
 function renderUsers(users) {
     // Two tables show this same data: the overview-pane preview (usersBody)
@@ -437,17 +444,29 @@ function renderUsers(users) {
         .filter(Boolean);
     if (!tbodies.length) return;
 
+    const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
+
     const html = !users.length
         ? '<tr><td colspan="5" style="text-align:center;">No users found</td></tr>'
-        : users.map(u => `
+        : users.map(u => {
+            const isSelf = u._id === loggedInUser.id || u._id === loggedInUser._id;
+            const isActive = (u.status || 'active') === 'active';
+            return `
         <tr>
             <td>${u.name || 'N/A'}</td>
             <td>${u.email || 'N/A'}</td>
             <td>${u.role === 'admin' ? 'Administrator' : 'Customer'}</td>
-            <td><span class="status-badge ${u.status === 'active' ? 'status-delivered' : 'status-pending'}">${(u.status || 'active').toUpperCase()}</span></td>
-            <td><button class="action-btn" onclick="editUser('${u._id}')" title="Edit"><i class="fas fa-edit"></i></button></td>
+            <td><span class="status-badge ${isActive ? 'status-delivered' : 'status-pending'}">${(u.status || 'active').toUpperCase()}</span></td>
+            <td>
+                <button class="action-btn" onclick="editUser('${u._id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="action-btn" onclick="toggleUserStatus('${u._id}')" title="${isActive ? 'Deactivate' : 'Activate'}" ${isSelf ? 'disabled' : ''}>
+                    <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i>
+                </button>
+                <button class="action-btn delete" onclick="deleteUser('${u._id}')" title="Delete" ${isSelf ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
+            </td>
         </tr>
-    `).join('');
+    `;
+        }).join('');
 
     tbodies.forEach(tbody => tbody.innerHTML = html);
 }
@@ -895,8 +914,141 @@ window.deleteShipment = async function(id) {
     }
 };
 
+// =============================================
+// USER MANAGEMENT MODAL (Add / Edit / Delete / Activate-Deactivate)
+// =============================================
+window.openUserModal = function(mode, user) {
+    const form = document.getElementById('userForm');
+    const passwordGroup = document.getElementById('userFormPasswordGroup');
+    const passwordInput = document.getElementById('userFormPassword');
+    const passwordHint = document.getElementById('userFormPasswordHint');
+
+    form.reset();
+    document.getElementById('userFormId').value = '';
+
+    if (mode === 'edit' && user) {
+        document.getElementById('userModalTitle').textContent = 'Edit User';
+        document.getElementById('userFormId').value = user._id;
+        document.getElementById('userFormName').value = user.name || '';
+        document.getElementById('userFormEmail').value = user.email || '';
+        document.getElementById('userFormRole').value = user.role || 'user';
+        document.getElementById('userFormStatus').value = user.status || 'active';
+        passwordInput.required = false;
+        passwordHint.style.display = 'block';
+    } else {
+        document.getElementById('userModalTitle').textContent = 'Add New User';
+        passwordInput.required = true;
+        passwordHint.style.display = 'none';
+    }
+
+    document.getElementById('userModal').classList.add('active');
+};
+
+window.closeUserModal = function() {
+    document.getElementById('userModal').classList.remove('active');
+};
+
+document.getElementById('closeUserModal')?.addEventListener('click', window.closeUserModal);
+document.getElementById('addUserBtn')?.addEventListener('click', () => window.openUserModal('add'));
+
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('userModal');
+    if (event.target === modal) window.closeUserModal();
+});
+
+document.getElementById('userForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('userFormId').value;
+    const isEdit = !!id;
+    const password = document.getElementById('userFormPassword').value;
+
+    const userData = {
+        name: document.getElementById('userFormName').value,
+        email: document.getElementById('userFormEmail').value,
+        role: document.getElementById('userFormRole').value,
+        status: document.getElementById('userFormStatus').value
+    };
+    // Only send a password if one was actually typed -- on edit, blank means
+    // "leave it alone"; on add, the field is required so it's always present.
+    if (password) userData.password = password;
+
+    try {
+        const res = await fetch(`/api/dashboard/users${isEdit ? '/' + id : ''}`, {
+            method: isEdit ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(userData)
+        });
+        const result = await res.json();
+        if (result.success) {
+            window.closeUserModal();
+            loadAllUsers();
+        } else {
+            alert('❌ Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('❌ Error saving user: ' + error.message);
+    }
+});
+
 window.editUser = function(id) {
-    alert('Edit user – implement as needed.');
+    const user = lastLoadedUsers.find(u => u._id === id);
+    if (!user) {
+        alert('Could not find that user -- try refreshing the page.');
+        return;
+    }
+    window.openUserModal('edit', user);
+};
+
+window.toggleUserStatus = async function(id) {
+    const user = lastLoadedUsers.find(u => u._id === id);
+    if (!user) return;
+
+    const newStatus = (user.status || 'active') === 'active' ? 'inactive' : 'active';
+    if (!confirm(`${newStatus === 'active' ? 'Activate' : 'Deactivate'} ${user.name}?`)) return;
+
+    try {
+        const res = await fetch(`/api/dashboard/users/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+        const result = await res.json();
+        if (result.success) {
+            loadAllUsers();
+        } else {
+            alert('❌ Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('❌ Error updating status: ' + error.message);
+    }
+};
+
+window.deleteUser = async function(id) {
+    const user = lastLoadedUsers.find(u => u._id === id);
+    const label = user ? `${user.name} (${user.email})` : 'this user';
+    if (!confirm(`Delete ${label}? This can't be undone.`)) return;
+
+    try {
+        const res = await fetch(`/api/dashboard/users/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const result = await res.json();
+        if (result.success) {
+            loadAllUsers();
+        } else {
+            alert('❌ Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('❌ Error deleting user: ' + error.message);
+    }
 };
 
 document.getElementById('quickTrackBtn')?.addEventListener('click', function() {

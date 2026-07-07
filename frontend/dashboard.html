@@ -650,7 +650,7 @@
                     <div class="card">
                         <div class="card-header">
                             <h3>User Management</h3>
-                            <button class="btn" onclick="document.getElementById('userModal').classList.add('active')">+ New User</button>
+                            <button class="btn" onclick="window.openUserModal('add')">+ New User</button>
                         </div>
                         <table>
                             <thead>
@@ -740,19 +740,26 @@
             </div>
             
             <form id="userForm">
+                <input type="hidden" id="userFormId" value="">
                 <div class="form-group">
                     <label>Full Name</label>
-                    <input type="text" id="userName" required>
+                    <input type="text" id="userFormName" required>
                 </div>
                 
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="email" id="userEmail" required>
+                    <input type="email" id="userFormEmail" required>
+                </div>
+
+                <div class="form-group" id="userFormPasswordGroup">
+                    <label>Password</label>
+                    <input type="password" id="userFormPassword" minlength="6" placeholder="Minimum 6 characters">
+                    <small id="userFormPasswordHint" style="display:none; color:#999;">Leave blank to keep the current password.</small>
                 </div>
                 
                 <div class="form-group">
                     <label>Role</label>
-                    <select id="userRole">
+                    <select id="userFormRole">
                         <option value="user">User</option>
                         <option value="admin">Admin</option>
                     </select>
@@ -760,9 +767,10 @@
                 
                 <div class="form-group">
                     <label>Status</label>
-                    <select id="userStatus">
+                    <select id="userFormStatus">
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
                     </select>
                 </div>
                 
