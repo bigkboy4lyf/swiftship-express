@@ -83,9 +83,10 @@ header {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     font-weight: 700;
     color: var(--primary);
+    letter-spacing: -0.02em;
 }
 
 .logo i {
@@ -95,32 +96,71 @@ header {
 .nav-links {
     display: flex;
     list-style: none;
-    gap: 30px;
+    align-items: center;
+    gap: 6px;
+}
+
+.nav-links li {
+    display: flex;
+    align-items: center;
 }
 
 .nav-links a {
-    font-weight: 600;
-    padding: 5px 0;
+    display: inline-block;
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--dark);
+    padding: 8px 14px;
+    border-radius: 4px;
     position: relative;
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .nav-links a:hover {
     color: var(--primary);
+    background-color: rgba(0, 86, 179, 0.06);
 }
 
 .nav-links a::after {
     content: '';
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 0;
+    bottom: 3px;
+    left: 14px;
+    right: 14px;
+    width: auto;
     height: 2px;
     background-color: var(--primary);
-    transition: width 0.3s ease;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
 }
 
 .nav-links a:hover::after {
-    width: 100%;
+    transform: scaleX(1);
+}
+
+/* Visually separate account actions (Sign In / Dashboard / Logout) from the
+   primary nav links, and keep the CTA button clear of the pack */
+.nav-links li#signInItem,
+.nav-links li:has(#logoutBtn),
+.nav-links li:has(a[href="dashboard.html"]) {
+    margin-left: 8px;
+    padding-left: 14px;
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.nav-links a i {
+    margin-right: 6px;
+}
+
+.nav-links li:last-child {
+    margin-left: 10px;
+}
+
+.nav-links li:last-child a.btn {
+    padding: 10px 22px;
+    border-radius: 6px;
+    font-size: 0.95rem;
 }
 
 .mobile-menu-btn {
@@ -530,7 +570,21 @@ footer {
         padding: 15px 0;
         border-bottom: 1px solid #eee;
     }
-    
+
+    .nav-links li#signInItem,
+    .nav-links li:has(#logoutBtn),
+    .nav-links li:has(a[href="dashboard.html"]) {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+    }
+
+    .nav-links li:last-child {
+        margin-left: 0;
+        border-bottom: none;
+        padding-top: 10px;
+    }
+
     .hero {
         padding: 130px 0 80px;
     }
