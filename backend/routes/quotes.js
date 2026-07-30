@@ -2,9 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Shipment = require('../models/Shipment');
 
-// Your existing test route
-router.get('/test', (req, res) => res.json({message: 'Working!'}));
-
 // Calculate quote endpoint - Fully Aligned with Mongoose Schema Constraints
 router.post('/calculate', async (req, res) => {
     try {
@@ -140,60 +137,6 @@ router.post('/calculate', async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Convert quote to shipment
-router.post('/convert', async (req, res) => {
-    try {
-        const { quoteData } = req.body;
-        const user = req.user || { _id: quoteData.userId || null };
-        
-        // Create shipment from quote
-        const shipment = new Shipment({
-            trackingNumber: 'TRK-' + Date.now().toString().slice(-6) + Math.random().toString(36).substring(2, 5).toUpperCase(),
-            userId: user._id || '67b8b5d4c5e6f7a8b9c0d1e2',
-            status: 'pending',
-            serviceType: quoteData.serviceType || 'standard',
-            recipient: {
-                name: quoteData.senderName || 'Customer',
-                city: quoteData.destinationCountry || 'N/A',
-                country: quoteData.destinationCountry || 'N/A'
-            },
-            package: {
-                weight: quoteData.weight || 1,
-                dimensions: {
-                    length: 0,
-                    width: 0,
-                    height: 0
-                }
-            },
-            currentLocation: {
-                facility: 'Processing Center',
-                city: quoteData.originCountry || 'N/A',
-                country: quoteData.originCountry || 'N/A'
-            },
-            trackingHistory: [{
-                status: 'pending',
-                location: 'Order Received',
-                description: 'Shipment created from quote',
-                timestamp: new Date()
-            }]
-        });
-        
-        await shipment.save();
-        
-        res.json({
-            success: true,
-            data: {
-                trackingNumber: shipment.trackingNumber,
-                shipmentId: shipment._id,
-                totalPrice: quoteData.totalPrice || 0
-            }
-        });
-    } catch (error) {
-        console.error('Convert error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

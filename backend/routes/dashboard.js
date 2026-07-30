@@ -1,9 +1,8 @@
-// BACKEND dashboard.js - Runs on server
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const Shipment = require('../models/Shipment');
 const User = require('../models/User');
+const { protect } = require('../middleware/auth');
 
 // A shipment stops being "active" once it's fully resolved -- delivered to the
 // customer, or rejected (rejected requests are deleted outright, so this is
@@ -19,22 +18,6 @@ const TERMINAL_STATUSES = ['delivered', 'rejected'];
 // as an inactive status. 'pending' is no longer assigned anywhere in this
 // pipeline -- it's kept only for any legacy records that already have it.
 const AWAITING_DECISION_STATUSES = ['pending_approval'];
-
-// Protection Middleware
-const protect = async (req, res, next) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            return res.status(401).json({ success: false, message: 'No token provided' });
-        }
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'swiftship_secret_key_2023_change_this_later');
-        req.user = decoded;
-        next();
-    } catch (e) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
-};
 
 // =============================================
 // DASHBOARD STATS
@@ -418,7 +401,7 @@ router.patch('/profile', protect, async (req, res) => {
 // =============================================
 // CHANGE CURRENT USER'S PASSWORD
 // =============================================
-router.patch('/change-password', protect, async (req, res) => {
+router.patch('/password', protect, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
@@ -442,40 +425,6 @@ router.patch('/change-password', protect, async (req, res) => {
 
         if (currentPassword === newPassword) {
             return res.status(400).json({ success: false, message: 'New password must be different from your current password' });
-        }
-
-        user.password = newPassword; // the pre-save hook in User.js hashes this automatically
-        await user.save();
-
-        res.json({ success: true, message: 'Password updated successfully' });
-    } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
-    }
-});
-
-// =============================================
-// CHANGE CURRENT USER'S PASSWORD
-// =============================================
-router.patch('/password', protect, async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({ success: false, message: 'Current and new password are required' });
-        }
-        if (newPassword.length < 6) {
-            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
-        }
-
-        // Password has select:false on the schema, so it must be explicitly requested here
-        const user = await User.findById(req.user.id).select('+password');
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        const isMatch = await user.comparePassword(currentPassword);
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
         }
 
         // Assigning to .password (not save-as-is) lets the existing pre('save') hook re-hash it

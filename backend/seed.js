@@ -4,9 +4,14 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const Shipment = require('./models/Shipment');
 
+// Placeholder ObjectId -- swap for a real user's _id if you need the
+// seeded shipments to show up on a specific account's dashboard.
+const SEED_USER_ID = '000000000000000000000000';
+
 const testShipments = [
     {
         trackingNumber: 'SS123456789',
+        userId: SEED_USER_ID,
         status: 'in_transit',
         serviceType: 'express',
         sender: {
@@ -49,6 +54,7 @@ const testShipments = [
     },
     {
         trackingNumber: 'SS987654321',
+        userId: SEED_USER_ID,
         status: 'out_for_delivery',
         serviceType: 'standard',
         sender: {
@@ -87,6 +93,7 @@ const testShipments = [
     },
     {
         trackingNumber: 'SS567890123',
+        userId: SEED_USER_ID,
         status: 'delivered',
         serviceType: 'international',
         sender: {

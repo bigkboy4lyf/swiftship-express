@@ -1,18 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
-
-// Helper to create JWT
-const createToken = (user) => {
-    return jwt.sign(
-        { id: user._id, role: user.role },
-        process.env.JWT_SECRET || 'swiftship_secret_key_2023_change_this_later',
-        { expiresIn: '30d' }
-    );
-};
+const { createToken } = require('../middleware/auth');
 
 // =============================================
 // REGISTER NEW USER

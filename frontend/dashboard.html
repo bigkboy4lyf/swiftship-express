@@ -7,17 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard.css">
-    <style>
-        /* Subtle pulse for placeholders until real data replaces them */
-        .loading {
-            opacity: 0.35;
-            animation: statPulse 1.2s ease-in-out infinite;
-        }
-        @keyframes statPulse {
-            0%, 100% { opacity: 0.35; }
-            50% { opacity: 0.6; }
-        }
-    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -29,9 +18,8 @@
                     <span>SwiftShip</span>
                 </a>
             </div>
-            
+
             <div class="sidebar-menu" id="sidebarMenu">
-                <!-- User Menu -->
                 <div class="sidebar-menu-item active" data-tab="user-dashboard">
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
@@ -56,50 +44,22 @@
                     <i class="fas fa-user"></i>
                     <span>Profile</span>
                 </div>
-                
-                <!-- Admin Menu (hidden by default) -->
-                <div class="admin-divider"></div>
-                <div class="admin-label admin-menu">ADMIN</div>
-                
-                <div class="sidebar-menu-item admin-menu" data-tab="admin-dashboard">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Admin Dashboard <span class="admin-badge">Admin</span></span>
-                </div>
-                <div class="sidebar-menu-item admin-menu" data-tab="admin-shipments">
-                    <i class="fas fa-shipping-fast"></i>
-                    <span>All Shipments</span>
-                </div>
-                <div class="sidebar-menu-item admin-menu" data-tab="admin-users">
-                    <i class="fas fa-users"></i>
-                    <span>Users</span>
-                </div>
-                <div class="sidebar-menu-item admin-menu" data-tab="admin-reports">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Reports</span>
-                </div>
-                <div class="sidebar-menu-item admin-menu" data-tab="admin-settings">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </div>
+
+                <!-- Only shown for admins -->
+                <div class="admin-menu admin-divider"></div>
+                <a class="admin-menu sidebar-menu-item" href="admin.html">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Admin Panel</span>
+                </a>
             </div>
         </div>
-        
+
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Header - ALWAYS VISIBLE -->
             <div class="dashboard-header">
-                <div class="header-search">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Search...">
-                </div>
-                
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
                 <div class="header-actions">
-                    <div class="notification-badge">
-                        <i class="far fa-bell"></i>
-                        <span class="badge" id="notificationCount">3</span>
-                    </div>
-                    
-                    <div class="user-profile" id="userProfileMenu">
+                    <div class="user-profile">
                         <div class="user-avatar" id="userAvatar">
                             <img id="userAvatarImg" src="" alt="Avatar" style="display:none;">
                             <span id="userAvatarInitial">JD</span>
@@ -108,22 +68,16 @@
                             <h4 id="userDisplayName">John Doe</h4>
                             <p id="userRole">Customer</p>
                         </div>
-                        <i class="fas fa-chevron-down" style="font-size: 0.8rem; color: #999;"></i>
                     </div>
+                    <button class="header-icon-btn" id="logoutBtn" title="Log out">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
                 </div>
             </div>
-            
-            <!-- Dashboard Tabs (User/Admin toggle) -->
-            <div class="dashboard-tabs">
-                <button class="tab-btn active" data-role="user">User Dashboard</button>
-                <button class="tab-btn" data-role="admin" id="adminTabBtn">Admin Panel</button>
-            </div>
-            
-            <!-- Content Area - This is what gets hidden/shown -->
+
             <div class="content-area">
-                <!-- User Dashboard Tab -->
-                <div class="tab-pane active" id="userDashboard">
-                    <!-- Stats Cards -->
+                <!-- Dashboard overview -->
+                <div class="dashboard-section" id="userDashboard">
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-icon blue">
@@ -134,7 +88,7 @@
                                 <p>Total Shipments</p>
                             </div>
                         </div>
-                        
+
                         <div class="stat-card">
                             <div class="stat-icon green">
                                 <i class="fas fa-check-circle"></i>
@@ -144,7 +98,7 @@
                                 <p>Delivered</p>
                             </div>
                         </div>
-                        
+
                         <div class="stat-card">
                             <div class="stat-icon orange">
                                 <i class="fas fa-truck"></i>
@@ -154,7 +108,7 @@
                                 <p>In Transit</p>
                             </div>
                         </div>
-                        
+
                         <div class="stat-card">
                             <div class="stat-icon purple">
                                 <i class="fas fa-clock"></i>
@@ -165,14 +119,13 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Recent Shipments -->
+
                     <div class="card">
                         <div class="card-header">
                             <h3>Recent Shipments</h3>
-                            <a href="#" id="viewAllShipments">View All <i class="fas fa-arrow-right"></i></a>
+                            <a href="#" data-tab-link="user-shipments">View All <i class="fas fa-arrow-right"></i></a>
                         </div>
-                        
+
                         <table id="recentShipmentsTable">
                             <thead>
                                 <tr>
@@ -186,122 +139,20 @@
                             <tbody id="recentShipmentsBody"></tbody>
                         </table>
                     </div>
-                    
-                    <!-- Quick Track -->
+
                     <div class="card">
                         <div class="card-header">
                             <h3>Track Your Package</h3>
                         </div>
-                        
+
                         <div class="quick-track">
                             <input type="text" id="quickTrackInput" placeholder="Enter tracking number">
                             <button class="btn" id="quickTrackBtn">Track</button>
                         </div>
-                        
-                        <div id="quickTrackResult" class="track-result" style="display: none;"></div>
                     </div>
                 </div>
-                
-                <!-- Admin Dashboard Tab -->
-                <div class="tab-pane" id="adminDashboard">
-                    <!-- Admin Stats -->
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon blue">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3 id="totalUsers" class="stat-value loading">&ndash;</h3>
-                                <p>Total Users</p>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon green">
-                                <i class="fas fa-box"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3 id="totalShipmentsAdmin" class="stat-value loading">&ndash;</h3>
-                                <p>Total Shipments</p>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon orange">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3 id="activeShipments" class="stat-value loading">&ndash;</h3>
-                                <p>Active Shipments</p>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon purple">
-                                <i class="fas fa-dollar-sign"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3 id="revenue" class="stat-value loading">&ndash;</h3>
-                                <p>Revenue (MTD)</p>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Pending Approvals (Admin) -->
-                    <div class="card" id="pendingApprovalsCard">
-                        <div class="card-header">
-                            <h3>📋 Awaiting Confirmation</h3>
-                            <span id="pendingCount" style="background: #ff9800; color: white; padding: 2px 10px; border-radius: 20px; font-size: 0.8rem;">0</span>
-                        </div>
-                        <div id="pendingApprovalsContainer">
-                            <p>Loading...</p>
-                        </div>
-                    </div>
-                    
-                    <!-- All Shipments (Admin) -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Recent Shipments - All Users</h3>
-                            <button class="btn" id="addShipmentBtn">+ New Shipment</button>
-                        </div>
-                        
-                        <table id="allShipmentsTable">
-                            <thead>
-                                <tr>
-                                    <th>Tracking #</th>
-                                    <th>Customer</th>
-                                    <th>Destination</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="allShipmentsBody"></tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- User Management (Admin) -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>User Management</h3>
-                            <button class="btn" id="addUserBtn">+ Add User</button>
-                        </div>
-                        
-                        <table id="usersTable">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <!-- Hidden Content Sections (shown when sidebar items are clicked) -->
+                <!-- My Shipments -->
                 <div id="userShipments" class="dashboard-section" style="display: none;">
                     <div class="card">
                         <div class="card-header">
@@ -324,6 +175,7 @@
                     </div>
                 </div>
 
+                <!-- Track Package -->
                 <div id="userTracking" class="dashboard-section" style="display: none;">
                     <div class="card">
                         <div class="card-header">
@@ -331,11 +183,12 @@
                         </div>
                         <div class="quick-track">
                             <input type="text" id="trackingInput" placeholder="Enter tracking number">
-                            <button class="btn" onclick="window.location.href='tracking.html?number='+document.getElementById('trackingInput').value">Track</button>
+                            <button class="btn" id="trackingTabBtn">Track</button>
                         </div>
                     </div>
                 </div>
 
+                <!-- Get Quote -->
                 <div id="userQuote" class="dashboard-section" style="display: none;">
                     <div class="card">
                         <div class="card-header">
@@ -355,183 +208,115 @@
 
                         <!-- Expanded state: the actual form, hidden until "Start a Quote" is clicked -->
                         <div id="quoteFormState" class="quote-layout" style="display: none;">
-                            <div>
-                                <form id="dashboardQuoteForm" class="quote-form">
-                                    <div class="quote-field-row">
-                                        <div class="form-group">
-                                            <label>Sender Name *</label>
-                                            <input type="text" id="dashSenderName" placeholder="Your full name" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Email *</label>
-                                            <input type="email" id="dashSenderEmail" placeholder="your@email.com" required>
-                                        </div>
-                                    </div>
-
-                                    <div class="quote-field-row">
-                                        <div class="form-group">
-                                            <label>Origin Country *</label>
-                                            <select id="dashOrigin" required>
-                                                <option value="">Select country</option>
-                                                <option value="US">United States</option>
-                                                <option value="CA">Canada</option>
-                                                <option value="UK">United Kingdom</option>
-                                                <option value="DE">Germany</option>
-                                                <option value="FR">France</option>
-                                                <option value="AU">Australia</option>
-                                                <option value="JP">Japan</option>
-                                                <option value="CN">China</option>
-                                                <option value="IN">India</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Destination Country *</label>
-                                            <select id="dashDestination" required>
-                                                <option value="">Select country</option>
-                                                <option value="US">United States</option>
-                                                <option value="CA">Canada</option>
-                                                <option value="UK">United Kingdom</option>
-                                                <option value="DE">Germany</option>
-                                                <option value="FR">France</option>
-                                                <option value="AU">Australia</option>
-                                                <option value="JP">Japan</option>
-                                                <option value="CN">China</option>
-                                                <option value="IN">India</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
+                            <form id="dashboardQuoteForm" class="quote-form">
+                                <div class="quote-field-row">
                                     <div class="form-group">
-                                        <label>Shipping Service *</label>
-                                        <select id="dashServiceType" required>
-                                            <option value="">Select service type</option>
-                                            <option value="express">Express Delivery (1-3 days)</option>
-                                            <option value="standard">Standard Shipping (5-10 days)</option>
-                                            <option value="economy">Economy Shipping (10-20 days)</option>
-                                            <option value="international">International Priority (3-7 days)</option>
-                                            <option value="cargo">Cargo/Freight Shipping</option>
+                                        <label>Sender Name *</label>
+                                        <input type="text" id="dashSenderName" placeholder="Your full name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Email *</label>
+                                        <input type="email" id="dashSenderEmail" placeholder="your@email.com" required>
+                                    </div>
+                                </div>
+
+                                <div class="quote-field-row">
+                                    <div class="form-group">
+                                        <label>Origin Country *</label>
+                                        <select id="dashOrigin" required>
+                                            <option value="">Select country</option>
+                                            <option value="US">United States</option>
+                                            <option value="CA">Canada</option>
+                                            <option value="UK">United Kingdom</option>
+                                            <option value="DE">Germany</option>
+                                            <option value="FR">France</option>
+                                            <option value="AU">Australia</option>
+                                            <option value="JP">Japan</option>
+                                            <option value="CN">China</option>
+                                            <option value="IN">India</option>
                                         </select>
                                     </div>
-
-                                    <div class="quote-field-row">
-                                        <div class="form-group">
-                                            <label>Weight (kg) *</label>
-                                            <input type="number" id="dashWeight" min="0.1" max="1000" step="0.1" placeholder="2.5" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Dimensions (cm)</label>
-                                            <input type="text" id="dashDimensions" placeholder="30x20x15">
-                                        </div>
+                                    <div class="form-group">
+                                        <label>Destination Country *</label>
+                                        <select id="dashDestination" required>
+                                            <option value="">Select country</option>
+                                            <option value="US">United States</option>
+                                            <option value="CA">Canada</option>
+                                            <option value="UK">United Kingdom</option>
+                                            <option value="DE">Germany</option>
+                                            <option value="FR">France</option>
+                                            <option value="AU">Australia</option>
+                                            <option value="JP">Japan</option>
+                                            <option value="CN">China</option>
+                                            <option value="IN">India</option>
+                                        </select>
                                     </div>
-
-                                    <div class="quote-field-row">
-                                        <div class="form-group">
-                                            <label>Package Type</label>
-                                            <select id="dashPackageType">
-                                                <option value="standard">Standard Box</option>
-                                                <option value="envelope">Document Envelope</option>
-                                                <option value="tube">Tube</option>
-                                                <option value="pallet">Pallet</option>
-                                                <option value="custom">Custom Packaging</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Insurance Value ($)</label>
-                                            <input type="number" id="dashInsurance" min="0" placeholder="Optional">
-                                        </div>
-                                    </div>
-
-                                    <div class="quote-form-actions">
-                                        <button type="submit" class="btn quote-btn-primary">Calculate Quote</button>
-                                        <button type="reset" class="btn quote-btn-secondary">Reset</button>
-                                        <button type="button" id="closeQuoteFormBtn" class="quote-btn-text">Cancel</button>
-                                    </div>
-                                </form>
-                            </div>
-
-                            <!-- Quote Result -->
-                            <div>
-                                <div id="dashQuoteResult" class="quote-result" style="display: none;">
-                                    <h4>Your Shipping Quote</h4>
-
-                                    <div class="quote-result-grid-2">
-                                        <div class="quote-result-tile">
-                                            <div class="quote-result-tile-label">Service Type</div>
-                                            <div class="quote-result-tile-value" id="dashResultService">Express</div>
-                                        </div>
-                                        <div class="quote-result-tile">
-                                            <div class="quote-result-tile-label">Route</div>
-                                            <div class="quote-result-tile-value" id="dashResultRoute">US → UK</div>
-                                        </div>
-                                        <div class="quote-result-tile">
-                                            <div class="quote-result-tile-label">Delivery</div>
-                                            <div class="quote-result-tile-value" id="dashResultDelivery">1-3 days</div>
-                                        </div>
-                                        <div class="quote-result-tile">
-                                            <div class="quote-result-tile-label">Base Price</div>
-                                            <div class="quote-result-tile-value" id="dashResultBase">$45.00</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="quote-result-grid-3">
-                                        <div class="quote-result-tile center">
-                                            <div class="quote-result-tile-label small">Insurance</div>
-                                            <div class="quote-result-tile-value small" id="dashResultInsurance">$5.00</div>
-                                        </div>
-                                        <div class="quote-result-tile center">
-                                            <div class="quote-result-tile-label small">Surcharge</div>
-                                            <div class="quote-result-tile-value small" id="dashResultSurcharge">$3.50</div>
-                                        </div>
-                                        <div class="quote-result-tile center total">
-                                            <div class="quote-result-tile-label small">Total</div>
-                                            <div class="quote-result-tile-value" id="dashResultTotal">$53.50</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="quote-form-actions">
-                                        <button class="btn quote-btn-secondary" id="dashPrintQuote">Print</button>
-                                        <button class="btn quote-btn-accent" id="dashBookNow">Book Now</button>
-                                    </div>
-                                    <p class="quote-fineprint">Quote valid for 30 days. Taxes may apply.</p>
                                 </div>
 
-                                <!-- Info Box -->
-                                <div class="quote-info-box">
-                                    <h4><i class="fas fa-info-circle"></i> How Quotes Are Calculated</h4>
-                                    <ul>
-                                        <li><i class="fas fa-check"></i> <strong>Distance:</strong> Rates vary based on origin and destination</li>
-                                        <li><i class="fas fa-check"></i> <strong>Weight &amp; Size:</strong> Heavier packages cost more</li>
-                                        <li><i class="fas fa-check"></i> <strong>Service Type:</strong> Faster delivery = higher rates</li>
-                                        <li><i class="fas fa-check"></i> <strong>Insurance:</strong> Optional coverage for valuable items</li>
-                                    </ul>
+                                <div class="form-group">
+                                    <label>Shipping Service *</label>
+                                    <select id="dashServiceType" required>
+                                        <option value="">Select service type</option>
+                                        <option value="express">Express Delivery (1-3 days)</option>
+                                        <option value="standard">Standard Shipping (5-10 days)</option>
+                                        <option value="economy">Economy Shipping (10-20 days)</option>
+                                        <option value="international">International Priority (3-7 days)</option>
+                                        <option value="cargo">Cargo/Freight Shipping</option>
+                                    </select>
                                 </div>
+
+                                <div class="quote-field-row">
+                                    <div class="form-group">
+                                        <label>Weight (kg) *</label>
+                                        <input type="number" id="dashWeight" min="0.1" max="1000" step="0.1" placeholder="2.5" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Dimensions (cm)</label>
+                                        <input type="text" id="dashDimensions" placeholder="30x20x15">
+                                    </div>
+                                </div>
+
+                                <div class="quote-form-actions">
+                                    <button type="submit" class="btn quote-btn-primary">Submit Request</button>
+                                    <button type="reset" class="btn quote-btn-secondary">Reset</button>
+                                    <button type="button" id="closeQuoteFormBtn" class="quote-btn-text">Cancel</button>
+                                </div>
+                            </form>
+
+                            <div class="quote-info-box">
+                                <h4><i class="fas fa-info-circle"></i> How Quotes Are Calculated</h4>
+                                <ul>
+                                    <li><i class="fas fa-check"></i> <strong>Distance:</strong> Rates vary based on origin and destination</li>
+                                    <li><i class="fas fa-check"></i> <strong>Weight &amp; Size:</strong> Heavier packages cost more</li>
+                                    <li><i class="fas fa-check"></i> <strong>Service Type:</strong> Faster delivery = higher rates</li>
+                                    <li><i class="fas fa-check"></i> <strong>Insurance:</strong> Optional coverage for valuable items</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Addresses -->
                 <div id="userAddresses" class="dashboard-section" style="display: none;">
                     <div class="card">
                         <div class="card-header">
                             <h3>Saved Addresses (<span id="address-count">0</span>/3)</h3>
-                            <button id="toggle-address-btn" class="btn" style="background: var(--primary); color: white;">
+                            <button id="toggle-address-btn" class="btn">
                                 <i class="fas fa-plus"></i> Add Address
                             </button>
                         </div>
-                        
-                        <!-- Native Grid Collection -->
-                        <div id="address-list-container" class="address-grid" style="margin-top: 20px;"></div>
 
-                        <!-- Hidden Input Drawer Panel -->
-                        <div id="address-form-wrapper" style="display: none; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px;">
+                        <div id="address-list-container" class="address-grid"></div>
+
+                        <div id="address-form-wrapper" class="address-form-wrapper" style="display: none;">
                             <h4>Add New Address</h4>
-                            <form id="add-address-form" style="margin-top: 15px;">
+                            <form id="add-address-form">
                                 <div class="form-group">
                                     <label>Street Address *</label>
                                     <input type="text" id="addr-street" placeholder="e.g., 123 Main St" required>
                                 </div>
-                                
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+
+                                <div class="quote-field-row">
                                     <div class="form-group">
                                         <label>City *</label>
                                         <input type="text" id="addr-city" placeholder="City" required>
@@ -541,8 +326,8 @@
                                         <input type="text" id="addr-state" placeholder="State" required>
                                     </div>
                                 </div>
-                                
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+
+                                <div class="quote-field-row">
                                     <div class="form-group">
                                         <label>Zip / Postal Code *</label>
                                         <input type="text" id="addr-zip" placeholder="Zip Code" required>
@@ -552,19 +337,19 @@
                                         <input type="text" id="addr-country" placeholder="Country" required>
                                     </div>
                                 </div>
-                                
-                                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                                    <button type="submit" class="btn" style="background: var(--accent); color: white;">Save Address</button>
-                                    <button type="button" id="cancel-address-btn" class="btn" style="background: transparent; border: 1px solid #ddd;">Cancel</button>
+
+                                <div class="quote-form-actions">
+                                    <button type="submit" class="btn quote-btn-primary">Save Address</button>
+                                    <button type="button" id="cancel-address-btn" class="quote-btn-secondary btn">Cancel</button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
 
+                <!-- Profile -->
                 <div id="userProfile" class="dashboard-section" style="display: none;">
                     <div class="profile-layout">
-                        <!-- Summary card: avatar, name, quick stats -->
                         <div class="card profile-summary-card">
                             <div class="profile-summary-avatar">
                                 <img id="profileAvatarImg" src="" alt="Avatar" style="display:none;">
@@ -591,7 +376,6 @@
                             <button class="btn profile-edit-btn" id="editProfileBtn"><i class="fas fa-pen"></i> Edit Profile</button>
                         </div>
 
-                        <!-- Details card: contact info + security, read-only until Edit is used -->
                         <div class="card profile-details-card">
                             <div class="card-header">
                                 <h3>Contact Information</h3>
@@ -621,180 +405,27 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Admin Sections -->
-                <div id="adminShipments" class="dashboard-section" style="display: none;">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>All Shipments</h3>
-                            <button class="btn" onclick="document.getElementById('shipmentModal').classList.add('active')">+ New</button>
-                        </div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Tracking #</th>
-                                    <th>Customer</th>
-                                    <th>Destination</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminShipmentsBody">
-                                <tr><td colspan="5" style="text-align: center;">Loading shipments...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="adminUsers" class="dashboard-section" style="display: none;">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>User Management</h3>
-                            <button class="btn" onclick="window.openUserModal('add')">+ New User</button>
-                        </div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminUsersBody">
-                                <tr><td colspan="5" style="text-align: center;">Loading users...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="adminReports" class="dashboard-section" style="display: none;">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Reports</h3>
-                        </div>
-                        <p>Reporting dashboard would go here</p>
-                    </div>
-                </div>
-
-                <div id="adminSettings" class="dashboard-section" style="display: none;">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Settings</h3>
-                        </div>
-                        <p>System settings would go here</p>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Modals -->
-    <div class="modal" id="shipmentModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Add New Shipment</h3>
-                <button class="modal-close" id="closeShipmentModal">&times;</button>
-            </div>
-            
-            <form id="shipmentForm">
-                <div class="form-group">
-                    <label>Tracking Number</label>
-                    <input type="text" id="trackingNumber" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Customer Name</label>
-                    <input type="text" id="customerName" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Destination</label>
-                    <input type="text" id="destination" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Status</label>
-                    <select id="shipmentStatus">
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="picked_up">Picked Up</option>
-                        <option value="in_transit">In Transit</option>
-                        <option value="out_for_delivery">Out For Delivery</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="delayed">Delayed</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="btn">Save Shipment</button>
-            </form>
-        </div>
-    </div>
-    
-    <div class="modal" id="userModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="userModalTitle">Add New User</h3>
-                <button class="modal-close" id="closeUserModal">&times;</button>
-            </div>
-            
-            <form id="userForm">
-                <input type="hidden" id="userFormId" value="">
-                <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" id="userFormName" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="userFormEmail" required>
-                </div>
-
-                <div class="form-group" id="userFormPasswordGroup">
-                    <label>Password</label>
-                    <input type="password" id="userFormPassword" minlength="6" placeholder="Minimum 6 characters">
-                    <small id="userFormPasswordHint" style="display:none; color:#999;">Leave blank to keep the current password.</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Role</label>
-                    <select id="userFormRole">
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Status</label>
-                    <select id="userFormStatus">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="suspended">Suspended</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="btn">Save User</button>
-            </form>
-        </div>
-    </div>
-
     <div class="modal" id="editProfileModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Edit Profile</h3>
-                <button class="modal-close" onclick="closeEditProfileModal()">&times;</button>
+                <button class="modal-close" id="closeEditProfileModal">&times;</button>
             </div>
 
             <form id="editProfileForm">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                        <img id="editAvatarPreview" src="" alt="Avatar" style="width:100%; height:100%; object-fit: cover; display:none;">
-                        <span id="editAvatarInitial" style="font-size: 2rem; color: white; font-weight: 600;">JD</span>
+                <div class="avatar-picker">
+                    <div class="avatar-picker-preview">
+                        <img id="editAvatarPreview" src="" alt="Avatar" style="display:none;">
+                        <span id="editAvatarInitial">JD</span>
                     </div>
                     <input type="file" id="editAvatarInput" accept="image/*" style="display:none;">
-                    <button type="button" class="btn" id="chooseAvatarBtn" style="background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 6px 14px; font-size: 0.85rem;">Change Photo</button>
-                    <button type="button" id="removeAvatarBtn" style="background: none; border: none; color: #dc3545; font-size: 0.8rem; margin-left: 8px; cursor: pointer; display:none;">Remove</button>
+                    <button type="button" class="profile-secondary-btn btn" id="chooseAvatarBtn">Change Photo</button>
+                    <button type="button" id="removeAvatarBtn" class="avatar-remove-btn" style="display:none;">Remove</button>
                 </div>
 
                 <div class="form-group">
@@ -807,8 +438,8 @@
                 </div>
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" id="editEmail" disabled style="background:#f5f5f5; cursor: not-allowed;">
-                    <small style="color:#999;">Contact support to change your email.</small>
+                    <input type="email" id="editEmail" disabled>
+                    <small class="form-hint">Contact support to change your email.</small>
                 </div>
                 <div class="form-group">
                     <label>Phone Number</label>
@@ -824,7 +455,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Change Password</h3>
-                <button class="modal-close" onclick="closeChangePasswordModal()">&times;</button>
+                <button class="modal-close" id="closeChangePasswordModal">&times;</button>
             </div>
 
             <form id="changePasswordForm">
@@ -840,12 +471,26 @@
                     <label>Confirm New Password</label>
                     <input type="password" id="confirmNewPassword" required minlength="6">
                 </div>
-                <p id="passwordFormError" style="color:#dc3545; font-size:0.85rem; display:none; margin-bottom: 12px;"></p>
+                <p id="passwordFormError" class="form-error" style="display:none;"></p>
                 <button type="submit" class="btn" id="savePasswordBtn">Update Password</button>
             </form>
         </div>
     </div>
 
+    <div class="modal" id="trackingConfirmModal">
+        <div class="modal-content confirm-modal-content">
+            <div class="confirm-modal-icon"><i class="fas fa-check-circle"></i></div>
+            <h3>Shipment Request Received</h3>
+            <p>Your shipment request has been received. Our support team will follow up with the details needed to get it moving.</p>
+            <div class="confirm-modal-tracking">
+                <span>Assigned Tracking Number</span>
+                <strong id="trackingConfirmNumber"></strong>
+            </div>
+            <button class="btn quote-btn-primary" id="dismissTrackingConfirm">Acknowledge</button>
+        </div>
+    </div>
+
+    <script src="js/auth-navbar.js"></script>
     <script src="js/script.js"></script>
     <script src="js/dashboard-ui.js"></script>
 </body>

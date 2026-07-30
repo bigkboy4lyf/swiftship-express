@@ -1,23 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken'); // Added to parse tokens locally
 const User = require('../models/User');
-
-const protect = async (req, res, next) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            return res.status(401).json({ success: false, message: 'No token provided' });
-        }
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'swiftship_secret_key_2023_change_this_later');
-        req.user = decoded; // Standardized to match req.user.id expectations
-        req.user.id = decoded.id;
-        next();
-    } catch (e) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
-};
+const { protect } = require('../middleware/auth');
 
 // =============================================
 // GET ADDRESSES

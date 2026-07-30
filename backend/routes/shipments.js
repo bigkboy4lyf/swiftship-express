@@ -77,16 +77,4 @@ router.post('/create', async (req, res) => {
     }
 });
 
-// =============================================
-// GET USER'S SHIPMENTS (For the Dashboard)
-// =============================================
-router.get('/my-shipments/:userId', async (req, res) => {
-    try {
-        const shipments = await Shipment.find({ userId: req.params.userId });
-        res.json({ success: true, data: shipments });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
 module.exports = router;
