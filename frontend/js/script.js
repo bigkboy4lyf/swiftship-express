@@ -1,3 +1,19 @@
+// =============================================
+// DEVICE ID (used to recognize this browser on login -- see auth.js's
+// new-device check). Generated once and persisted; not a secret, just a
+// stable identifier for "have we OTP-verified this browser before."
+// =============================================
+function getDeviceId() {
+    let id = localStorage.getItem('deviceId');
+    if (!id) {
+        id = (window.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem('deviceId', id);
+    }
+    return id;
+}
+
 // Mobile menu toggle
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const navLinks = document.getElementById('navLinks');

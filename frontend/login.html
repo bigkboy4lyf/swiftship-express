@@ -6,64 +6,7 @@
     <title>SwiftShip Express | Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        .alert {
-            padding: 12px 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        .alert.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            display: block;
-        }
-        .alert.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            display: block;
-        }
-        .loading {
-            opacity: 0.7;
-            pointer-events: none;
-        }
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 3000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-overlay.active {
-            display: flex;
-        }
-        .modal-box {
-            background: white;
-            border-radius: 10px;
-            padding: 35px;
-            max-width: 420px;
-            width: 90%;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .modal-box-close {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            font-size: 1.4rem;
-            color: var(--gray);
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
     <!-- Header & Navigation -->
@@ -189,6 +132,24 @@
         </div>
     </div>
 
+    <!-- Sign-in Verification Modal (new device / unverified email) -->
+    <div class="modal-overlay" id="otpModalOverlay">
+        <div class="modal-box">
+            <button type="button" class="modal-box-close" id="otpModalClose">&times;</button>
+            <h3 style="margin-bottom: 10px; color: var(--primary);" id="otpHeading">Confirm it's you</h3>
+            <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 20px;" id="otpSubheading">We sent a 6-digit code to <strong id="otpEmailDisplay"></strong>. It expires in 15 minutes.</p>
+            <div id="otpAlert" class="alert"></div>
+            <form id="otpForm">
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:600;">6-Digit Code</label>
+                    <input type="text" id="otpCode" class="otp-code-input" maxlength="6" inputmode="numeric" required>
+                </div>
+                <button type="submit" class="btn" id="otpSubmitBtn" style="width:100%; padding:12px; margin-bottom:12px;">Verify & Sign In</button>
+                <button type="button" id="otpResendBtn" class="resend-link">Didn't get a code? Resend</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer id="contact">
         <div class="container">
@@ -263,16 +224,20 @@
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password, deviceId: getDeviceId(), deviceLabel: navigator.userAgent })
             });
 
             const result = await response.json();
 
-            if (result.success) {
+            if (result.success && result.data.pendingVerification) {
+                submitBtn.classList.remove('loading');
+                submitBtn.textContent = 'Login to Account';
+                openOtpModal(result.data.email, result.data.reason);
+            } else if (result.success) {
                 // Save session data to LocalStorage
                 localStorage.setItem('token', result.data.token);
                 localStorage.setItem('user', JSON.stringify(result.data.user));
-                
+
                 alertDiv.className = 'alert success';
                 alertDiv.textContent = 'Login successful! Redirecting...';
                 alertDiv.style.display = 'block';
@@ -425,6 +390,93 @@
         } finally {
             btn.classList.remove('loading');
             btn.textContent = 'Reset Password';
+        }
+    });
+</script>
+
+<script>
+    // ===== Sign-in verification (new device / unverified email) =====
+    const otpOverlay = document.getElementById('otpModalOverlay');
+    const otpAlert = document.getElementById('otpAlert');
+    let otpEmailValue = '';
+
+    function openOtpModal(email, reason) {
+        otpEmailValue = email;
+        document.getElementById('otpEmailDisplay').textContent = email;
+        document.getElementById('otpHeading').textContent = reason === 'unverified_email' ? 'Verify your email' : "Confirm it's you";
+        document.getElementById('otpSubheading').innerHTML = reason === 'unverified_email'
+            ? `We sent a 6-digit code to <strong>${email}</strong> to finish verifying your account.`
+            : `We don't recognize this device. We sent a 6-digit code to <strong>${email}</strong> to confirm it's really you.`;
+        document.getElementById('otpForm').reset();
+        otpAlert.style.display = 'none';
+        otpOverlay.classList.add('active');
+    }
+
+    document.getElementById('otpModalClose')?.addEventListener('click', () => otpOverlay.classList.remove('active'));
+    otpOverlay?.addEventListener('click', (e) => {
+        if (e.target === otpOverlay) otpOverlay.classList.remove('active');
+    });
+
+    document.getElementById('otpForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('otpSubmitBtn');
+        const code = document.getElementById('otpCode').value.trim();
+        otpAlert.style.display = 'none';
+
+        btn.classList.add('loading');
+        btn.textContent = 'Verifying...';
+        try {
+            const res = await fetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: otpEmailValue, code, deviceId: getDeviceId(), deviceLabel: navigator.userAgent })
+            });
+            const result = await res.json();
+            if (!result.success) throw new Error(result.message || 'Invalid code');
+
+            localStorage.setItem('token', result.data.token);
+            localStorage.setItem('user', JSON.stringify(result.data.user));
+            window.location.href = 'dashboard.html';
+        } catch (err) {
+            otpAlert.className = 'alert error';
+            otpAlert.textContent = err.message;
+            otpAlert.style.display = 'block';
+            btn.classList.remove('loading');
+            btn.textContent = 'Verify & Sign In';
+        }
+    });
+
+    document.getElementById('otpResendBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('otpResendBtn');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        try {
+            const res = await fetch('/api/auth/resend-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: otpEmailValue })
+            });
+            const result = await res.json();
+            otpAlert.className = result.success ? 'alert success' : 'alert error';
+            otpAlert.textContent = result.success ? 'A new code has been sent.' : (result.message || 'Could not resend the code.');
+            otpAlert.style.display = 'block';
+        } catch (err) {
+            otpAlert.className = 'alert error';
+            otpAlert.textContent = 'Could not resend the code. Please try again.';
+            otpAlert.style.display = 'block';
+        } finally {
+            let seconds = 60;
+            const tick = () => {
+                if (seconds <= 0) {
+                    btn.disabled = false;
+                    btn.textContent = "Didn't get a code? Resend";
+                    return;
+                }
+                btn.textContent = `Resend in ${seconds}s`;
+                seconds -= 1;
+                setTimeout(tick, 1000);
+            };
+            tick();
         }
     });
 </script>

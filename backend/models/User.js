@@ -33,16 +33,46 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    resetCodeHash: {
-        // bcrypt hash of the current 6-digit reset code, never the plain code itself
+    // Shared by every one-time-code flow (password reset, email verification,
+    // new-device login) -- a user is only ever in one of those flows at a
+    // time, so one hash+expiry pair covers all of them instead of three.
+    otpCodeHash: {
+        // bcrypt hash of the current 6-digit code, never the plain code itself
         type: String,
         select: false,
         default: null
     },
-    resetCodeExpires: {
+    otpCodeExpires: {
         type: Date,
         select: false,
         default: null
+    },
+    otpLastSentAt: {
+        // Drives the resend cooldown -- see backend/utils/otp.js
+        type: Date,
+        select: false,
+        default: null
+    },
+    // Defaults to true so existing accounts (created before this field
+    // existed) aren't retroactively locked out -- new registrations set this
+    // to false explicitly until the OTP flow confirms the address.
+    emailVerified: {
+        type: Boolean,
+        default: true
+    },
+    // Browsers/devices that have already completed an OTP challenge for this
+    // account. A login from a deviceId not in this list is treated as new
+    // and re-challenged, same idea as "new device" alerts on other services.
+    trustedDevices: {
+        type: [
+            {
+                deviceId: { type: String, required: true },
+                userAgent: { type: String, default: 'Unknown device' },
+                addedAt: { type: Date, default: Date.now },
+                lastSeenAt: { type: Date, default: Date.now }
+            }
+        ],
+        default: []
     },
     role: {
         type: String,
