@@ -202,8 +202,16 @@ function checkDemoTrackingData(trackingNumber) {
 // Smooth scrolling
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
+        // Read the href at click time, not bind time -- some links (e.g. a
+        // modal's "Track This Shipment") start as "#" placeholders and get
+        // their real destination filled in by other JS later. If that's
+        // happened, this is no longer a same-page anchor link, so let the
+        // browser navigate normally instead of hijacking the click.
+        const hash = this.getAttribute('href');
+        if (!hash || !hash.startsWith('#') || hash.length <= 1) return;
+
         e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
+        const target = document.querySelector(hash);
         if (target) {
             window.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
         }
