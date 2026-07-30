@@ -152,7 +152,12 @@ async function loadRecentShipments(token, user) {
     }
 }
 
+// Populated by renderRecentShipments()/renderUserShipments(); lets
+// viewShipmentDetail() show the full record without a second network call.
+let lastLoadedUserShipments = [];
+
 function renderRecentShipments(shipments) {
+    lastLoadedUserShipments = shipments;
     const tbody = document.getElementById('recentShipmentsBody');
     if (!tbody) return;
     if (!shipments.length) {
@@ -165,7 +170,7 @@ function renderRecentShipments(shipments) {
             <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
             <td>${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
             <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
-            <td><button class="action-btn" onclick="viewShipment('${s.trackingNumber}')" title="Track"><i class="fas fa-search"></i></button></td>
+            <td><button class="action-btn" onclick="viewShipmentDetail('${s._id}')" title="View Details"><i class="fas fa-eye"></i></button></td>
         </tr>
     `).join('');
 }
@@ -188,6 +193,7 @@ async function loadUserShipments() {
 }
 
 function renderUserShipments(shipments) {
+    lastLoadedUserShipments = shipments;
     const tbody = document.getElementById('userShipmentsBody');
     if (!tbody) return;
     if (!shipments.length) {
@@ -200,14 +206,49 @@ function renderUserShipments(shipments) {
             <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
             <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
             <td>${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
-            <td><button class="action-btn" onclick="viewShipment('${s.trackingNumber}')" title="Track"><i class="fas fa-search"></i></button></td>
+            <td><button class="action-btn" onclick="viewShipmentDetail('${s._id}')" title="View Details"><i class="fas fa-eye"></i></button></td>
         </tr>
     `).join('');
 }
 
-window.viewShipment = function(trackingNumber) {
-    window.location.href = `tracking.html?number=${trackingNumber}`;
+// =============================================
+// SHIPMENT DETAILS (full quote/shipment record, dashboard-only)
+// =============================================
+window.viewShipmentDetail = function(id) {
+    const s = lastLoadedUserShipments.find(x => x._id === id);
+    if (!s) return;
+
+    const dims = s.package?.dimensions;
+    const dimensionsText = dims && (dims.length || dims.width || dims.height)
+        ? `${dims.length} x ${dims.width} x ${dims.height} cm`
+        : 'Not specified';
+
+    const rows = [
+        ['Tracking Number', s.trackingNumber || 'N/A'],
+        ['Status', getStatusLabel(s.status)],
+        ['Service Type', s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'N/A'],
+        ['Weight', s.package?.weight ? `${s.package.weight} kg` : 'Not specified'],
+        ['Dimensions', dimensionsText],
+        ['Sender Name', s.sender?.name || 'Not specified'],
+        ['Sender Email', s.sender?.email || 'Not specified'],
+        ['Destination', [s.recipient?.city, s.recipient?.country].filter(Boolean).join(', ') || 'N/A'],
+        ['Requested', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'N/A']
+    ];
+
+    document.getElementById('shipmentDetailBody').innerHTML = rows.map(([label, value]) => `
+        <div class="profile-detail-row">
+            <dt>${label}</dt>
+            <dd>${value}</dd>
+        </div>
+    `).join('');
+
+    document.getElementById('shipmentDetailTrackLink').href = `tracking.html?number=${s.trackingNumber}`;
+    document.getElementById('shipmentDetailModal').classList.add('active');
 };
+
+document.getElementById('closeShipmentDetailModal')?.addEventListener('click', () => {
+    document.getElementById('shipmentDetailModal').classList.remove('active');
+});
 
 // =============================================
 // QUICK TRACK
@@ -524,17 +565,28 @@ document.getElementById('closeQuoteFormBtn')?.addEventListener('click', () => {
 // =============================================
 // QUOTE SUBMISSION -> SHIPMENT REQUEST
 // =============================================
+function parseDimensions(input) {
+    if (typeof input !== 'string') return { length: 0, width: 0, height: 0 };
+    const parts = input.toLowerCase().split('x').map(p => parseFloat(p.trim()));
+    if (parts.length === 3 && parts.every(p => !isNaN(p))) {
+        return { length: parts[0], width: parts[1], height: parts[2] };
+    }
+    return { length: 0, width: 0, height: 0 };
+}
+
 document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user')) || {};
 
+    const senderName = document.getElementById('dashSenderName')?.value.trim();
+    const senderEmail = document.getElementById('dashSenderEmail')?.value.trim();
     const originCity = document.getElementById('dashOrigin')?.value || 'Origin Hub';
     const destCity = document.getElementById('dashDestination')?.value || '';
     const service = document.getElementById('dashServiceType')?.value || 'standard';
     const pkgWeight = parseFloat(document.getElementById('dashWeight')?.value) || 1;
-    const notes = document.getElementById('dashDimensions')?.value || 'N/A';
+    const dimensionsInput = document.getElementById('dashDimensions')?.value || '';
 
     if (!destCity) {
         alert('Please provide a destination country.');
@@ -544,9 +596,12 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
     const payload = {
         userId: user.id || user._id,
         serviceType: service,
-        sender: { name: user.name || 'Customer', city: originCity, country: originCity },
-        recipient: { name: user.name || 'Customer Reference', city: destCity, country: destCity },
-        packageDetails: { weight: pkgWeight, description: `Package parameters: ${notes}` }
+        sender: { name: senderName || user.name || 'Customer', email: senderEmail, city: originCity, country: originCity },
+        recipient: { name: 'To Be Determined', city: destCity, country: destCity },
+        packageDetails: {
+            weight: pkgWeight,
+            dimensions: parseDimensions(dimensionsInput)
+        }
     };
 
     try {

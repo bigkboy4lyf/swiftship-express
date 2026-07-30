@@ -681,6 +681,12 @@ td {
     color: white;
 }
 
+.shipment-detail-track-link {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+}
+
 .avatar-picker {
     text-align: center;
     margin-bottom: 20px;

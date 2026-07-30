@@ -148,7 +148,13 @@ async function loadAllShipments() {
     }
 }
 
+// Populated on every render; lets viewShipmentDetail() show the full record
+// (weight, dimensions, sender contact info) without a second network call.
+let lastLoadedShipments = [];
+
 function renderAllShipments(shipments) {
+    lastLoadedShipments = shipments;
+
     // Two tables show this same data: the overview-pane preview (allShipmentsBody)
     // and the dedicated "All Shipments" sidebar tab (adminShipmentsBody).
     const tbodies = ['allShipmentsBody', 'adminShipmentsBody']
@@ -165,6 +171,7 @@ function renderAllShipments(shipments) {
             <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
             <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
             <td>
+                <button class="action-btn" onclick="viewShipmentDetail('${s._id}')" title="View Details"><i class="fas fa-eye"></i></button>
                 <button class="action-btn" onclick="updateShipmentStatus('${s._id}')" title="Update Status"><i class="fas fa-truck"></i></button>
                 <button class="action-btn delete" onclick="deleteShipment('${s._id}')" title="Delete"><i class="fas fa-trash"></i></button>
             </td>
@@ -173,6 +180,42 @@ function renderAllShipments(shipments) {
 
     tbodies.forEach(tbody => tbody.innerHTML = html);
 }
+
+window.viewShipmentDetail = function(id) {
+    const s = lastLoadedShipments.find(x => x._id === id);
+    if (!s) return;
+
+    const dims = s.package?.dimensions;
+    const dimensionsText = dims && (dims.length || dims.width || dims.height)
+        ? `${dims.length} x ${dims.width} x ${dims.height} cm`
+        : 'Not specified';
+
+    const rows = [
+        ['Tracking Number', s.trackingNumber || 'N/A'],
+        ['Status', getStatusLabel(s.status)],
+        ['Service Type', s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'N/A'],
+        ['Account Holder', s.userId?.name ? `${s.userId.name} (${s.userId.email || 'no email on file'})` : 'N/A'],
+        ['Weight', s.package?.weight ? `${s.package.weight} kg` : 'Not specified'],
+        ['Dimensions', dimensionsText],
+        ['Sender Name', s.sender?.name || 'Not specified'],
+        ['Sender Email', s.sender?.email || 'Not specified'],
+        ['Destination', [s.recipient?.city, s.recipient?.country].filter(Boolean).join(', ') || 'N/A'],
+        ['Requested', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'N/A']
+    ];
+
+    document.getElementById('shipmentDetailBody').innerHTML = rows.map(([label, value]) => `
+        <div class="profile-detail-row">
+            <dt>${label}</dt>
+            <dd>${value}</dd>
+        </div>
+    `).join('');
+
+    document.getElementById('shipmentDetailModal').classList.add('active');
+};
+
+document.getElementById('closeShipmentDetailModal')?.addEventListener('click', () => {
+    document.getElementById('shipmentDetailModal').classList.remove('active');
+});
 
 // =============================================
 // PENDING APPROVALS
