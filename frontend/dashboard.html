@@ -53,10 +53,14 @@
                 </a>
             </div>
         </div>
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
         <!-- Main Content -->
         <div class="main-content">
             <div class="dashboard-header">
+                <button class="sidebar-toggle-btn" id="sidebarToggleBtn" aria-label="Open menu">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <h1 class="page-title" id="pageTitle">Dashboard</h1>
                 <div class="header-actions">
                     <div class="user-profile">
@@ -126,7 +130,7 @@
                             <a href="#" data-tab-link="user-shipments">View All <i class="fas fa-arrow-right"></i></a>
                         </div>
 
-                        <table id="recentShipmentsTable">
+                        <table id="recentShipmentsTable" class="data-table">
                             <thead>
                                 <tr>
                                     <th>Tracking #</th>
@@ -158,7 +162,7 @@
                         <div class="card-header">
                             <h3>My Shipments</h3>
                         </div>
-                        <table>
+                        <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Tracking #</th>
@@ -169,7 +173,7 @@
                                 </tr>
                             </thead>
                             <tbody id="userShipmentsBody">
-                                <tr><td colspan="5" style="text-align: center;">Loading shipments...</td></tr>
+                                <tr class="row-static"><td colspan="5" style="text-align: center;">Loading shipments...</td></tr>
                             </tbody>
                         </table>
                     </div>

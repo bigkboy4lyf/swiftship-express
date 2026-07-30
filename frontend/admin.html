@@ -48,10 +48,14 @@
                 </a>
             </div>
         </div>
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
         <!-- Main Content -->
         <div class="main-content">
             <div class="dashboard-header">
+                <button class="sidebar-toggle-btn" id="sidebarToggleBtn" aria-label="Open menu">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <h1 class="page-title" id="pageTitle">Admin Dashboard</h1>
                 <div class="header-actions">
                     <div class="user-profile">
@@ -131,7 +135,7 @@
                             <button class="btn" id="addShipmentBtn">+ New Shipment</button>
                         </div>
 
-                        <table id="allShipmentsTable">
+                        <table id="allShipmentsTable" class="data-table">
                             <thead>
                                 <tr>
                                     <th>Tracking #</th>
@@ -151,7 +155,7 @@
                             <button class="btn" id="addUserBtnOverview">+ Add User</button>
                         </div>
 
-                        <table id="usersTable">
+                        <table id="usersTable" class="data-table">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -173,7 +177,7 @@
                             <h3>All Shipments</h3>
                             <button class="btn" id="addShipmentBtnTab">+ New</button>
                         </div>
-                        <table>
+                        <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Tracking #</th>
@@ -184,7 +188,7 @@
                                 </tr>
                             </thead>
                             <tbody id="adminShipmentsBody">
-                                <tr><td colspan="5" style="text-align: center;">Loading shipments...</td></tr>
+                                <tr class="row-static"><td colspan="5" style="text-align: center;">Loading shipments...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -197,7 +201,7 @@
                             <h3>User Management</h3>
                             <button class="btn" id="addUserBtnTab">+ New User</button>
                         </div>
-                        <table>
+                        <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -208,7 +212,7 @@
                                 </tr>
                             </thead>
                             <tbody id="adminUsersBody">
-                                <tr><td colspan="5" style="text-align: center;">Loading users...</td></tr>
+                                <tr class="row-static"><td colspan="5" style="text-align: center;">Loading users...</td></tr>
                             </tbody>
                         </table>
                     </div>

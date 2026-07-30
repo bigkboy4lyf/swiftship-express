@@ -25,8 +25,25 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('logoutBtn')?.addEventListener('click', () => window.logout());
 
     setupTabSwitching();
+    setupSidebarDrawer();
     loadAdminData(token);
 });
+
+// =============================================
+// MOBILE SIDEBAR DRAWER
+// =============================================
+function closeSidebarDrawer() {
+    document.querySelector('.sidebar')?.classList.remove('open');
+    document.getElementById('sidebarBackdrop')?.classList.remove('open');
+}
+
+function setupSidebarDrawer() {
+    document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => {
+        document.querySelector('.sidebar')?.classList.add('open');
+        document.getElementById('sidebarBackdrop')?.classList.add('open');
+    });
+    document.getElementById('sidebarBackdrop')?.addEventListener('click', closeSidebarDrawer);
+}
 
 // =============================================
 // AVATAR HELPER
@@ -72,14 +89,16 @@ function switchTab(tabId) {
 
     if (tabId === 'admin-shipments') {
         document.getElementById('adminShipmentsBody').innerHTML =
-            '<tr><td colspan="5" style="text-align:center;">Loading shipments...</td></tr>';
+            '<tr class="row-static"><td colspan="5" style="text-align:center;">Loading shipments...</td></tr>';
         loadAllShipments();
     }
     if (tabId === 'admin-users') {
         document.getElementById('adminUsersBody').innerHTML =
-            '<tr><td colspan="5" style="text-align:center;">Loading users...</td></tr>';
+            '<tr class="row-static"><td colspan="5" style="text-align:center;">Loading users...</td></tr>';
         loadAllUsers();
     }
+
+    closeSidebarDrawer();
 }
 
 function toSectionId(tabId) {
@@ -163,17 +182,16 @@ function renderAllShipments(shipments) {
     if (!tbodies.length) return;
 
     const html = !shipments.length
-        ? '<tr><td colspan="5" style="text-align:center;">No shipments found</td></tr>'
+        ? '<tr class="row-static"><td colspan="5" style="text-align:center;">No shipments found</td></tr>'
         : shipments.map(s => `
-        <tr>
-            <td><strong>${s.trackingNumber || 'N/A'}</strong></td>
-            <td>${s.userId?.name || 'N/A'}</td>
-            <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
-            <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
-            <td>
-                <button class="action-btn" onclick="viewShipmentDetail('${s._id}')" title="View Details"><i class="fas fa-eye"></i></button>
-                <button class="action-btn" onclick="updateShipmentStatus('${s._id}')" title="Update Status"><i class="fas fa-truck"></i></button>
-                <button class="action-btn delete" onclick="deleteShipment('${s._id}')" title="Delete"><i class="fas fa-trash"></i></button>
+        <tr onclick="viewShipmentDetail('${s._id}')">
+            <td data-label="Tracking #"><strong>${s.trackingNumber || 'N/A'}</strong></td>
+            <td data-label="Customer">${s.userId?.name || 'N/A'}</td>
+            <td data-label="Destination">${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
+            <td data-label="Status"><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
+            <td data-label="Actions">
+                <button class="action-btn" onclick="event.stopPropagation(); updateShipmentStatus('${s._id}')" title="Update Status"><i class="fas fa-truck"></i></button>
+                <button class="action-btn delete" onclick="event.stopPropagation(); deleteShipment('${s._id}')" title="Delete"><i class="fas fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
@@ -317,22 +335,21 @@ function renderUsers(users) {
     const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
 
     const html = !users.length
-        ? '<tr><td colspan="5" style="text-align:center;">No users found</td></tr>'
+        ? '<tr class="row-static"><td colspan="5" style="text-align:center;">No users found</td></tr>'
         : users.map(u => {
             const isSelf = u._id === loggedInUser.id || u._id === loggedInUser._id;
             const isActive = (u.status || 'active') === 'active';
             return `
-        <tr>
-            <td>${u.name || 'N/A'}</td>
-            <td>${u.email || 'N/A'}</td>
-            <td>${u.role === 'admin' ? 'Administrator' : 'Customer'}</td>
-            <td><span class="status-badge ${isActive ? 'status-delivered' : 'status-pending'}">${(u.status || 'active').toUpperCase()}</span></td>
-            <td>
-                <button class="action-btn" onclick="editUser('${u._id}')" title="Edit"><i class="fas fa-edit"></i></button>
-                <button class="action-btn" onclick="toggleUserStatus('${u._id}')" title="${isActive ? 'Deactivate' : 'Activate'}" ${isSelf ? 'disabled' : ''}>
+        <tr onclick="editUser('${u._id}')">
+            <td data-label="Name">${u.name || 'N/A'}</td>
+            <td data-label="Email">${u.email || 'N/A'}</td>
+            <td data-label="Role">${u.role === 'admin' ? 'Administrator' : 'Customer'}</td>
+            <td data-label="Status"><span class="status-badge ${isActive ? 'status-delivered' : 'status-pending'}">${(u.status || 'active').toUpperCase()}</span></td>
+            <td data-label="Actions">
+                <button class="action-btn" onclick="event.stopPropagation(); toggleUserStatus('${u._id}')" title="${isActive ? 'Deactivate' : 'Activate'}" ${isSelf ? 'disabled' : ''}>
                     <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i>
                 </button>
-                <button class="action-btn delete" onclick="deleteUser('${u._id}')" title="Delete" ${isSelf ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
+                <button class="action-btn delete" onclick="event.stopPropagation(); deleteUser('${u._id}')" title="Delete" ${isSelf ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
             </td>
         </tr>
     `;

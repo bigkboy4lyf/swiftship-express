@@ -26,8 +26,25 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('logoutBtn')?.addEventListener('click', () => window.logout());
 
     setupTabSwitching();
+    setupSidebarDrawer();
     loadDashboardData(token, user);
 });
+
+// =============================================
+// MOBILE SIDEBAR DRAWER
+// =============================================
+function closeSidebarDrawer() {
+    document.querySelector('.sidebar')?.classList.remove('open');
+    document.getElementById('sidebarBackdrop')?.classList.remove('open');
+}
+
+function setupSidebarDrawer() {
+    document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => {
+        document.querySelector('.sidebar')?.classList.add('open');
+        document.getElementById('sidebarBackdrop')?.classList.add('open');
+    });
+    document.getElementById('sidebarBackdrop')?.addEventListener('click', closeSidebarDrawer);
+}
 
 // =============================================
 // AVATAR HELPER (shows the real photo if set, else initials)
@@ -81,11 +98,13 @@ function switchTab(tabId) {
 
     if (tabId === 'user-shipments') {
         document.getElementById('userShipmentsBody').innerHTML =
-            '<tr><td colspan="5" style="text-align:center;">Loading your shipments...</td></tr>';
+            '<tr class="row-static"><td colspan="5" style="text-align:center;">Loading your shipments...</td></tr>';
         loadUserShipments();
     }
     if (tabId === 'user-profile') loadProfileData();
     if (tabId === 'user-addresses') fetchAddresses();
+
+    closeSidebarDrawer();
 }
 
 function toSectionId(tabId) {
@@ -161,16 +180,16 @@ function renderRecentShipments(shipments) {
     const tbody = document.getElementById('recentShipmentsBody');
     if (!tbody) return;
     if (!shipments.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No shipments found</td></tr>';
+        tbody.innerHTML = '<tr class="row-static"><td colspan="5" style="text-align:center;">No shipments found</td></tr>';
         return;
     }
     tbody.innerHTML = shipments.map(s => `
-        <tr>
-            <td><strong>${s.trackingNumber || 'N/A'}</strong></td>
-            <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
-            <td>${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
-            <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
-            <td><button class="action-btn" onclick="viewShipmentDetail('${s._id}')" title="View Details"><i class="fas fa-eye"></i></button></td>
+        <tr onclick="viewShipmentDetail('${s._id}')">
+            <td data-label="Tracking #"><strong>${s.trackingNumber || 'N/A'}</strong></td>
+            <td data-label="Destination">${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
+            <td data-label="Date">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
+            <td data-label="Status"><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
+            <td data-label=""><i class="fas fa-chevron-right row-caret"></i></td>
         </tr>
     `).join('');
 }
@@ -197,16 +216,16 @@ function renderUserShipments(shipments) {
     const tbody = document.getElementById('userShipmentsBody');
     if (!tbody) return;
     if (!shipments.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No shipments found</td></tr>';
+        tbody.innerHTML = '<tr class="row-static"><td colspan="5" style="text-align:center;">No shipments found</td></tr>';
         return;
     }
     tbody.innerHTML = shipments.map(s => `
-        <tr>
-            <td><strong>${s.trackingNumber || 'N/A'}</strong></td>
-            <td>${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
-            <td><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
-            <td>${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
-            <td><button class="action-btn" onclick="viewShipmentDetail('${s._id}')" title="View Details"><i class="fas fa-eye"></i></button></td>
+        <tr onclick="viewShipmentDetail('${s._id}')">
+            <td data-label="Tracking #"><strong>${s.trackingNumber || 'N/A'}</strong></td>
+            <td data-label="Destination">${s.recipient?.city || 'N/A'}, ${s.recipient?.country || ''}</td>
+            <td data-label="Status"><span class="status-badge status-${s.status}">${getStatusLabel(s.status).toUpperCase()}</span></td>
+            <td data-label="Date">${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</td>
+            <td data-label=""><i class="fas fa-chevron-right row-caret"></i></td>
         </tr>
     `).join('');
 }

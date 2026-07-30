@@ -32,6 +32,41 @@
     z-index: 1000;
 }
 
+/* Dimmed backdrop behind the sidebar when it's opened as a mobile drawer.
+   Inert (and never shown) above the tablet breakpoint. */
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.sidebar-backdrop.open {
+    display: block;
+    opacity: 1;
+}
+
+/* Hamburger button that opens the drawer; hidden until the mobile
+   breakpoint below turns the sidebar into an off-canvas drawer. */
+.sidebar-toggle-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: #333;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+}
+
+.sidebar-toggle-btn:hover {
+    background: #f0f7ff;
+    color: var(--primary);
+}
+
 .sidebar-header {
     padding: 20px;
     border-bottom: 1px solid #eee;
@@ -320,6 +355,51 @@ td {
     color: #dc3545;
 }
 
+/* =============================================
+   Clickable table rows
+   Convention: any <table class="data-table"> row is a click target for its
+   primary action (view/edit). Icon buttons for secondary actions (delete,
+   status changes) stop propagation so they don't also fire the row click.
+   Loading/empty placeholder rows opt out via .row-static.
+   ============================================= */
+table.data-table tbody tr {
+    cursor: pointer;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+table.data-table tbody tr:hover {
+    background: linear-gradient(120deg, rgba(0, 86, 179, 0.05), rgba(0, 162, 255, 0.09));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+table.data-table tbody tr:hover td:first-child {
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
+table.data-table tbody tr:hover td:last-child {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+table.data-table tbody tr:active {
+    background: linear-gradient(120deg, rgba(0, 86, 179, 0.09), rgba(0, 162, 255, 0.14));
+}
+
+table.data-table tbody tr.row-static {
+    cursor: default;
+}
+
+table.data-table tbody tr.row-static:hover {
+    background: none;
+    box-shadow: none;
+}
+
+.row-caret {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
 /* Quick Track */
 .quick-track {
     display: flex;
@@ -418,33 +498,158 @@ td {
     color: #2e7d32;
 }
 
-/* Responsive */
+/* =============================================
+   Responsive - mobile drawer + card-style tables
+   ============================================= */
 @media (max-width: 768px) {
-    .sidebar {
-        width: 70px;
-        overflow: visible;
-    }
-    
-    .sidebar .logo span,
-    .sidebar-menu-item span {
-        display: none;
-    }
-    
-    .sidebar-menu-item {
-        padding: 15px;
+    .sidebar-toggle-btn {
+        display: inline-flex;
+        align-items: center;
         justify-content: center;
     }
-    
-    .sidebar-menu-item i {
-        margin: 0;
+
+    /* Sidebar becomes an off-canvas drawer instead of squeezing to icons */
+    .sidebar {
+        transform: translateX(-100%);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
     }
-    
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
     .main-content {
-        margin-left: 70px;
+        margin-left: 0;
+        padding: 14px;
+    }
+
+    .dashboard-header {
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        gap: 10px;
+    }
+
+    .page-title {
+        font-size: 1.1rem;
+        flex: 1;
+    }
+
+    .header-actions {
+        gap: 10px;
     }
 
     .stats-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
+    }
+
+    .stat-info h3 {
+        font-size: 1.3rem;
+    }
+
+    .stat-info p {
+        font-size: 0.8rem;
+    }
+
+    .card {
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+    }
+
+    /* Tables become stacked cards: each row is a card, each cell a
+       label/value line (label supplied by the cell's data-label attribute) */
+    table.data-table thead {
+        display: none;
+    }
+
+    table.data-table,
+    table.data-table tbody,
+    table.data-table tr {
+        display: block;
+        width: 100%;
+    }
+
+    table.data-table tr {
+        margin-bottom: 10px;
+        border: 1px solid #eee;
+        border-radius: 10px;
+        padding: 4px 14px;
+    }
+
+    table.data-table tr:hover td:first-child,
+    table.data-table tr:hover td:last-child {
+        border-radius: 0;
+    }
+
+    table.data-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        text-align: right;
+        border-bottom: 1px solid #f2f2f2;
+    }
+
+    table.data-table td:last-child {
+        border-bottom: none;
+    }
+
+    table.data-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #888;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        text-align: left;
+    }
+
+    table.data-table td[colspan] {
+        display: block;
+        text-align: center;
+    }
+
+    table.data-table td[colspan]::before {
+        content: none;
+    }
+
+    .action-btn {
+        font-size: 1.2rem;
+        padding: 6px;
+    }
+
+    .quick-track {
+        flex-direction: column;
+    }
+
+    .quick-track button {
+        width: 100%;
+    }
+
+    .quote-form-actions {
+        flex-wrap: wrap;
+    }
+
+    .quote-form-actions .btn {
+        flex: 1 1 auto;
+    }
+
+    .modal-content {
+        padding: 20px;
     }
 }
 
