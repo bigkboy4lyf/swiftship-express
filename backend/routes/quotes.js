@@ -1,41 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const Shipment = require('../models/Shipment');
+const { calculateShippingPrice } = require('../utils/pricing');
 
 // Calculate quote endpoint - Fully Aligned with Mongoose Schema Constraints
 router.post('/calculate', async (req, res) => {
     try {
-        const { 
-            senderName, senderEmail, 
-            originCountry, destinationCountry, 
-            serviceType, weight, dimensions, 
+        const {
+            senderName, senderEmail,
+            originCountry, destinationCountry,
+            serviceType, weight, dimensions,
             packageType, insuranceValue,
-            userId 
+            userId
         } = req.body;
 
-        // 1. Math Calculation Matrices
-        const baseRates = {
-            'express': 1.8,
-            'standard': 1.0,
-            'economy': 0.7,
-            'international': 2.2,
-            'cargo': 1.5
-        };
-
-        const distanceFactors = {
-            'US-CA': 1.0, 'US-UK': 2.5, 'US-DE': 2.7,
-            'US-FR': 2.8, 'US-AU': 3.5, 'US-JP': 3.2,
-            'US-CN': 3.3, 'US-IN': 3.4
-        };
-        
-        const routeKey = `${String(originCountry).toUpperCase()}-${String(destinationCountry).toUpperCase()}`;
-        const distanceFactor = distanceFactors[routeKey] || 2.0;
-        
-        const computedBase = 10 + (distanceFactor * 5) + (parseFloat(weight) * 0.5 * 2) * (baseRates[serviceType] || 1.0);
-        const basePrice = Math.max(computedBase, 15);
-        const insuranceCost = (parseFloat(insuranceValue) || 0) * 0.01;
-        const surcharge = basePrice * 0.075;
-        const totalPrice = basePrice + insuranceCost + surcharge;
+        const { basePrice, insuranceCost, surcharge, totalPrice } = calculateShippingPrice({
+            originCountry, destinationCountry, serviceType, weight, insuranceValue
+        });
 
         // 2. Metadata-Rhyming Tracking Number Algorithm
         const servicePrefix = {
@@ -72,7 +53,8 @@ router.post('/calculate', async (req, res) => {
             userId: validatedUserId, // Validated ObjectId mapping
             status: 'pending_approval',
             serviceType: serviceType || 'standard',
-            totalPrice: parseFloat(totalPrice.toFixed(2)),
+            totalPrice,
+            pricing: { basePrice, insuranceCost, surcharge },
             sender: {
                 name: senderName || 'Guest User',
                 city: originCountry,

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Shipment = require('../models/Shipment');
+const { calculateShippingPrice } = require('../utils/pricing');
 
 
 // =============================================
@@ -55,6 +56,17 @@ router.post('/create', async (req, res) => {
         // Generate a professional tracking number: SS + 9 random digits
         const trackingNumber = 'SS' + Math.floor(100000000 + Math.random() * 900000000);
 
+        // This endpoint used to leave totalPrice at its schema default of 0 --
+        // nothing ever priced the shipment. Compute it the same way the quote
+        // calculator does, from the same inputs this form already collects.
+        const { basePrice, insuranceCost, surcharge, totalPrice } = calculateShippingPrice({
+            originCountry: sender?.country,
+            destinationCountry: recipient?.country,
+            serviceType,
+            weight: packageDetails?.weight,
+            insuranceValue: packageDetails?.value
+        });
+
         const newShipment = new Shipment({
             trackingNumber,
             userId: userId, // Links the shipment to the logged-in user
@@ -63,6 +75,8 @@ router.post('/create', async (req, res) => {
             recipient,
             package: packageDetails,
             status: 'pending_approval',
+            totalPrice,
+            pricing: { basePrice, insuranceCost, surcharge },
             trackingHistory: [{
                 status: 'pending_approval',
                 location: sender.city,

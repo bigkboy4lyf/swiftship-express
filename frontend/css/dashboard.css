@@ -886,12 +886,6 @@ table.data-table tbody tr.row-static:hover {
     color: white;
 }
 
-.shipment-detail-track-link {
-    display: block;
-    text-align: center;
-    margin-top: 20px;
-}
-
 .avatar-picker {
     text-align: center;
     margin-bottom: 20px;
@@ -1197,4 +1191,220 @@ table.data-table tbody tr.row-static:hover {
 
 .address-form-wrapper h4 {
     margin-bottom: 15px;
+}
+
+/* =============================================
+   Invoice / Receipt document
+   ============================================= */
+.invoice-modal-content {
+    max-width: 560px;
+}
+
+.invoice-doc {
+    position: relative;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 28px 26px;
+    background: #fff;
+}
+
+.invoice-doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #222;
+    margin-bottom: 20px;
+}
+
+.invoice-doc-brand {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.invoice-doc-brand i {
+    color: var(--accent);
+    margin-right: 6px;
+}
+
+.invoice-doc-type {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #222;
+}
+
+/* Diagonal corner stamp -- orange/unpaid for an invoice, green/paid for a receipt */
+.invoice-doc-stamp {
+    position: absolute;
+    top: 22px;
+    right: -34px;
+    transform: rotate(35deg);
+    width: 160px;
+    text-align: center;
+    padding: 4px 0;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    border: 2px solid currentColor;
+    text-transform: uppercase;
+}
+
+.invoice-doc-stamp.unpaid {
+    color: #c2410c;
+    background: rgba(255, 123, 0, 0.08);
+}
+
+.invoice-doc-stamp.paid {
+    color: #15803d;
+    background: rgba(40, 167, 69, 0.08);
+}
+
+.invoice-doc-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.invoice-doc-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #999;
+    margin-bottom: 3px;
+}
+
+.invoice-doc-parties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 22px;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.invoice-doc-parties p {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.invoice-doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+}
+
+.invoice-doc-table th {
+    text-align: left;
+    padding: 8px 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #999;
+    border-bottom: 2px solid #eee;
+}
+
+.invoice-doc-table td {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.9rem;
+}
+
+.invoice-doc-table th:last-child,
+.invoice-doc-table td:last-child {
+    text-align: right;
+}
+
+.invoice-doc-total-row td {
+    border-bottom: none;
+    border-top: 2px solid #222;
+    padding-top: 14px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #222;
+}
+
+.invoice-doc-note {
+    font-size: 0.85rem;
+    color: #555;
+    background: #f8f9fa;
+    border-left: 3px solid var(--primary);
+    padding: 10px 14px;
+    margin-bottom: 18px;
+}
+
+.invoice-doc-verification {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f4f6f8;
+    border: 1px dashed #c7cdd4;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+}
+
+.invoice-doc-verification span {
+    color: #888;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+}
+
+.invoice-doc-verification strong {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.05em;
+    color: #222;
+}
+
+.invoice-doc-fineprint {
+    font-size: 0.72rem;
+    color: #aaa;
+    text-align: center;
+    margin: 0;
+}
+
+.invoice-print-btn {
+    width: 100%;
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Printing renders only the document itself -- everything else on the page
+   (sidebar, header, modal chrome) is hidden rather than just the modal
+   backdrop, since window.print() has no concept of "this modal is open". */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    #invoicePrintArea,
+    #invoicePrintArea * {
+        visibility: visible;
+    }
+
+    #invoicePrintArea {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        border: none;
+        padding: 0;
+    }
+
+    .invoice-doc-stamp {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }

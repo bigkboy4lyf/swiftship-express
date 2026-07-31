@@ -199,9 +199,14 @@ function renderAllShipments(shipments) {
     tbodies.forEach(tbody => tbody.innerHTML = html);
 }
 
+// The shipment currently open in the details modal -- lets the "View
+// Invoice/Receipt" button build its document without a second lookup.
+let currentDetailShipment = null;
+
 window.viewShipmentDetail = function(id) {
     const s = lastLoadedShipments.find(x => x._id === id);
     if (!s) return;
+    currentDetailShipment = s;
 
     const dims = s.package?.dimensions;
     const dimensionsText = dims && (dims.length || dims.width || dims.height)
@@ -228,11 +233,18 @@ window.viewShipmentDetail = function(id) {
         </div>
     `).join('');
 
+    const docBtn = document.getElementById('shipmentDetailDocBtn');
+    if (docBtn) docBtn.textContent = isAwaitingConfirmation(s.status) ? 'View Invoice' : 'View Receipt';
+
     document.getElementById('shipmentDetailModal').classList.add('active');
 };
 
 document.getElementById('closeShipmentDetailModal')?.addEventListener('click', () => {
     document.getElementById('shipmentDetailModal').classList.remove('active');
+});
+
+document.getElementById('shipmentDetailDocBtn')?.addEventListener('click', () => {
+    if (currentDetailShipment) openInvoiceOrReceipt(currentDetailShipment);
 });
 
 // =============================================
@@ -600,3 +612,69 @@ window.deleteShipment = async function(id) {
         alert('Error: ' + error.message);
     }
 };
+
+// =============================================
+// INVOICE / RECEIPT
+// =============================================
+// A shipment sitting at pending_approval hasn't been paid for yet -- it
+// gets an invoice. Once it's been approved (any other status), the same
+// document becomes a receipt. Matches AWAITING_DECISION_STATUSES on the
+// backend (backend/routes/dashboard.js).
+function isAwaitingConfirmation(status) {
+    return status === 'pending_approval';
+}
+
+function money(n) {
+    return `$${(Number(n) || 0).toFixed(2)}`;
+}
+
+function openInvoiceOrReceipt(s) {
+    const isInvoice = isAwaitingConfirmation(s.status);
+
+    document.getElementById('invoiceModalTitle').textContent = isInvoice ? 'Invoice' : 'Receipt';
+    document.getElementById('invoiceDocType').textContent = isInvoice ? 'INVOICE' : 'RECEIPT';
+
+    const stamp = document.getElementById('invoiceStatusStamp');
+    stamp.textContent = isInvoice ? 'Unpaid' : 'Paid';
+    stamp.className = 'invoice-doc-stamp ' + (isInvoice ? 'unpaid' : 'paid');
+
+    document.getElementById('invoiceDocNumber').textContent = `${isInvoice ? 'INV' : 'RCT'}-${s.trackingNumber}`;
+    document.getElementById('invoiceDocDate').textContent = s.createdAt
+        ? new Date(s.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : 'N/A';
+
+    document.getElementById('invoiceBillTo').innerHTML = `
+        <strong>${s.sender?.name || s.userId?.name || 'N/A'}</strong><br>
+        ${s.sender?.email || s.userId?.email || ''}
+    `;
+    document.getElementById('invoiceShipmentSummary').innerHTML = `
+        Tracking: <strong>${s.trackingNumber}</strong><br>
+        ${[s.sender?.country, s.recipient?.country].filter(Boolean).join(' &rarr; ') || 'N/A'}<br>
+        ${s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'Standard'} Service &middot; ${s.package?.weight || 'N/A'} kg
+    `;
+
+    const p = s.pricing || {};
+    document.getElementById('invoiceLineItems').innerHTML = s.totalPrice
+        ? `
+            <tr><td>Base Shipping Rate</td><td>${money(p.basePrice)}</td></tr>
+            ${p.insuranceCost ? `<tr><td>Insurance</td><td>${money(p.insuranceCost)}</td></tr>` : ''}
+            <tr><td>Service Surcharge</td><td>${money(p.surcharge)}</td></tr>
+        `
+        : '<tr><td colspan="2">Pricing details are not available for this shipment.</td></tr>';
+
+    document.getElementById('invoiceTotal').textContent = money(s.totalPrice);
+
+    document.getElementById('invoiceFooterNote').textContent = isInvoice
+        ? 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.'
+        : 'This receipt confirms payment has been received and processed for the shipment described above.';
+
+    document.getElementById('invoiceVerificationCode').textContent = s.verificationCode || 'N/A';
+
+    document.getElementById('invoiceReceiptModal').classList.add('active');
+}
+
+document.getElementById('closeInvoiceModal')?.addEventListener('click', () => {
+    document.getElementById('invoiceReceiptModal').classList.remove('active');
+});
+
+document.getElementById('printInvoiceBtn')?.addEventListener('click', () => window.print());

@@ -3,6 +3,7 @@ const router = express.Router();
 const Shipment = require('../models/Shipment');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
+const { documentVerificationCode } = require('../utils/verification');
 
 // A shipment stops being "active" once it's fully resolved -- delivered to the
 // customer, or rejected (rejected requests are deleted outright, so this is
@@ -138,7 +139,15 @@ router.get('/shipments', protect, async (req, res) => {
             .limit(finalLimit)
             .populate('userId', 'name email');
 
-        res.json({ success: true, data: shipments });
+        // Attached here rather than stored, so it can't go stale relative to
+        // the fields it's derived from. See utils/verification.js.
+        const withVerification = shipments.map(s => {
+            const obj = s.toObject();
+            obj.verificationCode = documentVerificationCode(s);
+            return obj;
+        });
+
+        res.json({ success: true, data: withVerification });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

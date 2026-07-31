@@ -344,6 +344,70 @@
                 <button class="modal-close" id="closeShipmentDetailModal">&times;</button>
             </div>
             <dl class="profile-detail-list" id="shipmentDetailBody"></dl>
+            <div class="quote-form-actions">
+                <button type="button" id="shipmentDetailDocBtn" class="btn quote-btn-primary">View Invoice</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice / Receipt -->
+    <div class="modal" id="invoiceReceiptModal">
+        <div class="modal-content invoice-modal-content">
+            <div class="modal-header no-print">
+                <h3 id="invoiceModalTitle">Invoice</h3>
+                <button class="modal-close" id="closeInvoiceModal">&times;</button>
+            </div>
+
+            <div id="invoicePrintArea" class="invoice-doc">
+                <div class="invoice-doc-header">
+                    <div class="invoice-doc-brand"><i class="fas fa-shipping-fast"></i> SwiftShip Express</div>
+                    <div class="invoice-doc-type" id="invoiceDocType">INVOICE</div>
+                </div>
+
+                <span class="invoice-doc-stamp" id="invoiceStatusStamp">UNPAID</span>
+
+                <div class="invoice-doc-meta">
+                    <div>
+                        <span class="invoice-doc-label">Document #</span>
+                        <strong id="invoiceDocNumber">&mdash;</strong>
+                    </div>
+                    <div>
+                        <span class="invoice-doc-label">Date Issued</span>
+                        <strong id="invoiceDocDate">&mdash;</strong>
+                    </div>
+                </div>
+
+                <div class="invoice-doc-parties">
+                    <div>
+                        <span class="invoice-doc-label">Billed To</span>
+                        <p id="invoiceBillTo">&mdash;</p>
+                    </div>
+                    <div>
+                        <span class="invoice-doc-label">Shipment</span>
+                        <p id="invoiceShipmentSummary">&mdash;</p>
+                    </div>
+                </div>
+
+                <table class="invoice-doc-table">
+                    <thead>
+                        <tr><th>Description</th><th>Amount</th></tr>
+                    </thead>
+                    <tbody id="invoiceLineItems"></tbody>
+                    <tfoot>
+                        <tr class="invoice-doc-total-row"><td>Total</td><td id="invoiceTotal">$0.00</td></tr>
+                    </tfoot>
+                </table>
+
+                <p class="invoice-doc-note" id="invoiceFooterNote"></p>
+
+                <div class="invoice-doc-verification">
+                    <span>Verification Code</span>
+                    <strong id="invoiceVerificationCode">&mdash;</strong>
+                </div>
+                <p class="invoice-doc-fineprint">This document was generated electronically by SwiftShip Express and is valid without a signature. Any alteration of the amounts or details above will not match the verification code.</p>
+            </div>
+
+            <button type="button" class="btn quote-btn-primary invoice-print-btn no-print" id="printInvoiceBtn"><i class="fas fa-print"></i> Print / Save as PDF</button>
         </div>
     </div>
 

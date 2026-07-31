@@ -20,7 +20,16 @@ const shipmentSchema = new mongoose.Schema({
         default: 'pending_approval'
     },
     serviceType: { type: String, enum: ['express', 'standard', 'international', 'economy', 'cargo'], default: 'standard' },
+    // totalPrice stays the single source of truth other code already reads
+    // (e.g. the admin revenue aggregation) -- pricing below is purely the
+    // itemized breakdown for invoices/receipts, computed once at creation so
+    // a receipt's total never silently changes if the rate formula changes later.
     totalPrice: { type: Number, default: 0 },
+    pricing: {
+        basePrice: { type: Number, default: 0 },
+        insuranceCost: { type: Number, default: 0 },
+        surcharge: { type: Number, default: 0 }
+    },
     sender: {
         name: String,
         company: String,
