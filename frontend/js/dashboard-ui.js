@@ -720,19 +720,21 @@ function renderAddresses(addresses) {
     container.innerHTML = addresses.length
         ? addresses.map(addr => `
             <div class="address-card">
-                <div class="address-card-details">
-                    <strong>${addr.street}</strong><br>
-                    ${addr.city}, ${addr.state} ${addr.zipCode}<br>
-                    ${addr.Country || ''}
+                <div class="address-card-icon"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="address-card-body">
+                    <strong>${addr.street}</strong>
+                    <span>${addr.city}, ${addr.state} ${addr.zipCode}</span>
+                    <span>${addr.Country || ''}</span>
                 </div>
-                <div class="address-card-actions">
-                    <button type="button" class="btn-delete" onclick="deleteAddress('${addr._id}')">
-                        <i class="fas fa-trash-alt"></i> Delete
-                    </button>
-                </div>
+                <button type="button" class="address-card-delete" onclick="deleteAddress('${addr._id}')" title="Delete address" aria-label="Delete address">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </div>
         `).join('')
-        : '<p class="address-empty">No saved addresses yet. Add one to speed up checkout.</p>';
+        : `<div class="address-empty">
+                <i class="fas fa-map-marker-alt"></i>
+                <p>No saved addresses yet. Add one to speed up checkout.</p>
+           </div>`;
 
     if (toggleBtn) toggleBtn.style.display = addresses.length >= 3 ? 'none' : '';
 }
