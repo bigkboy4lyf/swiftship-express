@@ -2,6 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script>
+        // Applied synchronously, before CSS renders, so the page never
+        // flashes the wrong theme on load.
+        (function() {
+            var stored = localStorage.getItem('theme');
+            var theme = (stored === 'light' || stored === 'dark')
+                ? stored
+                : (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SwiftShip Express | Track Package</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,6 +39,11 @@
                 <li><a href="index.html#features">Features</a></li>
                 <li><a href="index.html#testimonials">Testimonials</a></li>
                 <li><a href="index.html#contact">Contact</a></li>
+                <li>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </li>
                 <li id="signInItem"><a href="account.html">Sign In</a></li>
                 <li><a href="quote.html" class="btn">Get Quote</a></li>
             </ul>

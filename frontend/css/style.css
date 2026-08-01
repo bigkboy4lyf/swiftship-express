@@ -6,6 +6,45 @@
     --light: #f8f9fa;
     --dark: #212529;
     --gray: #6c757d;
+
+    /* Theme tokens -- everything above stays constant across themes (brand
+       colors); everything below is what actually flips in dark mode. Every
+       stylesheet in this project loads style.css, so these are available
+       everywhere without needing to be redeclared per-file. */
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface-alt: #f8f9fa;
+    --text: #212529;
+    --text-muted: #6c757d;
+    --text-faint: #999999;
+    --border: #e5e7eb;
+    --border-strong: #222222;
+    --header-bg: rgba(255, 255, 255, 0.95);
+    --nav-hover-bg: rgba(0, 86, 179, 0.06);
+    --overlay: rgba(0, 0, 0, 0.5);
+    --section-overlay: rgba(248, 249, 250, 0.9);
+}
+
+:root[data-theme="dark"] {
+    --primary: #4d8fdb;
+    --secondary: #38bdf8;
+    --accent: #ff9636;
+    --light: #1c2436;
+    --dark: #e7e9ee;
+    --gray: #9aa4b5;
+
+    --bg: #0e1420;
+    --surface: #161d2b;
+    --surface-alt: #1c2436;
+    --text: #e7e9ee;
+    --text-muted: #9aa4b5;
+    --text-faint: #7a8496;
+    --border: #2a3244;
+    --border-strong: #e7e9ee;
+    --header-bg: rgba(22, 29, 43, 0.95);
+    --nav-hover-bg: rgba(56, 189, 248, 0.14);
+    --overlay: rgba(0, 0, 0, 0.7);
+    --section-overlay: rgba(14, 20, 32, 0.88);
 }
 
 * {
@@ -17,9 +56,10 @@
 
 body {
     line-height: 1.6;
-    color: var(--dark);
-    background-color: #f5f7fa;
+    color: var(--text);
+    background-color: var(--bg);
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 a {
@@ -47,7 +87,7 @@ a {
 }
 
 .btn:hover {
-    background-color: #004494;
+    filter: brightness(0.88);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 86, 179, 0.2);
 }
@@ -57,12 +97,12 @@ a {
 }
 
 .btn-accent:hover {
-    background-color: #e06c00;
+    filter: brightness(0.88);
 }
 
 /* Header & Navigation */
 header {
-    background-color: rgba(255, 255, 255, 0.95);
+    background-color: var(--header-bg);
     box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
     position: fixed;
     top: 0;
@@ -70,6 +110,10 @@ header {
     width: 100%;
     z-index: 1000;
     transition: all 0.3s ease;
+}
+
+header.scrolled {
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
 }
 
 .header-container {
@@ -87,6 +131,8 @@ header {
     font-weight: 700;
     color: var(--primary);
     letter-spacing: -0.02em;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .logo i {
@@ -97,7 +143,9 @@ header {
     display: flex;
     list-style: none;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .nav-links li {
@@ -110,23 +158,24 @@ header {
     font-weight: 500;
     font-size: 0.95rem;
     color: var(--dark);
-    padding: 8px 14px;
+    padding: 8px 10px;
     border-radius: 4px;
     position: relative;
+    white-space: nowrap;
     transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .nav-links a:hover {
     color: var(--primary);
-    background-color: rgba(0, 86, 179, 0.06);
+    background-color: var(--nav-hover-bg);
 }
 
 .nav-links a::after {
     content: '';
     position: absolute;
     bottom: 3px;
-    left: 14px;
-    right: 14px;
+    left: 10px;
+    right: 10px;
     width: auto;
     height: 2px;
     background-color: var(--primary);
@@ -144,9 +193,9 @@ header {
 .nav-links li#signInItem,
 .nav-links li:has(#logoutBtn),
 .nav-links li:has(a[href="dashboard.html"]) {
-    margin-left: 8px;
-    padding-left: 14px;
-    border-left: 1px solid rgba(0, 0, 0, 0.1);
+    margin-left: 6px;
+    padding-left: 10px;
+    border-left: 1px solid var(--border);
 }
 
 .nav-links a i {
@@ -170,6 +219,26 @@ header {
     font-size: 1.5rem;
     color: var(--primary);
     cursor: pointer;
+}
+
+.theme-toggle-btn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: var(--text);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--nav-hover-bg);
+    color: var(--primary);
 }
 
 /* Hero Section */
@@ -236,7 +305,7 @@ header {
 }
 
 .service-card {
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
@@ -290,7 +359,7 @@ header {
 
 /* Tracking Section */
 .tracking-section {
-    background: linear-gradient(rgba(248, 249, 250, 0.9), rgba(248, 249, 250, 0.9)), 
+    background: linear-gradient(var(--section-overlay), var(--section-overlay)),
                 url('../img/bg2.jpg');
     background-size: cover;
     background-position: center;
@@ -298,7 +367,7 @@ header {
 }
 
 .tracking-container {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--header-bg);
     border-radius: 10px;
     padding: 40px;
     max-width: 800px;
@@ -318,10 +387,11 @@ header {
 .tracking-input {
     flex: 1;
     padding: 15px 20px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--primary);
     border-radius: 4px 0 0 4px;
     font-size: 1rem;
-    border-color: var(--primary);
+    background: var(--surface);
+    color: var(--text);
 }
 
 .tracking-btn {
@@ -336,7 +406,7 @@ header {
 
 /* Features Section */
 .features-section {
-    background-color: white;
+    background-color: var(--surface);
 }
 
 .features-grid {
@@ -394,7 +464,7 @@ header {
 }
 
 .testimonial-card {
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 10px;
     padding: 30px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
@@ -545,7 +615,7 @@ footer {
         top: 70px;
         left: 0;
         width: 100%;
-        background-color: white;
+        background-color: var(--surface);
         flex-direction: column;
         align-items: center;
         padding: 20px 0;
@@ -568,7 +638,7 @@ footer {
         width: 100%;
         text-align: center;
         padding: 15px 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border);
     }
 
     .nav-links li#signInItem,

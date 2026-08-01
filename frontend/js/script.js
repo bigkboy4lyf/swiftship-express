@@ -14,6 +14,35 @@ function getDeviceId() {
     return id;
 }
 
+// =============================================
+// DARK MODE
+// =============================================
+// The actual theme is already applied before this file even loads (see the
+// inline snippet in each page's <head>, which runs synchronously to avoid a
+// flash of the wrong theme). This just keeps the toggle button's icon in
+// sync and wires up the click handler.
+function getStoredTheme() {
+    const stored = localStorage.getItem('theme');
+    if (stored === 'light' || stored === 'dark') return stored;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    document.querySelectorAll('.theme-toggle-btn i').forEach(icon => {
+        icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    });
+}
+
+document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+});
+// Sync icon(s) to whatever the anti-flash inline script already applied
+setTheme(document.documentElement.getAttribute('data-theme') || getStoredTheme());
+
 // Mobile menu toggle
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const navLinks = document.getElementById('navLinks');
@@ -38,12 +67,11 @@ if (mobileMenuBtn && navLinks) {
 window.addEventListener('scroll', () => {
     const header = document.getElementById('header');
     if (header) {
-        header.style.backgroundColor = window.scrollY > 100 
-            ? 'rgba(255, 255, 255, 0.98)' 
-            : 'rgba(255, 255, 255, 0.95)';
-        header.style.boxShadow = window.scrollY > 100 
-            ? '0 5px 20px rgba(0, 0, 0, 0.1)' 
-            : '0 2px 15px rgba(0, 0, 0, 0.1)';
+        // A class instead of inline styles, so the actual colors stay
+        // controlled by CSS (and therefore by the current theme) rather than
+        // this hardcoding a fixed light-mode color that would silently beat
+        // out var(--header-bg) in dark mode.
+        header.classList.toggle('scrolled', window.scrollY > 100);
     }
 });
 
