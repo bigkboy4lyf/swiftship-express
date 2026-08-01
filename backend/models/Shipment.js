@@ -58,7 +58,19 @@ const shipmentSchema = new mongoose.Schema({
             height: Number
         },
         description: String,
-        value: Number
+        category: String,
+        value: Number,
+        // Itemized contents when a shipment bundles more than one thing.
+        // weight/description/value above stay the aggregate across all
+        // items, so existing code that only reads the top-level package
+        // fields keeps working unchanged for both single- and multi-item
+        // shipments.
+        items: [{
+            description: String,
+            category: String,
+            weight: Number,
+            value: Number
+        }]
     },
     currentLocation: {
         facility: String,

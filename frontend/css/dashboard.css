@@ -1142,6 +1142,7 @@ table.data-table tbody tr.row-static:hover {
 .quote-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    align-items: start;
     gap: 30px;
     margin-top: 20px;
 }
@@ -1207,7 +1208,7 @@ table.data-table tbody tr.row-static:hover {
 }
 
 .quote-info-box {
-    background: #e8f4fd;
+    background: rgba(0, 86, 179, 0.08);
     border-radius: 10px;
     padding: 20px;
     border-left: 4px solid var(--primary);

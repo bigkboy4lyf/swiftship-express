@@ -605,6 +605,218 @@ footer {
     }
 }
 
+/* =============================================
+   SHARED QUOTE ITEM ROWS
+   ============================================= */
+/* Used by both the public quote page and the dashboard's Get Quote tab --
+   both build their "what's in this shipment" rows from the same
+   createItemRowHTML() in quote-engine.js, so one shared ruleset here keeps
+   them visually identical instead of drifting into two implementations. */
+.quote-items-section {
+    margin-bottom: 25px;
+}
+
+.quote-items-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.quote-items-header label {
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.quote-add-item-btn {
+    background: none;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.quote-add-item-btn:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.quote-item-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 12px;
+}
+
+.quote-item-row-fields {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 2fr 1.4fr 1fr 1fr;
+    gap: 12px;
+}
+
+.quote-item-row-fields .form-group {
+    margin-bottom: 0;
+}
+
+/* Narrow weight/value columns don't have room for native spinner arrows
+   without cropping the digits themselves (e.g. "800" rendering as "80"). */
+.quote-item-row-fields input[type="number"]::-webkit-outer-spin-button,
+.quote-item-row-fields input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.quote-item-row-fields input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.quote-item-remove {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 22px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.quote-item-remove:hover:not(:disabled) {
+    background: rgba(220, 53, 69, 0.12);
+    color: #dc3545;
+}
+
+.quote-item-remove:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.quote-limited-service-note {
+    font-size: 0.85rem;
+    color: #b45309;
+    background: rgba(217, 119, 6, 0.12);
+    border-left: 3px solid #d97706;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+/* =============================================
+   SHARED QUOTE RESULT PANEL
+   ============================================= */
+/* Same reasoning as the item rows above: the public quote page and the
+   dashboard's Get Quote tab both render their calculated price with this
+   markup, so one ruleset keeps the two results looking like the same
+   product instead of two different-looking calculators. */
+.quote-result {
+    background-color: var(--surface);
+    border-radius: 10px;
+    padding: 30px;
+    margin-top: 30px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    border-left: 4px solid var(--accent);
+    display: none;
+}
+
+.quote-result h3 {
+    color: var(--primary);
+    margin-bottom: 20px;
+}
+
+.quote-result-panel {
+    background-color: var(--surface);
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    border-left: 4px solid var(--accent);
+}
+
+.quote-result-panel h4 {
+    color: var(--primary);
+    margin-bottom: 18px;
+}
+
+.quote-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.quote-item {
+    padding: 15px;
+    background-color: rgba(0, 86, 179, 0.08);
+    border-radius: 5px;
+}
+
+.quote-label {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.quote-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.quote-total {
+    text-align: center;
+    padding: 20px;
+    background-color: var(--primary);
+    color: white;
+    border-radius: 5px;
+    margin-top: 20px;
+}
+
+.quote-total .quote-label {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.quote-total .quote-value {
+    color: white;
+    font-size: 1.8rem;
+}
+
+@media (max-width: 700px) {
+    .quote-item-row-fields {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .quote-item-row {
+        flex-direction: column;
+    }
+
+    .quote-item-row-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .quote-item-remove {
+        margin-top: 0;
+        align-self: flex-end;
+    }
+}
+
 @media (max-width: 768px) {
     .mobile-menu-btn {
         display: block;

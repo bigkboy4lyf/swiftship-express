@@ -260,6 +260,7 @@ window.viewShipmentDetail = function(id) {
         ['Status', getStatusLabel(s.status)],
         ['Service Type', s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'N/A'],
         ['Account Holder', s.userId?.name ? `${s.userId.name} (${s.userId.email || 'no email on file'})` : 'N/A'],
+        ['Contents', describePackageContents(s.package)],
         ['Weight', s.package?.weight ? `${s.package.weight} kg` : 'Not specified'],
         ['Dimensions', dimensionsText],
         ['Sender Name', s.sender?.name || 'Not specified'],
@@ -692,7 +693,8 @@ function openInvoiceOrReceipt(s) {
     document.getElementById('invoiceShipmentSummary').innerHTML = `
         Tracking: <strong>${s.trackingNumber}</strong><br>
         ${[s.sender?.country, s.recipient?.country].filter(Boolean).join(' &rarr; ') || 'N/A'}<br>
-        ${s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'Standard'} Service &middot; ${s.package?.weight || 'N/A'} kg
+        ${s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'Standard'} Service &middot; ${s.package?.weight || 'N/A'} kg<br>
+        Contents: ${describePackageContents(s.package)}
     `;
 
     const p = s.pricing || {};

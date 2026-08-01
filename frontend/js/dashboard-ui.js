@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupTabSwitching();
     setupSidebarDrawer();
     setupUserMenu();
+    setupDashboardQuoteEngine();
     loadDashboardData(token, user);
 });
 
@@ -286,6 +287,7 @@ window.viewShipmentDetail = function(id) {
         ['Tracking Number', s.trackingNumber || 'N/A'],
         ['Status', getStatusLabel(s.status)],
         ['Service Type', s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'N/A'],
+        ['Contents', describePackageContents(s.package)],
         ['Weight', s.package?.weight ? `${s.package.weight} kg` : 'Not specified'],
         ['Dimensions', dimensionsText],
         ['Sender Name', s.sender?.name || 'Not specified'],
@@ -608,15 +610,31 @@ function showTrackingConfirmation(trackingNumber) {
     document.getElementById('trackingConfirmModal').classList.add('active');
 }
 
+let lastDashboardQuoteContext = null;
+
+function resetQuoteTab() {
+    document.getElementById('dashboardQuoteForm')?.reset();
+    resetItemsRepeater(document.getElementById('dashItemsContainer'));
+    const resultState = document.getElementById('quoteResultState');
+    const infoBoxState = document.getElementById('quoteInfoBoxState');
+    if (resultState) resultState.style.display = 'none';
+    if (infoBoxState) infoBoxState.style.display = 'block';
+    ['dashOriginLimitedNote', 'dashDestinationLimitedNote'].forEach(id => {
+        const note = document.getElementById(id);
+        if (note) note.style.display = 'none';
+    });
+    lastDashboardQuoteContext = null;
+}
+
 document.getElementById('dismissTrackingConfirm')?.addEventListener('click', () => {
     document.getElementById('trackingConfirmModal').classList.remove('active');
-    document.getElementById('dashboardQuoteForm')?.reset();
+    resetQuoteTab();
     document.getElementById('quoteFormState').style.display = 'none';
     document.getElementById('quoteCtaState').style.display = 'block';
 });
 
 // =============================================
-// QUOTE TAB: click-to-open form
+// QUOTE TAB: click-to-open form + country/item-row setup
 // =============================================
 document.getElementById('openQuoteFormBtn')?.addEventListener('click', () => {
     document.getElementById('quoteCtaState').style.display = 'none';
@@ -626,11 +644,44 @@ document.getElementById('openQuoteFormBtn')?.addEventListener('click', () => {
 document.getElementById('closeQuoteFormBtn')?.addEventListener('click', () => {
     document.getElementById('quoteFormState').style.display = 'none';
     document.getElementById('quoteCtaState').style.display = 'block';
-    document.getElementById('dashboardQuoteForm')?.reset();
+    resetQuoteTab();
 });
 
+// The Reset button only clears the plain form fields natively -- rebuild the
+// item rows back down to one and flip the result panel back to the info box
+// right after, so "Reset" really does put the tab back to a blank slate.
+document.getElementById('dashboardQuoteForm')?.addEventListener('reset', () => {
+    setTimeout(() => {
+        resetItemsRepeater(document.getElementById('dashItemsContainer'));
+        document.getElementById('quoteResultState').style.display = 'none';
+        document.getElementById('quoteInfoBoxState').style.display = 'block';
+    }, 0);
+});
+
+function setupDashLimitedServiceNotice(selectId, noteId) {
+    const select = document.getElementById(selectId);
+    const note = document.getElementById(noteId);
+    if (!select || !note) return;
+    select.addEventListener('change', () => {
+        if (isLimitedServiceCountry(select.value)) {
+            note.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${getCountryName(select.value)} currently has limited shipping service. Delivery times may be longer than usual.`;
+            note.style.display = 'block';
+        } else {
+            note.style.display = 'none';
+        }
+    });
+}
+
+function setupDashboardQuoteEngine() {
+    populateCountrySelect(document.getElementById('dashOrigin'), 'Select country');
+    populateCountrySelect(document.getElementById('dashDestination'), 'Select country');
+    setupDashLimitedServiceNotice('dashOrigin', 'dashOriginLimitedNote');
+    setupDashLimitedServiceNotice('dashDestination', 'dashDestinationLimitedNote');
+    initItemsRepeater(document.getElementById('dashItemsContainer'), document.getElementById('dashAddItemBtn'));
+}
+
 // =============================================
-// QUOTE SUBMISSION -> SHIPMENT REQUEST
+// STEP 1: CALCULATE QUOTE (same engine as the public quote page)
 // =============================================
 function parseDimensions(input) {
     if (typeof input !== 'string') return { length: 0, width: 0, height: 0 };
@@ -644,32 +695,73 @@ function parseDimensions(input) {
 document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user')) || {};
-
     const senderName = document.getElementById('dashSenderName')?.value.trim();
     const senderEmail = document.getElementById('dashSenderEmail')?.value.trim();
-    const originCity = document.getElementById('dashOrigin')?.value || 'Origin Hub';
-    const destCity = document.getElementById('dashDestination')?.value || '';
-    const service = document.getElementById('dashServiceType')?.value || 'standard';
-    const pkgWeight = parseFloat(document.getElementById('dashWeight')?.value) || 1;
+    const origin = document.getElementById('dashOrigin')?.value || '';
+    const destination = document.getElementById('dashDestination')?.value || '';
+    const serviceType = document.getElementById('dashServiceType')?.value || 'standard';
     const dimensionsInput = document.getElementById('dashDimensions')?.value || '';
+    const items = collectItems(document.getElementById('dashItemsContainer'));
 
-    if (!destCity) {
-        alert('Please provide a destination country.');
+    if (!origin || !destination) {
+        alert('Please select an origin and destination country.');
+        return;
+    }
+    if (origin === destination) {
+        alert('Origin and destination cannot be the same.');
+        return;
+    }
+    if (!items.length || items.some(i => !i.description || !i.weight)) {
+        alert("Please describe every item you're shipping and give it a weight.");
         return;
     }
 
+    const quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions: dimensionsInput });
+
+    lastDashboardQuoteContext = { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items };
+
+    document.getElementById('dashResultService').textContent = QUOTE_SERVICE_DETAILS[serviceType]?.name || serviceType;
+    document.getElementById('dashResultRoute').textContent = `${getCountryName(origin)} → ${getCountryName(destination)}`;
+    document.getElementById('dashResultDelivery').textContent = quote.deliveryEstimate || QUOTE_SERVICE_DETAILS[serviceType]?.delivery || '5-10 days';
+    document.getElementById('dashResultContents').textContent = `${items.length} item${items.length > 1 ? 's' : ''}, ${quote.totalWeight.toFixed(1)} kg total`;
+    document.getElementById('dashResultBase').textContent = money(quote.basePrice);
+    document.getElementById('dashResultInsurance').textContent = money(quote.insuranceCost);
+    document.getElementById('dashResultSurcharge').textContent = money(quote.surcharge);
+    document.getElementById('dashResultTotal').textContent = money(quote.totalPrice);
+
+    document.getElementById('quoteInfoBoxState').style.display = 'none';
+    document.getElementById('quoteResultState').style.display = 'block';
+});
+
+document.getElementById('editQuoteDetailsBtn')?.addEventListener('click', () => {
+    document.getElementById('quoteResultState').style.display = 'none';
+    document.getElementById('quoteInfoBoxState').style.display = 'block';
+});
+
+// =============================================
+// STEP 2: CONFIRM -> ACTUALLY CREATE THE SHIPMENT
+// =============================================
+document.getElementById('confirmQuoteBookingBtn')?.addEventListener('click', async () => {
+    if (!lastDashboardQuoteContext) return;
+
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items } = lastDashboardQuoteContext;
+
     const payload = {
         userId: user.id || user._id,
-        serviceType: service,
-        sender: { name: senderName || user.name || 'Customer', email: senderEmail, city: originCity, country: originCity },
-        recipient: { name: 'To Be Determined', city: destCity, country: destCity },
+        serviceType,
+        sender: { name: senderName || user.name || 'Customer', email: senderEmail, city: getCountryName(origin), country: origin },
+        recipient: { name: 'To Be Determined', city: getCountryName(destination), country: destination },
         packageDetails: {
-            weight: pkgWeight,
-            dimensions: parseDimensions(dimensionsInput)
+            dimensions: parseDimensions(dimensionsInput),
+            items
         }
     };
+
+    const btn = document.getElementById('confirmQuoteBookingBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
 
     try {
         const res = await fetch('/api/shipments/create', {
@@ -692,6 +784,9 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
     } catch (error) {
         console.error('Error submitting shipment request:', error);
         alert('Could not reach the server. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Submit Request';
     }
 });
 
@@ -817,7 +912,8 @@ function openInvoiceOrReceipt(s) {
     document.getElementById('invoiceShipmentSummary').innerHTML = `
         Tracking: <strong>${s.trackingNumber}</strong><br>
         ${[s.sender?.country, s.recipient?.country].filter(Boolean).join(' &rarr; ') || 'N/A'}<br>
-        ${s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'Standard'} Service &middot; ${s.package?.weight || 'N/A'} kg
+        ${s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'Standard'} Service &middot; ${s.package?.weight || 'N/A'} kg<br>
+        Contents: ${describePackageContents(s.package)}
     `;
 
     const p = s.pricing || {};

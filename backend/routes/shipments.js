@@ -56,6 +56,23 @@ router.post('/create', async (req, res) => {
         // Generate a professional tracking number: SS + 9 random digits
         const trackingNumber = 'SS' + Math.floor(100000000 + Math.random() * 900000000);
 
+        // A shipment can bundle several items (packageDetails.items). When it
+        // does, the top-level package fields become the aggregate across all
+        // of them so every existing reader (admin table, invoice, tracking
+        // page) that only looks at package.weight/description/value keeps
+        // working unchanged, whether this is a single- or multi-item request.
+        const items = Array.isArray(packageDetails?.items) ? packageDetails.items : [];
+        const aggregateWeight = items.length
+            ? items.reduce((sum, i) => sum + (parseFloat(i.weight) || 0), 0)
+            : (parseFloat(packageDetails?.weight) || 0);
+        const aggregateValue = items.length
+            ? items.reduce((sum, i) => sum + (parseFloat(i.value) || 0), 0)
+            : (parseFloat(packageDetails?.value) || 0);
+        const aggregateDescription = items.length > 1
+            ? `${items.length} items: ${items.map(i => i.description).filter(Boolean).join(', ')}`
+            : (items[0]?.description || packageDetails?.description || '');
+        const aggregateCategory = items.length > 1 ? 'mixed' : (items[0]?.category || packageDetails?.category || '');
+
         // This endpoint used to leave totalPrice at its schema default of 0 --
         // nothing ever priced the shipment. Compute it the same way the quote
         // calculator does, from the same inputs this form already collects.
@@ -63,8 +80,8 @@ router.post('/create', async (req, res) => {
             originCountry: sender?.country,
             destinationCountry: recipient?.country,
             serviceType,
-            weight: packageDetails?.weight,
-            insuranceValue: packageDetails?.value
+            weight: aggregateWeight,
+            insuranceValue: aggregateValue
         });
 
         const newShipment = new Shipment({
@@ -73,7 +90,14 @@ router.post('/create', async (req, res) => {
             serviceType,
             sender,
             recipient,
-            package: packageDetails,
+            package: {
+                weight: aggregateWeight,
+                dimensions: packageDetails?.dimensions,
+                description: aggregateDescription,
+                category: aggregateCategory,
+                value: aggregateValue,
+                items
+            },
             status: 'pending_approval',
             totalPrice,
             pricing: { basePrice, insuranceCost, surcharge },

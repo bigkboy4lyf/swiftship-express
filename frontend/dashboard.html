@@ -253,33 +253,17 @@
                                         <label>Origin Country *</label>
                                         <select id="dashOrigin" required>
                                             <option value="">Select country</option>
-                                            <option value="US">United States</option>
-                                            <option value="CA">Canada</option>
-                                            <option value="UK">United Kingdom</option>
-                                            <option value="DE">Germany</option>
-                                            <option value="FR">France</option>
-                                            <option value="AU">Australia</option>
-                                            <option value="JP">Japan</option>
-                                            <option value="CN">China</option>
-                                            <option value="IN">India</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
                                         <label>Destination Country *</label>
                                         <select id="dashDestination" required>
                                             <option value="">Select country</option>
-                                            <option value="US">United States</option>
-                                            <option value="CA">Canada</option>
-                                            <option value="UK">United Kingdom</option>
-                                            <option value="DE">Germany</option>
-                                            <option value="FR">France</option>
-                                            <option value="AU">Australia</option>
-                                            <option value="JP">Japan</option>
-                                            <option value="CN">China</option>
-                                            <option value="IN">India</option>
                                         </select>
                                     </div>
                                 </div>
+                                <p class="quote-limited-service-note" id="dashOriginLimitedNote" style="display:none;"></p>
+                                <p class="quote-limited-service-note" id="dashDestinationLimitedNote" style="display:none;"></p>
 
                                 <div class="form-group">
                                     <label>Shipping Service *</label>
@@ -293,32 +277,80 @@
                                     </select>
                                 </div>
 
-                                <div class="quote-field-row">
-                                    <div class="form-group">
-                                        <label>Weight (kg) *</label>
-                                        <input type="number" id="dashWeight" min="0.1" max="1000" step="0.1" placeholder="2.5" required>
+                                <div class="form-group">
+                                    <label>Dimensions (cm)</label>
+                                    <input type="text" id="dashDimensions" placeholder="30x20x15">
+                                </div>
+
+                                <div class="quote-items-section">
+                                    <div class="quote-items-header">
+                                        <label>What are you shipping? *</label>
+                                        <button type="button" id="dashAddItemBtn" class="quote-add-item-btn">
+                                            <i class="fas fa-plus"></i> Add Another Item
+                                        </button>
                                     </div>
-                                    <div class="form-group">
-                                        <label>Dimensions (cm)</label>
-                                        <input type="text" id="dashDimensions" placeholder="30x20x15">
-                                    </div>
+                                    <div id="dashItemsContainer"></div>
                                 </div>
 
                                 <div class="quote-form-actions">
-                                    <button type="submit" class="btn quote-btn-primary">Submit Request</button>
+                                    <button type="submit" class="btn quote-btn-primary">Calculate Quote</button>
                                     <button type="reset" class="btn quote-btn-secondary">Reset</button>
                                     <button type="button" id="closeQuoteFormBtn" class="quote-btn-text">Cancel</button>
                                 </div>
                             </form>
 
-                            <div class="quote-info-box">
-                                <h4><i class="fas fa-info-circle"></i> How Quotes Are Calculated</h4>
-                                <ul>
-                                    <li><i class="fas fa-check"></i> <strong>Distance:</strong> Rates vary based on origin and destination</li>
-                                    <li><i class="fas fa-check"></i> <strong>Weight &amp; Size:</strong> Heavier packages cost more</li>
-                                    <li><i class="fas fa-check"></i> <strong>Service Type:</strong> Faster delivery = higher rates</li>
-                                    <li><i class="fas fa-check"></i> <strong>Insurance:</strong> Optional coverage for valuable items</li>
-                                </ul>
+                            <div id="quoteInfoBoxState">
+                                <div class="quote-info-box">
+                                    <h4><i class="fas fa-info-circle"></i> How Quotes Are Calculated</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> <strong>Distance:</strong> Rates vary based on origin and destination</li>
+                                        <li><i class="fas fa-check"></i> <strong>Weight &amp; Size:</strong> Heavier packages cost more</li>
+                                        <li><i class="fas fa-check"></i> <strong>Service Type:</strong> Faster delivery = higher rates</li>
+                                        <li><i class="fas fa-check"></i> <strong>Insurance:</strong> Optional coverage for valuable items</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div id="quoteResultState" class="quote-result-panel" style="display:none;">
+                                <h4>Your Shipping Quote</h4>
+                                <div class="quote-details">
+                                    <div class="quote-item">
+                                        <div class="quote-label">Service Type</div>
+                                        <div class="quote-value" id="dashResultService">&ndash;</div>
+                                    </div>
+                                    <div class="quote-item">
+                                        <div class="quote-label">Route</div>
+                                        <div class="quote-value" id="dashResultRoute">&ndash;</div>
+                                    </div>
+                                    <div class="quote-item">
+                                        <div class="quote-label">Estimated Delivery</div>
+                                        <div class="quote-value" id="dashResultDelivery">&ndash;</div>
+                                    </div>
+                                    <div class="quote-item">
+                                        <div class="quote-label">Contents</div>
+                                        <div class="quote-value" id="dashResultContents" style="font-size:1rem;">&ndash;</div>
+                                    </div>
+                                    <div class="quote-item">
+                                        <div class="quote-label">Base Shipping</div>
+                                        <div class="quote-value" id="dashResultBase">&ndash;</div>
+                                    </div>
+                                    <div class="quote-item">
+                                        <div class="quote-label">Insurance</div>
+                                        <div class="quote-value" id="dashResultInsurance">&ndash;</div>
+                                    </div>
+                                    <div class="quote-item">
+                                        <div class="quote-label">Surcharge</div>
+                                        <div class="quote-value" id="dashResultSurcharge">&ndash;</div>
+                                    </div>
+                                </div>
+                                <div class="quote-total">
+                                    <div class="quote-label">Total Estimated Cost</div>
+                                    <div class="quote-value" id="dashResultTotal">&ndash;</div>
+                                </div>
+                                <div class="quote-form-actions">
+                                    <button type="button" id="confirmQuoteBookingBtn" class="btn quote-btn-primary">Confirm &amp; Submit Request</button>
+                                    <button type="button" id="editQuoteDetailsBtn" class="quote-btn-text">Edit Details</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -595,6 +627,8 @@
 
     <script src="js/auth-navbar.js"></script>
     <script src="js/script.js"></script>
+    <script src="js/countries-data.js"></script>
+    <script src="js/quote-engine.js"></script>
     <script src="js/dashboard-ui.js"></script>
 </body>
 </html>

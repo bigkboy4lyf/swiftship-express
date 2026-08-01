@@ -1,15 +1,16 @@
 // =============================================
-// SWIFTSHIP EXPRESS - UNIFIED QUOTE ENGINE
+// SWIFTSHIP EXPRESS - PUBLIC QUOTE PAGE
 // =============================================
-// Standalone Page Frontend Logic
-// =============================================
+// Form wiring only -- the actual price math and item-row UI live in
+// quote-engine.js so this page and the dashboard's Get Quote tab share one
+// calculation engine instead of two that can drift apart.
+
+let lastQuoteContext = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Session context matching authentication behaviors
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user'));
 
-    // If an authenticated session is running, auto-populate profile context fields
     if (user) {
         const senderNameInput = document.getElementById('senderName');
         const senderEmailInput = document.getElementById('senderEmail');
@@ -17,147 +18,90 @@ document.addEventListener('DOMContentLoaded', function() {
         if (senderEmailInput && !senderEmailInput.value) senderEmailInput.value = user.email || '';
     }
 
-    setupQuoteFormHandler();
+    populateCountrySelect(document.getElementById('origin'), 'Select country');
+    populateCountrySelect(document.getElementById('destination'), 'Select country');
+    setupLimitedServiceNotice('origin', 'originLimitedNote');
+    setupLimitedServiceNotice('destination', 'destinationLimitedNote');
+
+    initItemsRepeater(document.getElementById('quoteItemsContainer'), document.getElementById('quoteAddItemBtn'));
+
+    setupQuoteFormHandler(token, user);
     setupPrintEngine();
-    setupBookingEngine(token, user);
+    setupBookingEngine();
 });
 
-// =============================================
-// SYSTEM CONFIGURATION & MATRICES
-// =============================================
+function setupLimitedServiceNotice(selectId, noteId) {
+    const select = document.getElementById(selectId);
+    const note = document.getElementById(noteId);
+    if (!select || !note) return;
 
-const countryNames = {
-    'US': 'United States', 'CA': 'Canada', 'UK': 'United Kingdom',
-    'DE': 'Germany', 'FR': 'France', 'AU': 'Australia',
-    'JP': 'Japan', 'CN': 'China', 'IN': 'India'
-};
-
-const serviceDetails = {
-    'express': { name: 'Express Delivery', delivery: '1-3 days', baseMultiplier: 1.8 },
-    'standard': { name: 'Standard Shipping', delivery: '5-10 days', baseMultiplier: 1.0 },
-    'economy': { name: 'Economy Shipping', delivery: '10-20 days', baseMultiplier: 0.7 },
-    'international': { name: 'International Priority', delivery: '3-7 days', baseMultiplier: 2.2 },
-    'cargo': { name: 'Cargo/Freight Shipping', delivery: '7-14 days', baseMultiplier: 1.5 }
-};
-
-const dashDistanceMatrix = {
-    'US-CA': 1.0, 'US-UK': 2.5, 'US-DE': 2.7, 'US-FR': 2.8, 'US-AU': 3.5, 'US-JP': 3.2, 'US-CN': 3.3, 'US-IN': 3.4,
-    'CA-UK': 2.3, 'CA-DE': 2.5, 'CA-FR': 2.6, 'CA-AU': 3.8, 'CA-JP': 3.5, 'CA-CN': 3.6, 'CA-IN': 3.7,
-    'UK-DE': 1.2, 'UK-FR': 1.1, 'UK-AU': 3.2, 'UK-JP': 3.0, 'UK-CN': 3.1, 'UK-IN': 3.3,
-    'DE-FR': 1.0, 'DE-AU': 3.3, 'DE-JP': 3.1, 'DE-CN': 3.2, 'DE-IN': 3.4,
-    'FR-AU': 3.4, 'FR-JP': 3.2, 'FR-CN': 3.3, 'FR-IN': 3.5,
-    'AU-JP': 2.8, 'AU-CN': 2.9, 'AU-IN': 2.7,
-    'JP-CN': 1.5, 'JP-IN': 2.2,
-    'CN-IN': 1.8
-};
-
-// =============================================
-// CALCULATION LOGIC & SUBMISSION
-// =============================================
-
-function calculateBaseRate(origin, destination, weight, serviceType) {
-    let distanceFactor = 1.0;
-    const route = `${origin}-${destination}`;
-    const reverseRoute = `${destination}-${origin}`;
-    
-    if (dashDistanceMatrix[route]) distanceFactor = dashDistanceMatrix[route];
-    else if (dashDistanceMatrix[reverseRoute]) distanceFactor = dashDistanceMatrix[reverseRoute];
-    
-    const weightFactor = weight * 0.5;
-    const serviceFactor = serviceDetails[serviceType]?.baseMultiplier || 1.0;
-    const baseRate = 10 + (distanceFactor * 5) + (weightFactor * 2) * serviceFactor;
-    
-    return Math.max(baseRate, 15);
+    select.addEventListener('change', () => {
+        if (isLimitedServiceCountry(select.value)) {
+            note.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${getCountryName(select.value)} currently has limited shipping service. Delivery times may be longer than usual.`;
+            note.style.display = 'block';
+        } else {
+            note.style.display = 'none';
+        }
+    });
 }
 
-function setupQuoteFormHandler() {
+function setupQuoteFormHandler(token, user) {
     const quoteForm = document.getElementById('shippingQuoteForm');
     if (!quoteForm) return;
 
     quoteForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+
         const origin = document.getElementById('origin').value;
         const destination = document.getElementById('destination').value;
         const serviceType = document.getElementById('serviceType').value;
-        const weight = parseFloat(document.getElementById('weight').value) || 1;
         const dimensions = document.getElementById('dimensions').value || 'N/A';
-        const insurance = parseFloat(document.getElementById('insurance').value) || 0;
         const senderName = document.getElementById('senderName').value;
         const senderEmail = document.getElementById('senderEmail').value;
-        const packageType = document.getElementById('packageType')?.value || 'parcel';
-        
-        if (!origin || !destination || !serviceType || !weight || !senderName || !senderEmail) {
+        const items = collectItems(document.getElementById('quoteItemsContainer'));
+
+        if (!origin || !destination || !serviceType || !senderName || !senderEmail) {
             alert('Please fill in all required fields.');
             return;
         }
-        
+
         if (origin === destination) {
             alert('Origin and destination cannot be the same.');
             return;
         }
-        
-        // Attempt calculations via core backend systems route
-        try {
-            const response = await fetch('/api/quotes/calculate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    senderName, senderEmail,
-                    originCountry: origin,
-                    destinationCountry: destination,
-                    serviceType: serviceType,
-                    weight: weight,
-                    dimensions: dimensions,
-                    packageType: packageType,
-                    insuranceValue: insurance
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                const data = result.data;
-                displayUnifiedQuote({
-                    serviceName: serviceDetails[data.quote.serviceType]?.name || data.quote.serviceType,
-                    route: `${countryNames[data.quote.originCountry] || data.quote.originCountry} → ${countryNames[data.quote.destinationCountry] || data.quote.destinationCountry}`,
-                    delivery: data.deliveryEstimate || serviceDetails[data.quote.serviceType]?.delivery || '5-10 days',
-                    basePrice: data.quote.basePrice,
-                    insuranceCost: data.quote.insuranceCost,
-                    surcharge: data.quote.surcharge,
-                    total: data.quote.totalPrice,
-                    quoteId: data.quote._id,
-                    quoteNumber: data.quote.quoteNumber
-                });
-                return; 
-            }
-        } catch (error) {
-            console.warn('Backend valuation route unavailable, running local backup loop.');
+
+        if (!items.length || items.some(i => !i.description || !i.weight)) {
+            alert('Please describe every item you\'re shipping and give it a weight.');
+            return;
         }
-        
-        // Local Fallback Execution Frame
-        const baseRate = calculateBaseRate(origin, destination, weight, serviceType);
-        const insuranceCost = insurance > 0 ? insurance * 0.01 : 0;
-        const fuelSurcharge = baseRate * 0.075;
-        const total = baseRate + insuranceCost + fuelSurcharge;
-        
+
+        const quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions });
+
+        // Kept so "Book Now" creates exactly the shipment that was just
+        // quoted, instead of re-deriving it from the form a second time.
+        lastQuoteContext = { origin, destination, serviceType, dimensions, senderName, senderEmail, items, quote, user };
+
         displayUnifiedQuote({
-            serviceName: serviceDetails[serviceType]?.name || serviceType,
-            route: `${countryNames[origin] || origin} → ${countryNames[destination] || destination}`,
-            delivery: serviceDetails[serviceType]?.delivery || '5-10 days',
-            basePrice: baseRate,
-            insuranceCost: insuranceCost,
-            surcharge: fuelSurcharge,
-            total: total,
-            quoteId: null,
-            quoteNumber: 'LOCAL-' + Date.now().toString().slice(-6)
+            serviceName: QUOTE_SERVICE_DETAILS[serviceType]?.name || serviceType,
+            route: `${getCountryName(origin)} → ${getCountryName(destination)}`,
+            delivery: quote.deliveryEstimate || QUOTE_SERVICE_DETAILS[serviceType]?.delivery || '5-10 days',
+            contents: `${items.length} item${items.length > 1 ? 's' : ''}, ${quote.totalWeight.toFixed(1)} kg total`,
+            basePrice: quote.basePrice,
+            insuranceCost: quote.insuranceCost,
+            surcharge: quote.surcharge,
+            total: quote.totalPrice
         });
     });
 
-    // Handle Reset Operations Elegantly
     quoteForm.querySelector('button[type="reset"]')?.addEventListener('click', function() {
         const quoteResult = document.getElementById('quoteResult');
         if (quoteResult) quoteResult.style.display = 'none';
+        resetItemsRepeater(document.getElementById('quoteItemsContainer'));
+        lastQuoteContext = null;
+        ['originLimitedNote', 'destinationLimitedNote'].forEach(id => {
+            const note = document.getElementById(id);
+            if (note) note.style.display = 'none';
+        });
     });
 }
 
@@ -168,22 +112,19 @@ function displayUnifiedQuote(quoteData) {
     document.getElementById('resultService').textContent = quoteData.serviceName;
     document.getElementById('resultRoute').textContent = quoteData.route;
     document.getElementById('resultDelivery').textContent = quoteData.delivery;
+    document.getElementById('resultContents').textContent = quoteData.contents;
     document.getElementById('resultBase').textContent = `$${quoteData.basePrice.toFixed(2)}`;
     document.getElementById('resultInsurance').textContent = `$${quoteData.insuranceCost.toFixed(2)}`;
     document.getElementById('resultSurcharge').textContent = `$${quoteData.surcharge.toFixed(2)}`;
     document.getElementById('resultTotal').textContent = `$${quoteData.total.toFixed(2)}`;
-    
+
     quoteResult.style.display = 'block';
     quoteResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    
-    // Save state context array straight to workspace local storage
-    localStorage.setItem('dashLastQuote', JSON.stringify(quoteData));
 }
 
 // =============================================
-// PREMIUM DISPATCH PRINT ENGINE
+// PRINT ENGINE
 // =============================================
-
 function setupPrintEngine() {
     const printQuoteBtn = document.getElementById('printQuote');
     if (!printQuoteBtn) return;
@@ -192,14 +133,14 @@ function setupPrintEngine() {
         const service = document.getElementById('resultService').textContent;
         const route = document.getElementById('resultRoute').textContent;
         const delivery = document.getElementById('resultDelivery').textContent;
+        const contents = document.getElementById('resultContents').textContent;
         const base = document.getElementById('resultBase').textContent;
         const insurance = document.getElementById('resultInsurance').textContent;
         const surcharge = document.getElementById('resultSurcharge').textContent;
         const total = document.getElementById('resultTotal').textContent;
-        
-        const cached = localStorage.getItem('dashLastQuote');
-        const quoteNumber = cached ? JSON.parse(cached).quoteNumber : 'LOCAL-' + Date.now().toString().slice(-6);
-        
+
+        const quoteNumber = 'Q-' + Date.now().toString().slice(-6);
+
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <!DOCTYPE html>
@@ -216,7 +157,7 @@ function setupPrintEngine() {
                         --border: #e2e8f0;
                     }
                     * { box-sizing: border-box; margin: 0; padding: 0; }
-                    body { 
+                    body {
                         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                         color: var(--text-main);
                         line-height: 1.5;
@@ -240,7 +181,7 @@ function setupPrintEngine() {
                     .date { font-size: 13px; color: var(--text-main); }
                     .details-grid {
                         display: grid;
-                        grid-template-columns: repeat(3, 1fr);
+                        grid-template-columns: repeat(2, 1fr);
                         gap: 20px;
                         background: var(--bg-light);
                         border: 1px solid var(--border);
@@ -252,12 +193,12 @@ function setupPrintEngine() {
                     .grid-item p { font-size: 15px; font-weight: 600; color: var(--text-dark); }
                     h3 { font-size: 16px; color: var(--text-dark); font-weight: 700; margin-bottom: 12px; }
                     table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                    th { 
-                        background: var(--bg-light); 
-                        color: var(--text-dark); 
-                        font-weight: 600; 
-                        font-size: 13px; 
-                        text-align: left; 
+                    th {
+                        background: var(--bg-light);
+                        color: var(--text-dark);
+                        font-weight: 600;
+                        font-size: 13px;
+                        text-align: left;
                         padding: 12px 16px;
                         border-bottom: 1px solid var(--border);
                     }
@@ -265,13 +206,13 @@ function setupPrintEngine() {
                     .summary-container { display: flex; justify-content: flex-end; }
                     .summary-card { width: 320px; background: var(--bg-light); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
                     .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
-                    .summary-row.total-row { 
-                        margin-top: 15px; 
-                        padding-top: 15px; 
-                        border-top: 2px dashed var(--border); 
-                        font-size: 18px; 
-                        font-weight: 700; 
-                        color: var(--text-dark); 
+                    .summary-row.total-row {
+                        margin-top: 15px;
+                        padding-top: 15px;
+                        border-top: 2px dashed var(--border);
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: var(--text-dark);
                     }
                     .total-amount { color: var(--accent); }
                     .footer { margin-top: 60px; border-top: 1px solid var(--border); padding-top: 20px; text-align: center; font-size: 12px; color: var(--text-main); }
@@ -306,6 +247,10 @@ function setupPrintEngine() {
                         <div class="grid-item">
                             <span>Est. Delivery Window</span>
                             <p>${delivery}</p>
+                        </div>
+                        <div class="grid-item">
+                            <span>Contents</span>
+                            <p>${contents}</p>
                         </div>
                     </div>
                     <h3>Financial Breakdown</h3>
@@ -363,14 +308,12 @@ function setupPrintEngine() {
 }
 
 // =============================================
-// TRANS-LOGISTICS BOOKING ENGINE & POPUPS
+// BOOKING ENGINE
 // =============================================
-
 function setupBookingEngine() {
     const bookNowBtn = document.getElementById('bookNow');
     if (!bookNowBtn) return;
 
-    // Custom Modal Generator to replace ugly native browser alerts
     function showCustomTrackingPopup(trackingNumber) {
         const overlay = document.createElement('div');
         Object.assign(overlay.style, {
@@ -389,16 +332,16 @@ function setupBookingEngine() {
         modal.innerHTML = `
             <div style="font-size: 2.5rem; color: #2e7d32; margin-bottom: 12px;"><i class="fas fa-check-circle"></i></div>
             <h3 style="color: #222; margin: 0 0 8px 0; font-size: 1.3rem;">Shipment Requirement Received</h3>
-            
+
             <p style="color: #555; font-size: 0.9rem; line-height: 1.4; margin-bottom: 18px;">
                 Your shipment requirement has been received, and support will write to you to get more details on the shipping and how to go about it.
             </p>
-            
+
             <div style="background: #f4f6f8; padding: 12px; border-radius: 6px; border: 1px dashed #b2dfdb; margin-bottom: 20px;">
                 <span style="font-size: 0.7rem; text-transform: uppercase; color: #666; display: block; margin-bottom: 2px;">Assigned Tracking Number</span>
                 <strong style="font-size: 1.25rem; color: #0056b3; letter-spacing: 0.5px;">${trackingNumber}</strong>
             </div>
-            
+
             <button id="dismissTrackingPopupBtn" style="width: 100%; background: #0056b3; color: white; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Acknowledge</button>
         `;
 
@@ -412,37 +355,30 @@ function setupBookingEngine() {
     }
 
     bookNowBtn.addEventListener('click', async () => {
-        const user = JSON.parse(localStorage.getItem('user')) || null;
-        const dimInput = document.getElementById('dimensions').value || "0x0x0";
-        const dimArray = dimInput.toLowerCase().split('x').map(num => parseFloat(num.trim()) || 0);
+        if (!lastQuoteContext) {
+            alert('Please calculate a quote first.');
+            return;
+        }
+
+        const { origin, destination, serviceType, dimensions, senderName, senderEmail, items, user } = lastQuoteContext;
+        const dimArray = (dimensions && dimensions !== 'N/A' ? dimensions : '0x0x0').toLowerCase().split('x').map(n => parseFloat(n.trim()) || 0);
 
         const bookingPayload = {
-            userId: user ? (user.id || user._id) : "65f1a2b3c4d5e6f7a8b9c0d1",
-            serviceType: document.getElementById('serviceType').value || 'standard',
-            sender: {
-                name: document.getElementById('senderName').value,
-                email: document.getElementById('senderEmail').value,
-                country: document.getElementById('origin').value,
-                city: "Origin Hub"
-            },
-            recipient: {
-                name: document.getElementById('senderName').value + " - Recipient",
-                city: "Destination Hub",
-                country: document.getElementById('destination').value
-            },
+            // Shipment.userId is required by the schema; guests booking without
+            // an account fall back to the same placeholder id the rest of this
+            // app already uses when there's no real user to attach the record to.
+            userId: user ? (user.id || user._id) : '65f1a2b3c4d5e6f7a8b9c0d1',
+            serviceType,
+            sender: { name: senderName, email: senderEmail, country: origin, city: getCountryName(origin) },
+            recipient: { name: `${senderName} - Recipient`, city: getCountryName(destination), country: destination },
             packageDetails: {
-                weight: parseFloat(document.getElementById('weight').value) || 0,
-                dimensions: {
-                    length: dimArray[0] || 0,
-                    width: dimArray[1] || 0,
-                    height: dimArray[2] || 0
-                },
-                value: parseFloat(document.getElementById('insurance').value) || 0
+                dimensions: { length: dimArray[0] || 0, width: dimArray[1] || 0, height: dimArray[2] || 0 },
+                items
             }
         };
 
         try {
-            const response = await fetch('/api/shipments/create', { 
+            const response = await fetch('/api/shipments/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(bookingPayload)
@@ -451,55 +387,13 @@ function setupBookingEngine() {
             const resData = await response.json();
 
             if (resData.success) {
-                // Calls the beautiful custom popup using the true backend tracking string
                 showCustomTrackingPopup(resData.data.trackingNumber);
             } else {
-                console.error(`Booking Failed: ${resData.message}`);
+                alert(`Booking failed: ${resData.message}`);
             }
         } catch (error) {
-            console.error('Pipeline Error:', error);
+            console.error('Booking error:', error);
+            alert('Could not reach the server. Please try again.');
         }
-    });
-}
-
-// Modal Frame rendering layout engine to match visual dashboard continuity
-function showLoggedTrackingPopup(trackingNumber) {
-    const overlay = document.createElement('div');
-    overlay.id = 'trackingPopupOverlay';
-    
-    Object.assign(overlay.style, {
-        position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)', display: 'flex',
-        justifyContent: 'center', alignItems: 'center', zIndex: '9999'
-    });
-
-    const modal = document.createElement('div');
-    Object.assign(modal.style, {
-        backgroundColor: '#ffffff', padding: '25px', borderRadius: '8px',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.2)', textAlign: 'center',
-        maxWidth: '400px', width: '90%', fontFamily: 'Arial, sans-serif'
-    });
-
-    modal.innerHTML = `
-        <div style="font-size: 2.5rem; color: #2e7d32; margin-bottom: 12px;"><i class="fas fa-check-circle"></i></div>
-        <h3 style="color: #222; margin: 0 0 8px 0; font-size: 1.3rem;">Shipment Requirement Received</h3>
-        
-        <p style="color: #555; font-size: 0.9rem; line-height: 1.4; margin-bottom: 18px;">
-            Your shipment requirement has been received, and support will write to you to get more details on the shipping and how to go about it.
-        </p>
-        
-        <div style="background: #f4f6f8; padding: 12px; border-radius: 6px; border: 1px dashed #b2dfdb; margin-bottom: 20px;">
-            <span style="font-size: 0.7rem; text-transform: uppercase; color: #666; display: block; margin-bottom: 2px;">Assigned Tracking Number</span>
-            <strong style="font-size: 1.25rem; color: #0056b3; letter-spacing: 0.5px;">${trackingNumber}</strong>
-        </div>
-        
-        <button id="dismissTrackingPopupBtn" style="width: 100%; background: #0056b3; color: white; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Acknowledge</button>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    document.getElementById('dismissTrackingPopupBtn').addEventListener('click', () => {
-        document.body.removeChild(overlay);
     });
 }

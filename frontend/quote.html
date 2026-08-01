@@ -123,66 +123,6 @@
             color: var(--accent);
             margin-top: 3px;
         }
-        
-        .quote-result {
-            background-color: var(--surface);
-            border-radius: 10px;
-            padding: 30px;
-            margin-top: 30px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid var(--accent);
-            display: none;
-        }
-        
-        .quote-result h3 {
-            color: var(--primary);
-            margin-bottom: 20px;
-        }
-        
-        .quote-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-        
-        .quote-item {
-            padding: 15px;
-            background-color: rgba(0, 86, 179, 0.05);
-            border-radius: 5px;
-        }
-        
-        .quote-label {
-            font-weight: 600;
-            color: var(--gray);
-            font-size: 0.9rem;
-            margin-bottom: 5px;
-        }
-        
-        .quote-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        .quote-total {
-            text-align: center;
-            padding: 20px;
-            background-color: var(--primary);
-            color: white;
-            border-radius: 5px;
-            margin-top: 20px;
-        }
-        
-        .quote-total .quote-label {
-            color: rgba(255, 255, 255, 0.9);
-        }
-        
-        .quote-total .quote-value {
-            color: white;
-            font-size: 1.8rem;
-        }
-        
         @media (max-width: 992px) {
             .quote-container {
                 grid-template-columns: 1fr;
@@ -280,34 +220,18 @@
                                 <label for="origin">Origin Country *</label>
                                 <select id="origin" class="form-control" required>
                                     <option value="">Select country</option>
-                                    <option value="US">United States</option>
-                                    <option value="CA">Canada</option>
-                                    <option value="UK">United Kingdom</option>
-                                    <option value="DE">Germany</option>
-                                    <option value="FR">France</option>
-                                    <option value="AU">Australia</option>
-                                    <option value="JP">Japan</option>
-                                    <option value="CN">China</option>
-                                    <option value="IN">India</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label for="destination">Destination Country *</label>
                                 <select id="destination" class="form-control" required>
                                     <option value="">Select country</option>
-                                    <option value="US">United States</option>
-                                    <option value="CA">Canada</option>
-                                    <option value="UK">United Kingdom</option>
-                                    <option value="DE">Germany</option>
-                                    <option value="FR">France</option>
-                                    <option value="AU">Australia</option>
-                                    <option value="JP">Japan</option>
-                                    <option value="CN">China</option>
-                                    <option value="IN">India</option>
                                 </select>
                             </div>
                         </div>
-                        
+                        <p class="quote-limited-service-note" id="originLimitedNote" style="display:none;"></p>
+                        <p class="quote-limited-service-note" id="destinationLimitedNote" style="display:none;"></p>
+
                         <div class="form-group">
                             <label for="serviceType">Shipping Service *</label>
                             <select id="serviceType" class="form-control" required>
@@ -319,34 +243,22 @@
                                 <option value="cargo">Cargo/Freight Shipping</option>
                             </select>
                         </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="weight">Package Weight (kg) *</label>
-                                <input type="number" id="weight" class="form-control" min="0.1" max="1000" step="0.1" placeholder="e.g., 2.5" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="dimensions">Dimensions (cm) *</label>
-                                <input type="text" id="dimensions" class="form-control" placeholder="L x W x H (e.g., 30x20x15)" required>
-                            </div>
-                        </div>
-                        
+
                         <div class="form-group">
-                            <label for="packageType">Package Type</label>
-                            <select id="packageType" class="form-control">
-                                <option value="standard">Standard Box</option>
-                                <option value="envelope">Document Envelope</option>
-                                <option value="tube">Tube</option>
-                                <option value="pallet">Pallet</option>
-                                <option value="custom">Custom Packaging</option>
-                            </select>
+                            <label for="dimensions">Package Dimensions (cm)</label>
+                            <input type="text" id="dimensions" class="form-control" placeholder="L x W x H (e.g., 30x20x15)">
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="insurance">Insurance Value ($)</label>
-                            <input type="number" id="insurance" class="form-control" min="0" placeholder="Optional insurance value">
+
+                        <div class="quote-items-section">
+                            <div class="quote-items-header">
+                                <label>What are you shipping? *</label>
+                                <button type="button" id="quoteAddItemBtn" class="quote-add-item-btn">
+                                    <i class="fas fa-plus"></i> Add Another Item
+                                </button>
+                            </div>
+                            <div id="quoteItemsContainer"></div>
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="submit" class="btn btn-accent" style="flex: 1;">Calculate Quote</button>
                             <button type="reset" class="btn" style="flex: 1;">Reset Form</button>
@@ -367,6 +279,10 @@
                             <div class="quote-item">
                                 <div class="quote-label">Estimated Delivery</div>
                                 <div class="quote-value" id="resultDelivery">3-5 days</div>
+                            </div>
+                            <div class="quote-item">
+                                <div class="quote-label">Contents</div>
+                                <div class="quote-value" id="resultContents" style="font-size: 1rem;">1 item, 2.5 kg</div>
                             </div>
                             <div class="quote-item">
                                 <div class="quote-label">Base Shipping</div>
@@ -488,6 +404,8 @@
         </div>
     </footer>
 <script src="js/auth-navbar.js"></script>
+<script src="js/countries-data.js"></script>
+<script src="js/quote-engine.js"></script>
 <script src="js/quote.js"></script>
 <script src="js/script.js"></script>
 </body>
