@@ -73,27 +73,31 @@ function createItemRowHTML() {
     const rowId = `qi-${++quoteItemRowSeq}`;
     return `
         <div class="quote-item-row" data-row-id="${rowId}">
-            <div class="quote-item-row-fields">
-                <div class="form-group quote-item-description">
-                    <label>Item Description *</label>
-                    <input type="text" class="qi-description form-control" placeholder="e.g., Laptop computer" required>
-                </div>
-                <div class="form-group quote-item-category">
-                    <label>Category *</label>
-                    <select class="qi-category form-control" required>${categoryOptionsHTML()}</select>
-                </div>
-                <div class="form-group quote-item-weight">
-                    <label>Weight (kg) *</label>
-                    <input type="number" class="qi-weight form-control" min="0.1" max="1000" step="0.1" placeholder="2.5" required>
-                </div>
-                <div class="form-group quote-item-value">
-                    <label>Declared Value ($)</label>
-                    <input type="number" class="qi-value form-control" min="0" step="0.01" placeholder="Optional">
-                </div>
-            </div>
             <button type="button" class="quote-item-remove" title="Remove item" aria-label="Remove item">
                 <i class="fas fa-trash-alt"></i>
             </button>
+            <div class="quote-item-row-fields">
+                <div class="quote-item-row-line">
+                    <div class="form-group quote-item-description">
+                        <label>Item Description *</label>
+                        <input type="text" class="qi-description form-control" placeholder="e.g., Laptop computer" required>
+                    </div>
+                    <div class="form-group quote-item-category">
+                        <label>Category *</label>
+                        <select class="qi-category form-control" required>${categoryOptionsHTML()}</select>
+                    </div>
+                </div>
+                <div class="quote-item-row-line">
+                    <div class="form-group quote-item-weight">
+                        <label>Weight (kg) *</label>
+                        <input type="number" class="qi-weight form-control" min="0.1" max="1000" step="0.1" placeholder="2.5" required>
+                    </div>
+                    <div class="form-group quote-item-value">
+                        <label>Declared Value ($)</label>
+                        <input type="number" class="qi-value form-control" min="0" step="0.01" placeholder="Optional">
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 }
