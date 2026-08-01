@@ -189,6 +189,7 @@
     background: none;
     border-radius: 10px;
     font-family: inherit;
+    color: inherit;
     text-align: left;
     transition: background-color 0.2s ease;
 }
