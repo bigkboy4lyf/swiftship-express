@@ -69,22 +69,32 @@
                 </button>
                 <h1 class="page-title" id="pageTitle">Admin Dashboard</h1>
                 <div class="header-actions">
-                    <div class="user-profile">
-                        <div class="user-avatar" id="userAvatar">
-                            <img id="userAvatarImg" src="" alt="Avatar" style="display:none;">
-                            <span id="userAvatarInitial">JD</span>
-                        </div>
-                        <div class="user-info">
-                            <h4 id="userDisplayName">John Doe</h4>
-                            <p>Administrator</p>
-                        </div>
-                    </div>
                     <button class="header-icon-btn theme-toggle-btn" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
                         <i class="fas fa-moon"></i>
                     </button>
-                    <button class="header-icon-btn" id="logoutBtn" title="Log out">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
+                    <div class="header-divider"></div>
+                    <div class="user-menu">
+                        <button class="user-profile" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
+                            <div class="user-avatar" id="userAvatar">
+                                <img id="userAvatarImg" src="" alt="Avatar" style="display:none;">
+                                <span id="userAvatarInitial">JD</span>
+                            </div>
+                            <div class="user-info">
+                                <h4 id="userDisplayName">John Doe</h4>
+                                <p>Administrator</p>
+                            </div>
+                            <i class="fas fa-chevron-down user-menu-caret" aria-hidden="true"></i>
+                        </button>
+                        <div class="user-menu-dropdown" id="userMenuDropdown">
+                            <a href="#" class="user-menu-item" data-tab-link="admin-settings">
+                                <i class="fas fa-cog"></i> Settings
+                            </a>
+                            <div class="user-menu-divider"></div>
+                            <button class="user-menu-item danger" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt"></i> Log out
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

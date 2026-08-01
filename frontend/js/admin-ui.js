@@ -26,8 +26,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setupTabSwitching();
     setupSidebarDrawer();
+    setupUserMenu();
     loadAdminData(token);
 });
+
+// =============================================
+// USER MENU (avatar dropdown: settings link + logout)
+// =============================================
+function setupUserMenu() {
+    const btn = document.getElementById('userMenuBtn');
+    const dropdown = document.getElementById('userMenuDropdown');
+    if (!btn || !dropdown) return;
+
+    function closeMenu() {
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        dropdown.classList.remove('open');
+    }
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.toggle('open');
+        btn.classList.toggle('open', isOpen);
+        btn.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    dropdown.addEventListener('click', (e) => {
+        if (e.target.closest('.user-menu-item')) closeMenu();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!btn.contains(e.target) && !dropdown.contains(e.target)) closeMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
+    });
+}
 
 // =============================================
 // MOBILE SIDEBAR DRAWER
@@ -109,6 +144,13 @@ function toSectionId(tabId) {
 function setupTabSwitching() {
     document.querySelectorAll('.sidebar-menu-item[data-tab]').forEach(item => {
         item.addEventListener('click', () => switchTab(item.getAttribute('data-tab')));
+    });
+
+    document.querySelectorAll('[data-tab-link]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchTab(link.getAttribute('data-tab-link'));
+        });
     });
 }
 
