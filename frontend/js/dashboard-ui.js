@@ -118,7 +118,8 @@ const PAGE_TITLES = {
     'user-tracking': 'Track Package',
     'user-quote': 'Get a Quote',
     'user-addresses': 'Saved Addresses',
-    'user-profile': 'Profile'
+    'user-profile': 'Profile',
+    'user-support': 'Support Center'
 };
 
 function switchTab(tabId) {
@@ -139,6 +140,7 @@ function switchTab(tabId) {
     }
     if (tabId === 'user-profile') loadProfileData();
     if (tabId === 'user-addresses') fetchAddresses();
+    if (tabId === 'user-support') renderMyTickets();
 
     closeSidebarDrawer();
 }
@@ -1077,3 +1079,140 @@ async function loadBankTransferDetails(s) {
         document.getElementById('bankTransferBody').innerHTML = '<div class="profile-detail-row"><dd>Could not load account details. Please try again or contact support.</dd></div>';
     }
 }
+
+// =============================================
+// SUPPORT TICKETS
+// =============================================
+// Backed by TicketStore (frontend/js/tickets-store.js), which persists to
+// localStorage until a real backend endpoint exists for this.
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+}
+
+function renderMyTickets() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const list = document.getElementById('myTicketsList');
+    if (!list || !window.TicketStore) return;
+
+    const tickets = TicketStore.getByUser(user.id);
+    list.innerHTML = !tickets.length
+        ? '<p class="empty-text">You haven\'t submitted any tickets yet.</p>'
+        : tickets.map(t => `
+            <div class="ticket-row" onclick="openTicketDetail('${t.id}')">
+                <div class="ticket-row-main">
+                    <span class="ticket-id-tag">${t.id}</span>
+                    <span class="status-badge status-${t.status}">${t.status.toUpperCase()}</span>
+                    <span class="ticket-row-date">${new Date(t.createdAt).toLocaleDateString()}</span>
+                </div>
+                <strong class="ticket-row-subject">${escapeHtml(t.subject)}</strong>
+                <p class="ticket-row-type">${escapeHtml(t.issueType)}</p>
+                ${t.status === 'closed'
+                    ? '<span class="ticket-row-resolved"><i class="fas fa-check-circle"></i> Resolved &mdash; click to view details</span>'
+                    : ''}
+            </div>
+        `).join('');
+}
+
+window.openTicketDetail = function(id) {
+    const ticket = TicketStore.getById(id);
+    if (!ticket) return;
+
+    document.getElementById('ticketDetailId').textContent = ticket.id;
+    const statusEl = document.getElementById('ticketDetailStatus');
+    statusEl.textContent = ticket.status.toUpperCase();
+    statusEl.className = 'status-badge status-' + ticket.status;
+
+    document.getElementById('ticketDetailSubject').textContent = ticket.subject;
+    document.getElementById('ticketDetailIssueType').textContent = ticket.issueType;
+    document.getElementById('ticketDetailMessage').textContent = ticket.message;
+    document.getElementById('ticketDetailCreated').textContent = new Date(ticket.createdAt).toLocaleString();
+
+    const closedRow = document.getElementById('ticketDetailClosedRow');
+    if (ticket.closedAt) {
+        closedRow.style.display = '';
+        document.getElementById('ticketDetailClosed').textContent = new Date(ticket.closedAt).toLocaleString();
+    } else {
+        closedRow.style.display = 'none';
+    }
+
+    const resolutionBox = document.getElementById('ticketDetailResolutionBox');
+    if (ticket.resolutionNote) {
+        resolutionBox.style.display = '';
+        document.getElementById('ticketDetailResolutionNote').textContent = ticket.resolutionNote;
+    } else {
+        resolutionBox.style.display = 'none';
+    }
+
+    document.getElementById('ticketDetailModal').classList.add('active');
+};
+
+document.getElementById('closeTicketDetailModal')?.addEventListener('click', () => {
+    document.getElementById('ticketDetailModal').classList.remove('active');
+});
+
+document.getElementById('supportTicketForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    const subject = document.getElementById('ticketSubject').value.trim();
+    const issueType = document.getElementById('ticketIssueType').value;
+    const message = document.getElementById('ticketMessage').value.trim();
+    if (!subject || !issueType || !message) return;
+
+    TicketStore.create({
+        userId: user.id,
+        userName: user.name || 'Customer',
+        userEmail: user.email || '',
+        issueType,
+        subject,
+        message
+    });
+
+    e.target.reset();
+    const successEl = document.getElementById('ticketFormSuccess');
+    successEl.style.display = 'block';
+    setTimeout(() => { successEl.style.display = 'none'; }, 4000);
+
+    renderMyTickets();
+});
+
+// =============================================
+// SUPPORT CHAT BUBBLE (front-end mock -- no backend chat yet)
+// =============================================
+function setupChatBubble() {
+    const bubbleBtn = document.getElementById('chatBubbleBtn');
+    const panel = document.getElementById('chatPanel');
+    const closeBtn = document.getElementById('closeChatPanel');
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('chatInput');
+    const messages = document.getElementById('chatMessages');
+    if (!bubbleBtn || !panel || !form || !input || !messages) return;
+
+    bubbleBtn.addEventListener('click', () => panel.classList.toggle('open'));
+    closeBtn?.addEventListener('click', () => panel.classList.remove('open'));
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+
+        const userMsg = document.createElement('div');
+        userMsg.className = 'chat-message user';
+        userMsg.textContent = text;
+        messages.appendChild(userMsg);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        setTimeout(() => {
+            const botMsg = document.createElement('div');
+            botMsg.className = 'chat-message bot';
+            botMsg.textContent = "Thanks for the message! A support agent isn't available right now -- submitting a ticket from the Support tab is the fastest way to get tracked follow-up.";
+            messages.appendChild(botMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }, 600);
+    });
+}
+
+setupChatBubble();

@@ -108,6 +108,7 @@ const PAGE_TITLES = {
     'admin-users': 'Users',
     'admin-payment-accounts': 'Payment Accounts',
     'admin-payment-reviews': 'Payment Reviews',
+    'admin-tickets': 'Support Tickets',
     'admin-reports': 'Reports',
     'admin-settings': 'Settings'
 };
@@ -139,6 +140,9 @@ function switchTab(tabId) {
     }
     if (tabId === 'admin-payment-reviews') {
         loadPaymentReviews();
+    }
+    if (tabId === 'admin-tickets') {
+        loadSupportTickets();
     }
 
     closeSidebarDrawer();
@@ -1047,3 +1051,118 @@ document.getElementById('closeInvoiceModal')?.addEventListener('click', () => {
 });
 
 document.getElementById('printInvoiceBtn')?.addEventListener('click', () => window.print());
+
+// =============================================
+// SUPPORT TICKETS
+// =============================================
+// Backed by TicketStore (frontend/js/tickets-store.js), which persists to
+// localStorage until a real backend endpoint exists for this.
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+}
+
+let ticketFilter = 'open';
+let currentTicketId = null;
+
+function loadSupportTickets() {
+    const tbody = document.getElementById('adminTicketsBody');
+    if (!tbody || !window.TicketStore) return;
+
+    const all = TicketStore.getAll();
+    const tickets = ticketFilter === 'all' ? all : all.filter(t => t.status === ticketFilter);
+
+    tbody.innerHTML = !tickets.length
+        ? `<tr class="row-static"><td colspan="7" style="text-align:center;">No ${ticketFilter === 'all' ? '' : ticketFilter + ' '}tickets found</td></tr>`
+        : tickets.map(t => `
+            <tr onclick="viewTicketDetail('${t.id}')">
+                <td data-label="Ticket #"><strong>${t.id}</strong></td>
+                <td data-label="User">${escapeHtml(t.userName)}<br><span style="color: var(--gray); font-size: 0.8em;">${escapeHtml(t.userEmail)}</span></td>
+                <td data-label="Issue">${escapeHtml(t.issueType)}</td>
+                <td data-label="Subject">${escapeHtml(t.subject)}</td>
+                <td data-label="Status"><span class="status-badge status-${t.status}">${t.status.toUpperCase()}</span></td>
+                <td data-label="Created">${new Date(t.createdAt).toLocaleDateString()}</td>
+                <td data-label="Actions">
+                    ${t.status === 'open'
+                        ? `<button class="action-btn" onclick="event.stopPropagation(); viewTicketDetail('${t.id}')" title="Resolve"><i class="fas fa-check"></i></button>`
+                        : `<button class="action-btn" onclick="event.stopPropagation(); reopenTicket('${t.id}')" title="Reopen"><i class="fas fa-undo"></i></button>`}
+                </td>
+            </tr>
+        `).join('');
+}
+
+document.getElementById('ticketFilterTabs')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-tab');
+    if (!btn) return;
+    ticketFilter = btn.getAttribute('data-filter');
+    document.querySelectorAll('#ticketFilterTabs .filter-tab').forEach(b => b.classList.toggle('active', b === btn));
+    loadSupportTickets();
+});
+
+window.viewTicketDetail = function(id) {
+    const ticket = TicketStore.getById(id);
+    if (!ticket) return;
+    currentTicketId = id;
+
+    document.getElementById('ticketDetailId').textContent = ticket.id;
+    const statusEl = document.getElementById('ticketDetailStatus');
+    statusEl.textContent = ticket.status.toUpperCase();
+    statusEl.className = 'status-badge status-' + ticket.status;
+
+    document.getElementById('ticketDetailSubject').textContent = ticket.subject;
+    document.getElementById('ticketDetailUser').textContent = `${ticket.userName} (${ticket.userEmail})`;
+    document.getElementById('ticketDetailIssueType').textContent = ticket.issueType;
+    document.getElementById('ticketDetailMessage').textContent = ticket.message;
+    document.getElementById('ticketDetailCreated').textContent = new Date(ticket.createdAt).toLocaleString();
+
+    const closedRow = document.getElementById('ticketDetailClosedRow');
+    const resolveSection = document.getElementById('ticketDetailResolveSection');
+    const resolutionBox = document.getElementById('ticketDetailResolutionBox');
+    const reopenBtn = document.getElementById('reopenTicketBtn');
+
+    if (ticket.status === 'open') {
+        closedRow.style.display = 'none';
+        resolveSection.style.display = '';
+        resolutionBox.style.display = 'none';
+        reopenBtn.style.display = 'none';
+        document.getElementById('ticketResolutionInput').value = '';
+    } else {
+        closedRow.style.display = '';
+        document.getElementById('ticketDetailClosed').textContent = new Date(ticket.closedAt).toLocaleString();
+        resolveSection.style.display = 'none';
+        resolutionBox.style.display = '';
+        document.getElementById('ticketDetailResolutionNote').textContent = ticket.resolutionNote || '';
+        reopenBtn.style.display = '';
+    }
+
+    document.getElementById('ticketDetailModal').classList.add('active');
+};
+
+document.getElementById('closeTicketDetailModal')?.addEventListener('click', () => {
+    document.getElementById('ticketDetailModal').classList.remove('active');
+});
+
+document.getElementById('closeTicketBtn')?.addEventListener('click', () => {
+    if (!currentTicketId) return;
+    const note = document.getElementById('ticketResolutionInput').value.trim();
+    if (!note) {
+        alert('Please add a resolution note before closing this ticket.');
+        return;
+    }
+    TicketStore.resolve(currentTicketId, note);
+    document.getElementById('ticketDetailModal').classList.remove('active');
+    loadSupportTickets();
+});
+
+window.reopenTicket = function(id) {
+    TicketStore.reopen(id);
+    loadSupportTickets();
+};
+
+document.getElementById('reopenTicketBtn')?.addEventListener('click', () => {
+    if (!currentTicketId) return;
+    TicketStore.reopen(currentTicketId);
+    document.getElementById('ticketDetailModal').classList.remove('active');
+    loadSupportTickets();
+});

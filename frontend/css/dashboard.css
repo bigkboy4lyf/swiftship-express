@@ -1631,3 +1631,356 @@ table.data-table tbody tr.row-static:hover {
         print-color-adjust: exact;
     }
 }
+
+/* =============================================
+   Support Center (customer support tab)
+   ============================================= */
+.support-intro-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.support-intro-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(255, 123, 0, 0.12);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+.support-intro-card h3 {
+    font-size: 1.2rem;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.support-intro-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Ticket list */
+.ticket-row {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.ticket-row:last-child {
+    border-bottom: none;
+}
+
+.ticket-row:hover .ticket-row-subject {
+    color: var(--primary);
+}
+
+.ticket-row-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.ticket-row-date {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-size: 0.8rem;
+}
+
+.ticket-row-subject {
+    display: block;
+    color: var(--text);
+    font-size: 1rem;
+    transition: color 0.15s ease;
+}
+
+.ticket-row-type {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 2px;
+}
+
+.ticket-row-resolved {
+    display: inline-block;
+    color: #2e7d32;
+    font-size: 0.82rem;
+    margin-top: 6px;
+}
+
+.ticket-id-tag {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+.ticket-detail-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ticket-detail-message {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    margin: 0;
+}
+
+.ticket-resolution-box {
+    background: rgba(46, 125, 50, 0.08);
+    border-left: 4px solid #2e7d32;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-top: 16px;
+}
+
+.ticket-resolution-box strong {
+    color: #2e7d32;
+    font-size: 0.85rem;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.ticket-resolution-box p {
+    color: var(--text);
+    font-size: 0.9rem;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+/* Ticket status badges (distinct from shipment status badges) */
+.status-open { background: #e0e7ff; color: #3730a3; }
+.status-closed { background: #d4edda; color: #155724; }
+
+/* FAQ accordion -- native <details>/<summary>, no JS required */
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.faq-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 16px;
+}
+
+.faq-item summary {
+    padding: 12px 0;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text);
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq-item summary::after {
+    content: '\f078';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: var(--text-faint);
+    font-size: 0.8rem;
+    transition: transform 0.2s ease;
+}
+
+.faq-item[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.faq-item p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding-bottom: 14px;
+    margin: 0;
+}
+
+/* =============================================
+   Support ticket filter tabs (admin)
+   ============================================= */
+.filter-tab-group {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-tab {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.filter-tab:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.filter-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+/* =============================================
+   Support Chat Bubble
+   ============================================= */
+.chat-bubble-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.chat-bubble-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease;
+}
+
+.chat-bubble-btn:hover {
+    transform: scale(1.06);
+}
+
+.chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 320px;
+    max-width: calc(100vw - 48px);
+    height: 420px;
+    max-height: calc(100vh - 120px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.chat-panel.open {
+    display: flex;
+}
+
+.chat-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--accent);
+    color: white;
+    padding: 14px 16px;
+}
+
+.chat-panel-header strong {
+    display: block;
+    font-size: 0.95rem;
+}
+
+.chat-panel-header span {
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+
+.chat-panel-header .modal-close {
+    color: white;
+}
+
+.chat-panel-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-message {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.chat-message.bot {
+    align-self: flex-start;
+    background: var(--surface-alt);
+    color: var(--text);
+    border-bottom-left-radius: 2px;
+}
+
+.chat-message.user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: white;
+    border-bottom-right-radius: 2px;
+}
+
+.chat-panel-input {
+    display: flex;
+    border-top: 1px solid var(--border);
+}
+
+.chat-panel-input input {
+    flex: 1;
+    border: none;
+    padding: 12px 14px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+}
+
+.chat-panel-input input:focus {
+    outline: none;
+}
+
+.chat-panel-input button {
+    border: none;
+    background: none;
+    color: var(--accent);
+    padding: 0 16px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+@media (max-width: 480px) {
+    .chat-bubble-widget {
+        bottom: 16px;
+        right: 16px;
+    }
+
+    .chat-panel {
+        width: calc(100vw - 32px);
+    }
+}

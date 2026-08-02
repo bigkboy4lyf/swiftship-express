@@ -55,6 +55,10 @@
                     <i class="fas fa-user"></i>
                     <span>Profile</span>
                 </div>
+                <div class="sidebar-menu-item" data-tab="user-support">
+                    <i class="fas fa-headset"></i>
+                    <span>Support</span>
+                </div>
 
                 <!-- Only shown for admins -->
                 <div class="admin-menu admin-divider"></div>
@@ -465,8 +469,113 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Support -->
+                <div id="userSupport" class="dashboard-section" style="display: none;">
+                    <div class="card support-intro-card">
+                        <div class="support-intro-icon"><i class="fas fa-headset"></i></div>
+                        <div>
+                            <h3>Support Center</h3>
+                            <p>Get help with your account and shipments</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Submit a Support Ticket</h3>
+                        </div>
+                        <p class="placeholder-text" style="margin-top: -10px;">We're here to help. Tell us about your issue and we'll find a solution.</p>
+
+                        <form id="supportTicketForm">
+                            <div class="form-group">
+                                <label>Ticket Title</label>
+                                <input type="text" id="ticketSubject" placeholder="Briefly describe your issue" required>
+                                <small class="form-hint">Be specific to help us understand your issue</small>
+                            </div>
+                            <div class="form-group">
+                                <label>What's the issue?</label>
+                                <select id="ticketIssueType" required>
+                                    <option value="">Select the issue that fits best</option>
+                                    <option value="Shipment Delay">Shipment Delay</option>
+                                    <option value="Billing / Payment">Billing / Payment</option>
+                                    <option value="Tracking Problem">Tracking Problem</option>
+                                    <option value="Account Access">Account Access</option>
+                                    <option value="Damaged / Lost Package">Damaged / Lost Package</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <small class="form-hint">Pick the closest match &mdash; choose "Other" if none fit</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Describe Your Issue</label>
+                                <textarea id="ticketMessage" rows="4" placeholder="Please provide all relevant details about your issue so we can help you better" required></textarea>
+                            </div>
+                            <p id="ticketFormSuccess" class="form-error form-success" style="display:none;">Ticket submitted &mdash; our support team will follow up soon.</p>
+                            <button type="submit" class="btn" style="width:100%;"><i class="fas fa-paper-plane"></i> Submit Ticket</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>My Tickets</h3>
+                        </div>
+                        <p class="placeholder-text" style="margin-top: -10px;">Track the tickets you've submitted</p>
+                        <div id="myTicketsList"></div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Quick Help</h3>
+                        </div>
+                        <p class="placeholder-text" style="margin-top: -10px;">Find answers to common questions</p>
+                        <div class="faq-list">
+                            <details class="faq-item">
+                                <summary>How do I get a shipping quote?</summary>
+                                <p>Go to Get Quote in the sidebar, enter your origin, destination and package details, and we'll calculate an instant estimate.</p>
+                            </details>
+                            <details class="faq-item">
+                                <summary>How do I track a shipment?</summary>
+                                <p>Use Track Package in the sidebar or the tracking box on your dashboard, and enter your tracking number.</p>
+                            </details>
+                            <details class="faq-item">
+                                <summary>What payment methods are accepted?</summary>
+                                <p>We accept card checkout and bank transfer. Both options are shown when you pay an invoice.</p>
+                            </details>
+                            <details class="faq-item">
+                                <summary>How long does delivery take?</summary>
+                                <p>Delivery times depend on the service type you choose, from express (1-3 days) to economy (10-20 days).</p>
+                            </details>
+                            <details class="faq-item">
+                                <summary>How do I update my saved addresses?</summary>
+                                <p>Go to Addresses in the sidebar to add, edit, or remove saved addresses on your account.</p>
+                            </details>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
+
+    <!-- Support Chat Bubble -->
+    <div class="chat-bubble-widget">
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-panel-header">
+                <div>
+                    <strong>Live Chat</strong>
+                    <span>SwiftShip Support</span>
+                </div>
+                <button class="modal-close" id="closeChatPanel">&times;</button>
+            </div>
+            <div class="chat-panel-messages" id="chatMessages">
+                <div class="chat-message bot">Hi! 👋 Our support team will be with you shortly. Feel free to also submit a ticket for tracked follow-up.</div>
+            </div>
+            <form class="chat-panel-input" id="chatForm">
+                <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off">
+                <button type="submit" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
+            </form>
+        </div>
+        <button class="chat-bubble-btn" id="chatBubbleBtn" aria-label="Open live chat">
+            <i class="fas fa-headset"></i>
+        </button>
     </div>
 
     <!-- Modals -->
@@ -508,6 +617,48 @@
 
                 <button type="submit" class="btn" id="saveProfileBtn">Save Changes</button>
             </form>
+        </div>
+    </div>
+
+    <div class="modal" id="ticketDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="ticket-detail-heading">
+                    <span class="ticket-id-tag" id="ticketDetailId">TCK-00000000</span>
+                    <span class="status-badge" id="ticketDetailStatus">OPEN</span>
+                </div>
+                <button class="modal-close" id="closeTicketDetailModal">&times;</button>
+            </div>
+
+            <h3 id="ticketDetailSubject" style="margin-bottom: 16px;">&mdash;</h3>
+
+            <dl class="profile-detail-list">
+                <div class="profile-detail-row">
+                    <dt>Issue Type</dt>
+                    <dd id="ticketDetailIssueType">&mdash;</dd>
+                </div>
+            </dl>
+
+            <div class="form-group">
+                <label>Your message</label>
+                <p id="ticketDetailMessage" class="ticket-detail-message">&mdash;</p>
+            </div>
+
+            <dl class="profile-detail-list">
+                <div class="profile-detail-row">
+                    <dt>Created</dt>
+                    <dd id="ticketDetailCreated">&mdash;</dd>
+                </div>
+                <div class="profile-detail-row" id="ticketDetailClosedRow" style="display:none;">
+                    <dt>Closed</dt>
+                    <dd id="ticketDetailClosed">&mdash;</dd>
+                </div>
+            </dl>
+
+            <div class="ticket-resolution-box" id="ticketDetailResolutionBox" style="display:none;">
+                <strong><i class="fas fa-check-circle"></i> How this was resolved</strong>
+                <p id="ticketDetailResolutionNote"></p>
+            </div>
         </div>
     </div>
 
@@ -668,6 +819,7 @@
     <script src="js/script.js"></script>
     <script src="js/countries-data.js"></script>
     <script src="js/quote-engine.js"></script>
+    <script src="js/tickets-store.js"></script>
     <script src="js/dashboard-ui.js"></script>
 </body>
 </html>
