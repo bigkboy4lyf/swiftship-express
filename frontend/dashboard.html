@@ -608,7 +608,44 @@
                 <p class="invoice-doc-fineprint">This document was generated electronically by SwiftShip Express and is valid without a signature. Any alteration of the amounts or details above will not match the verification code.</p>
             </div>
 
-            <button type="button" class="btn quote-btn-primary invoice-print-btn no-print" id="printInvoiceBtn"><i class="fas fa-print"></i> Print / Save as PDF</button>
+            <div class="quote-form-actions no-print">
+                <button type="button" class="btn quote-btn-secondary" id="printInvoiceBtn"><i class="fas fa-print"></i> Print</button>
+                <button type="button" class="btn quote-btn-primary" id="payNowBtn" style="display:none;"><i class="fas fa-lock"></i> Pay Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pay Now: choose payment method (both always offered) -->
+    <div class="modal" id="paymentMethodModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Choose Payment Method</h3>
+                <button class="modal-close" id="closePaymentMethodModal">&times;</button>
+            </div>
+
+            <div class="payment-method-tabs">
+                <button type="button" class="payment-method-tab active" id="paymentTabCard" data-method="card">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Card</span>
+                </button>
+                <button type="button" class="payment-method-tab" id="paymentTabBank" data-method="bank">
+                    <i class="fas fa-university"></i>
+                    <span>Bank Transfer</span>
+                </button>
+            </div>
+
+            <div id="paymentMethodCardPanel" class="payment-method-panel">
+                <p style="color: var(--gray); margin-bottom: 18px;">Pay securely by credit or debit card. You'll be taken to our secure checkout to complete payment.</p>
+                <button type="button" class="btn quote-btn-primary" id="continueToCardBtn" style="width:100%;">Continue to Card Checkout</button>
+            </div>
+
+            <div id="paymentMethodBankPanel" class="payment-method-panel" style="display:none;">
+                <p class="quote-limited-service-note">
+                    <i class="fas fa-info-circle"></i> Recommended for shipments to destinations with limited courier or card-processing service, such as regions affected by conflict -- but available for any destination.
+                </p>
+                <dl class="profile-detail-list" id="bankTransferBody"></dl>
+                <button type="button" class="btn quote-btn-primary" id="confirmBankPaymentBtn" style="width:100%; margin-top: 6px;">I've Made This Payment</button>
+            </div>
         </div>
     </div>
 

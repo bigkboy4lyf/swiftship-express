@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script>
+        // Applied synchronously, before CSS renders, so the page never
+        // flashes the wrong theme on load.
+        (function() {
+            var stored = localStorage.getItem('theme');
+            var theme = (stored === 'light' || stored === 'dark')
+                ? stored
+                : (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftShip Express | Submit Payment Receipt</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+    <!-- Header & Navigation -->
+    <header id="header">
+        <div class="container header-container">
+            <a href="index.html" class="logo">
+                <i class="fas fa-shipping-fast"></i>
+                <span>SwiftShip Express</span>
+            </a>
+
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+
+           <ul class="nav-links" id="navLinks">
+                <li><a href="index.html#home">Home</a></li>
+                <li><a href="index.html#tracking">Tracking</a></li>
+                <li><a href="index.html#services">Services</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+                <li>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </li>
+                <li id="signInItem"><a href="account.html">Sign In</a></li>
+                <li><a href="dashboard.html" class="btn">Dashboard</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <section class="section" style="padding: 120px 0 60px; min-height: 100vh; display: flex; align-items: flex-start;">
+        <div class="container">
+            <div style="max-width: 460px; margin: 0 auto; background: var(--surface); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 40px;">
+
+                <!-- Upload state -->
+                <div id="receiptFormState">
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <div class="logo" style="justify-content: center; font-size: 1.6rem; margin-bottom: 10px;">
+                            <i class="fas fa-receipt"></i>
+                            <span>Submit Payment Receipt</span>
+                        </div>
+                        <p style="color: var(--gray);">Upload proof of your payment so we can verify it and move your shipment forward.</p>
+                    </div>
+
+                    <div style="background: var(--surface-alt); border-radius: 8px; padding: 16px 18px; margin-bottom: 24px;">
+                        <span style="display:block; font-size: 0.8rem; color: var(--gray);">Tracking Number</span>
+                        <strong id="receiptTrackingNumber">&mdash;</strong>
+                    </div>
+
+                    <div id="receiptAlert" class="alert"></div>
+
+                    <form id="receiptForm">
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Payment Receipt (image or PDF)</label>
+                            <input type="file" id="receiptFile" accept="image/*,application/pdf" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text);">
+                            <small class="form-hint">Max file size 5MB. A screenshot of your bank transfer or card payment confirmation works well.</small>
+                        </div>
+
+                        <button type="submit" class="btn" id="receiptSubmitBtn" style="width: 100%; padding: 14px; font-size: 1.1rem;"><i class="fas fa-upload"></i> Submit Receipt</button>
+                    </form>
+                </div>
+
+                <!-- Confirmation state -->
+                <div id="receiptConfirmState" style="display:none; text-align: center;">
+                    <div style="font-size: 3rem; color: #28a745; margin-bottom: 15px;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h2 style="color: var(--primary); margin-bottom: 10px;">Receipt Submitted</h2>
+                    <p style="color: var(--gray); margin-bottom: 20px;">
+                        Thanks! We're reviewing your payment for shipment <strong id="receiptConfirmTracking">&mdash;</strong>. Your shipment will move forward as soon as it's confirmed.
+                    </p>
+                    <a href="dashboard.html" class="btn" style="display: inline-block;">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/script.js"></script>
+    <script src="js/auth-navbar.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'account.html';
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const shipmentId = params.get('shipment') || '';
+        const tracking = params.get('tracking') || 'N/A';
+        const method = params.get('method') === 'bank_transfer' ? 'bank_transfer' : 'card';
+
+        document.getElementById('receiptTrackingNumber').textContent = tracking;
+        document.getElementById('receiptConfirmTracking').textContent = tracking;
+
+        function showAlert(message, type) {
+            const el = document.getElementById('receiptAlert');
+            el.className = `alert ${type}`;
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        document.getElementById('receiptForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (!shipmentId) {
+                showAlert('Missing shipment reference -- please open this page from your dashboard.', 'error');
+                return;
+            }
+
+            const file = document.getElementById('receiptFile').files[0];
+            if (!file) return;
+
+            const isImage = file.type.startsWith('image/');
+            const isPdf = file.type === 'application/pdf';
+            if (!isImage && !isPdf) {
+                showAlert('Please choose an image or PDF file.', 'error');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                showAlert('Please choose a file smaller than 5MB.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('receiptSubmitBtn');
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                btn.disabled = true;
+                btn.textContent = 'Submitting...';
+                try {
+                    const res = await fetch(`/api/dashboard/shipments/${shipmentId}/receipt`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ data: evt.target.result, filename: file.name, contentType: file.type, method })
+                    });
+                    const result = await res.json();
+                    if (!result.success) throw new Error(result.message || 'Could not submit receipt');
+
+                    document.getElementById('receiptFormState').style.display = 'none';
+                    document.getElementById('receiptConfirmState').style.display = 'block';
+                } catch (err) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-upload"></i> Submit Receipt';
+                    showAlert(err.message, 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>

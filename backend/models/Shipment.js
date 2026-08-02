@@ -78,6 +78,24 @@ const shipmentSchema = new mongoose.Schema({
         country: String,
         timestamp: Date
     },
+    // Proof of payment submitted after either the card or bank transfer flow
+    // (see PATCH /shipments/:id/receipt and frontend/submit-receipt.html) --
+    // both flows converge on the same upload step. 'pending' blocks the
+    // dashboard's invoice button until admin resolves it via
+    // /receipt/confirm (which also advances the shipment into the pipeline)
+    // or /receipt/reject (which leaves the shipment as-is so the customer
+    // can retry). rejectionReason isn't shown anywhere yet -- it's captured
+    // now so the future notifications engine has it to surface later.
+    paymentReceipt: {
+        data: String,
+        filename: String,
+        contentType: String,
+        method: { type: String, enum: ['card', 'bank_transfer'] },
+        status: { type: String, enum: ['pending', 'confirmed', 'rejected'] },
+        submittedAt: Date,
+        resolvedAt: Date,
+        rejectionReason: String
+    },
     trackingHistory: [trackingHistorySchema],
     estimatedDelivery: Date,
     actualDelivery: Date,

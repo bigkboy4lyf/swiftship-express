@@ -29,4 +29,13 @@ async function sendEmail(to, subject, html) {
     });
 }
 
+// Fires the send without making the caller's HTTP response wait on it -- real
+// SMTP round trips (Gmail included) can take anywhere from under a second to
+// 20+ seconds, which callers like shipment creation shouldn't block on.
+sendEmail.inBackground = function(to, subject, html, context) {
+    sendEmail(to, subject, html).catch(err => {
+        console.error(`${context} email failed to send:`, err);
+    });
+};
+
 module.exports = sendEmail;

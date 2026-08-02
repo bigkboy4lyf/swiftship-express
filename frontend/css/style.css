@@ -86,10 +86,15 @@ a {
     transition: all 0.3s ease;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
     filter: brightness(0.88);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 86, 179, 0.2);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .btn-accent {

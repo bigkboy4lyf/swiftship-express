@@ -69,6 +69,12 @@ function isLimitedServiceCountry(code) {
     return LIMITED_SERVICE_COUNTRIES.has(String(code || '').toUpperCase());
 }
 
+// Reserved payment-account code for the one "parent" bank transfer account
+// that acts as the fallback for every destination without its own specific
+// account (see admin-ui.js's Payment Accounts tab and dashboard-ui.js's Pay
+// Now flow). Shared here since both pages need the exact same value.
+const PARENT_ACCOUNT_CODE = 'PARENT';
+
 function getCountryName(code) {
     const match = ALL_COUNTRIES.find(([c]) => c === String(code || '').toUpperCase());
     return match ? match[1] : (code || '');

@@ -306,7 +306,17 @@ window.viewShipmentDetail = function(id) {
     document.getElementById('shipmentDetailTrackLink').href = `tracking.html?number=${s.trackingNumber}`;
 
     const docBtn = document.getElementById('shipmentDetailDocBtn');
-    if (docBtn) docBtn.textContent = isAwaitingConfirmation(s.status) ? 'View Invoice' : 'View Receipt';
+    if (docBtn) {
+        // A pending receipt blocks the invoice/receipt view entirely until
+        // admin confirms or rejects it (see Payment Reviews in the admin
+        // panel) -- rejecting leaves shipment.status untouched, so this
+        // naturally reverts back to "View Invoice" on its own.
+        const paymentPending = s.paymentReceipt?.status === 'pending';
+        docBtn.disabled = paymentPending;
+        docBtn.textContent = paymentPending
+            ? 'Payment Processing'
+            : (isAwaitingConfirmation(s.status) ? 'View Invoice' : 'View Receipt');
+    }
 
     document.getElementById('shipmentDetailModal').classList.add('active');
 };
@@ -890,7 +900,13 @@ function money(n) {
     return `$${(Number(n) || 0).toFixed(2)}`;
 }
 
+// The invoice currently open in the modal -- lets the Pay Now button branch
+// on destination country and pull the right tracking number/amount without a
+// second lookup.
+let currentInvoiceShipment = null;
+
 function openInvoiceOrReceipt(s) {
+    currentInvoiceShipment = s;
     const isInvoice = isAwaitingConfirmation(s.status);
 
     document.getElementById('invoiceModalTitle').textContent = isInvoice ? 'Invoice' : 'Receipt';
@@ -933,6 +949,9 @@ function openInvoiceOrReceipt(s) {
 
     document.getElementById('invoiceVerificationCode').textContent = s.verificationCode || 'N/A';
 
+    const payBtn = document.getElementById('payNowBtn');
+    if (payBtn) payBtn.style.display = isInvoice ? '' : 'none';
+
     document.getElementById('invoiceReceiptModal').classList.add('active');
 }
 
@@ -941,3 +960,96 @@ document.getElementById('closeInvoiceModal')?.addEventListener('click', () => {
 });
 
 document.getElementById('printInvoiceBtn')?.addEventListener('click', () => window.print());
+
+// =============================================
+// PAY NOW -- both card and bank transfer are always offered; bank transfer
+// is just recommended (not required) for limited-service destinations, which
+// only affects which tab opens by default.
+// =============================================
+function selectPaymentMethod(method) {
+    document.getElementById('paymentTabCard').classList.toggle('active', method === 'card');
+    document.getElementById('paymentTabBank').classList.toggle('active', method === 'bank');
+    document.getElementById('paymentMethodCardPanel').style.display = method === 'card' ? '' : 'none';
+    document.getElementById('paymentMethodBankPanel').style.display = method === 'bank' ? '' : 'none';
+}
+
+document.getElementById('paymentTabCard')?.addEventListener('click', () => selectPaymentMethod('card'));
+document.getElementById('paymentTabBank')?.addEventListener('click', () => selectPaymentMethod('bank'));
+
+document.getElementById('payNowBtn')?.addEventListener('click', () => {
+    const s = currentInvoiceShipment;
+    if (!s) return;
+
+    selectPaymentMethod(isLimitedServiceCountry(s.recipient?.country) ? 'bank' : 'card');
+    document.getElementById('paymentMethodModal').classList.add('active');
+    loadBankTransferDetails(s);
+});
+
+document.getElementById('closePaymentMethodModal')?.addEventListener('click', () => {
+    document.getElementById('paymentMethodModal').classList.remove('active');
+});
+
+document.getElementById('continueToCardBtn')?.addEventListener('click', () => {
+    const s = currentInvoiceShipment;
+    if (!s) return;
+    const params = new URLSearchParams({
+        tracking: s.trackingNumber || '',
+        amount: s.totalPrice || 0,
+        shipment: s._id || ''
+    });
+    window.location.href = `pay.html?${params.toString()}`;
+});
+
+document.getElementById('confirmBankPaymentBtn')?.addEventListener('click', () => {
+    const s = currentInvoiceShipment;
+    if (!s) return;
+    const params = new URLSearchParams({
+        shipment: s._id || '',
+        tracking: s.trackingNumber || '',
+        method: 'bank_transfer'
+    });
+    window.location.href = `submit-receipt.html?${params.toString()}`;
+});
+
+// The account shown is specific to the shipment's destination if one's been
+// configured, otherwise the admin's parent account (PARENT_ACCOUNT_CODE) --
+// either way the customer can still use this tab regardless of destination.
+async function loadBankTransferDetails(s) {
+    document.getElementById('bankTransferBody').innerHTML = '<div class="profile-detail-row"><dd>Loading account details...</dd></div>';
+
+    try {
+        const res = await fetch('/api/dashboard/payment-accounts', { headers: getHeaders() });
+        const result = await res.json();
+        const accounts = result.success ? result.data : [];
+        const account = accounts.find(a => a.countryCode === s.recipient?.country)
+            || accounts.find(a => a.countryCode === PARENT_ACCOUNT_CODE);
+
+        const rows = account ? [
+            ['Payment Reference', s.trackingNumber],
+            ['Amount Due', money(s.totalPrice)],
+            ['Bank Name', account.bankName],
+            ['Account Holder Name', account.accountName],
+            ['Account Number', account.accountNumber],
+            ['IBAN', account.iban],
+            ['SWIFT / BIC', account.swiftBic],
+            ['Routing Number', account.routingNumber],
+            ['Sort Code', account.sortCode],
+            ['Branch Name', account.branchName],
+            ['Branch Address', account.branchAddress],
+            ['Currency', account.currency],
+            ['Intermediary Bank', account.intermediaryBank],
+            ['Instructions', account.additionalInstructions]
+        ].filter(([, value]) => value) : [];
+
+        document.getElementById('bankTransferBody').innerHTML = rows.length
+            ? rows.map(([label, value]) => `
+                <div class="profile-detail-row">
+                    <dt>${label}</dt>
+                    <dd>${value}</dd>
+                </div>
+            `).join('')
+            : `<div class="profile-detail-row"><dd>Bank transfer details aren't set up yet. Our support team will contact you directly with payment instructions for tracking number <strong>${s.trackingNumber}</strong>.</dd></div>`;
+    } catch (err) {
+        document.getElementById('bankTransferBody').innerHTML = '<div class="profile-detail-row"><dd>Could not load account details. Please try again or contact support.</dd></div>';
+    }
+}

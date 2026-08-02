@@ -36,4 +36,68 @@ function otpEmail({ heading, message, code }) {
     `);
 }
 
-module.exports = { brandedEmail, otpEmail };
+function money(n) {
+    return `$${(Number(n) || 0).toFixed(2)}`;
+}
+
+// Sent the moment a priced shipment record exists (booking submitted), since
+// that's the first point a total price, tracking number, and customer email
+// all co-exist -- see backend/routes/shipments.js and dashboard.js POST /shipments.
+// The "how to pay" step points at the dashboard invoice's Pay Now button
+// (frontend/js/dashboard-ui.js), which itself branches between card checkout
+// and bank transfer instructions depending on the destination country.
+function quoteEmail({ customerName, trackingNumber, originCity, originCountry, destCity, destCountry, serviceType, weight, pricing, totalPrice, dashboardUrl, supportEmail }) {
+    const serviceLabel = serviceType ? serviceType.charAt(0).toUpperCase() + serviceType.slice(1) : 'Standard';
+    const route = [[originCity, originCountry].filter(Boolean).join(', '), [destCity, destCountry].filter(Boolean).join(', ')]
+        .filter(Boolean).join(' &rarr; ');
+    const p = pricing || {};
+
+    return brandedEmail(`
+        <h2 style="margin: 0 0 12px; color: #222; font-size: 1.3rem;">Your Shipping Quote is Ready</h2>
+        <p style="margin: 0 0 22px; color: #555; font-size: 0.95rem; line-height: 1.5;">
+            Hi ${customerName || 'there'}, thanks for requesting a quote with SwiftShip Express. Here are the details and pricing for your shipment request.
+        </p>
+
+        <div style="background: #f4f6f8; border-radius: 8px; padding: 18px 20px; margin-bottom: 22px;">
+            <p style="margin: 0 0 10px; font-size: 0.85rem; color: #777;">Tracking Number</p>
+            <p style="margin: 0 0 16px; font-size: 1.15rem; font-weight: 700; color: #0056b3; letter-spacing: 0.02em;">${trackingNumber}</p>
+            <p style="margin: 0 0 4px; font-size: 0.85rem; color: #777;">Route</p>
+            <p style="margin: 0 0 16px; font-size: 0.95rem; color: #333;">${route || 'Not specified'}</p>
+            <p style="margin: 0 0 4px; font-size: 0.85rem; color: #777;">Service &amp; Weight</p>
+            <p style="margin: 0; font-size: 0.95rem; color: #333;">${serviceLabel} Service${weight ? ` &middot; ${weight} kg` : ''}</p>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 22px; font-size: 0.9rem;">
+            <tr><td style="padding: 6px 0; color: #555;">Base Shipping Rate</td><td style="padding: 6px 0; text-align: right; color: #333;">${money(p.basePrice)}</td></tr>
+            ${p.insuranceCost ? `<tr><td style="padding: 6px 0; color: #555;">Insurance</td><td style="padding: 6px 0; text-align: right; color: #333;">${money(p.insuranceCost)}</td></tr>` : ''}
+            <tr><td style="padding: 6px 0; color: #555;">Service Surcharge</td><td style="padding: 6px 0; text-align: right; color: #333;">${money(p.surcharge)}</td></tr>
+            <tr>
+                <td style="padding: 10px 0 0; border-top: 1px solid #e0e0e0; font-weight: 700; color: #222;">Total Due</td>
+                <td style="padding: 10px 0 0; border-top: 1px solid #e0e0e0; text-align: right; font-weight: 700; color: #0056b3; font-size: 1.05rem;">${money(totalPrice)}</td>
+            </tr>
+        </table>
+
+        <h3 style="margin: 0 0 10px; color: #222; font-size: 1.02rem;">How to Pay</h3>
+        <ol style="margin: 0 0 22px; padding-left: 20px; color: #555; font-size: 0.9rem; line-height: 1.7;">
+            <li>Log in to your <a href="${dashboardUrl}" style="color: #0056b3;">SwiftShip Express dashboard</a> and click on this shipment to view your invoice.</li>
+            <li>From the invoice, click <strong>Pay Now</strong> and choose to pay by card or by bank transfer -- bank transfer is recommended for destinations with limited service, such as regions affected by conflict.</li>
+            <li>Our support team will follow up with you shortly afterward to confirm payment and any remaining details about your shipment.</li>
+        </ol>
+
+        <p style="margin: 0; color: #999; font-size: 0.8rem;">Questions about this quote? You can't reply directly to this email, but you can always reach us at ${supportEmail}.</p>
+    `);
+}
+
+// Internal notice to the support inbox, not the customer -- lets support know
+// a receipt is waiting to be reviewed in the admin Payment Reviews tab. This
+// is the interim stand-in until a real notifications engine exists.
+function receiptSubmittedEmail({ trackingNumber, customerName, customerEmail }) {
+    return brandedEmail(`
+        <h2 style="margin: 0 0 12px; color: #222; font-size: 1.3rem;">Payment Receipt Submitted</h2>
+        <p style="margin: 0 0 22px; color: #555; font-size: 0.95rem; line-height: 1.5;">
+            ${customerName || 'A customer'} (${customerEmail || 'email on file'}) submitted a payment receipt for shipment <strong>${trackingNumber}</strong>. Review it in the admin Payment Reviews tab and confirm or reject it.
+        </p>
+    `);
+}
+
+module.exports = { brandedEmail, otpEmail, quoteEmail, receiptSubmittedEmail };

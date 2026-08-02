@@ -1202,6 +1202,50 @@ table.data-table tbody tr.row-static:hover {
     padding: 0 6px;
 }
 
+/* Standard two-option payment method switcher (Card / Bank Transfer) --
+   both methods are always available side by side; the active tab just
+   controls which panel is shown below it. */
+.payment-method-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.payment-method-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--gray);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.payment-method-tab i {
+    font-size: 1.3rem;
+}
+
+.payment-method-tab:hover {
+    border-color: var(--primary);
+}
+
+.payment-method-tab.active {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(0, 86, 179, 0.06);
+}
+
+.payment-method-panel {
+    margin-top: 4px;
+}
+
 .quote-btn-text:hover {
     color: var(--text);
     text-decoration: underline;
@@ -1344,10 +1388,10 @@ table.data-table tbody tr.row-static:hover {
 
 .invoice-doc {
     position: relative;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 28px 26px;
-    background: #fff;
+    background: var(--surface);
 }
 
 .invoice-doc-header {
@@ -1355,7 +1399,7 @@ table.data-table tbody tr.row-static:hover {
     justify-content: space-between;
     align-items: center;
     padding-bottom: 16px;
-    border-bottom: 2px solid #222;
+    border-bottom: 2px solid var(--border-strong);
     margin-bottom: 20px;
 }
 
@@ -1374,7 +1418,7 @@ table.data-table tbody tr.row-static:hover {
     font-size: 1.4rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    color: #222;
+    color: var(--text);
 }
 
 /* Diagonal corner stamp -- orange/unpaid for an invoice, green/paid for a receipt */
@@ -1415,7 +1459,7 @@ table.data-table tbody tr.row-static:hover {
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #999;
+    color: var(--text-faint);
     margin-bottom: 3px;
 }
 
@@ -1425,7 +1469,7 @@ table.data-table tbody tr.row-static:hover {
     gap: 16px;
     margin-bottom: 22px;
     font-size: 0.9rem;
-    color: #333;
+    color: var(--text);
 }
 
 .invoice-doc-parties p {
@@ -1445,14 +1489,15 @@ table.data-table tbody tr.row-static:hover {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #999;
-    border-bottom: 2px solid #eee;
+    color: var(--text-faint);
+    border-bottom: 2px solid var(--border);
 }
 
 .invoice-doc-table td {
     padding: 10px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border);
     font-size: 0.9rem;
+    color: var(--text);
 }
 
 .invoice-doc-table th:last-child,
@@ -1462,17 +1507,17 @@ table.data-table tbody tr.row-static:hover {
 
 .invoice-doc-total-row td {
     border-bottom: none;
-    border-top: 2px solid #222;
+    border-top: 2px solid var(--border-strong);
     padding-top: 14px;
     font-weight: 700;
     font-size: 1.05rem;
-    color: #222;
+    color: var(--text);
 }
 
 .invoice-doc-note {
     font-size: 0.85rem;
-    color: #555;
-    background: #f8f9fa;
+    color: var(--text-muted);
+    background: var(--surface-alt);
     border-left: 3px solid var(--primary);
     padding: 10px 14px;
     margin-bottom: 18px;
@@ -1482,8 +1527,8 @@ table.data-table tbody tr.row-static:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #f4f6f8;
-    border: 1px dashed #c7cdd4;
+    background: var(--surface-alt);
+    border: 1px dashed var(--border);
     border-radius: 6px;
     padding: 10px 14px;
     margin-bottom: 12px;
@@ -1491,7 +1536,7 @@ table.data-table tbody tr.row-static:hover {
 }
 
 .invoice-doc-verification span {
-    color: #888;
+    color: var(--text-faint);
     text-transform: uppercase;
     font-size: 0.7rem;
     letter-spacing: 0.05em;
@@ -1500,12 +1545,12 @@ table.data-table tbody tr.row-static:hover {
 .invoice-doc-verification strong {
     font-family: 'Courier New', monospace;
     letter-spacing: 0.05em;
-    color: #222;
+    color: var(--text);
 }
 
 .invoice-doc-fineprint {
     font-size: 0.72rem;
-    color: #aaa;
+    color: var(--text-faint);
     text-align: center;
     margin: 0;
 }
@@ -1543,6 +1588,17 @@ table.data-table tbody tr.row-static:hover {
         width: 100%;
         border: none;
         padding: 0;
+        /* Printed paper should always look the same regardless of the
+           viewer's dark/light mode -- redeclaring the theme tokens here
+           overrides whatever :root[data-theme] set, for every descendant
+           that reads them via var(...). */
+        --surface: #ffffff;
+        --surface-alt: #f8f9fa;
+        --text: #212529;
+        --text-muted: #6c757d;
+        --text-faint: #999999;
+        --border: #e5e7eb;
+        --border-strong: #222222;
     }
 
     .invoice-doc-stamp {

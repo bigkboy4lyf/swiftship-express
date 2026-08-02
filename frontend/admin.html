@@ -43,6 +43,14 @@
                     <i class="fas fa-users"></i>
                     <span>Users</span>
                 </div>
+                <div class="sidebar-menu-item" data-tab="admin-payment-accounts">
+                    <i class="fas fa-university"></i>
+                    <span>Payment Accounts</span>
+                </div>
+                <div class="sidebar-menu-item" data-tab="admin-payment-reviews">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Payment Reviews</span>
+                </div>
                 <div class="sidebar-menu-item" data-tab="admin-reports">
                     <i class="fas fa-file-alt"></i>
                     <span>Reports</span>
@@ -242,6 +250,80 @@
                     </div>
                 </div>
 
+                <!-- Payment Accounts -->
+                <div id="adminPaymentAccounts" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Parent Account</h3>
+                        </div>
+                        <p class="placeholder-text" style="padding: 0 20px 16px;">
+                            Bank transfer is offered as a payment option on every invoice, alongside card checkout. The parent account is the fallback bank transfer account used for any destination that doesn't have its own account set below -- set it once and it covers every country by default.
+                        </p>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Bank</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="parentPaymentAccountBody">
+                                <tr class="row-static"><td colspan="3" style="text-align: center;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Country-Specific Accounts</h3>
+                        </div>
+                        <p class="placeholder-text" style="padding: 0 20px 16px;">
+                            Override the parent account for individual destinations -- useful for limited-service countries where card processing can be unreliable, or wherever a different bank is required. Fields left blank simply won't appear on the customer's payment instructions.
+                        </p>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Country</th>
+                                    <th>Bank</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentAccountsBody">
+                                <tr class="row-static"><td colspan="4" style="text-align: center;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Payment Reviews -->
+                <div id="adminPaymentReviews" class="dashboard-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Payment Reviews</h3>
+                        </div>
+                        <p class="placeholder-text" style="padding: 0 20px 16px;">
+                            Receipts submitted from either the card or bank transfer flow land here for review. Confirming payment moves the shipment into processing; rejecting leaves it as-is so the customer can retry with a corrected receipt.
+                        </p>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Tracking #</th>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Receipt</th>
+                                    <th>Submitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentReviewsBody">
+                                <tr class="row-static"><td colspan="7" style="text-align: center;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Reports -->
                 <div id="adminReports" class="dashboard-section" style="display: none;">
                     <div class="card">
@@ -357,6 +439,73 @@
                 </div>
 
                 <button type="submit" class="btn">Save User</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="paymentAccountModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="paymentAccountModalTitle">Payment Account</h3>
+                <button class="modal-close" id="closePaymentAccountModal">&times;</button>
+            </div>
+
+            <form id="paymentAccountForm">
+                <input type="hidden" id="paymentAccountCountryCode" value="">
+
+                <div class="form-group">
+                    <label>Bank Name</label>
+                    <input type="text" id="paymentAccountBankName">
+                </div>
+                <div class="form-group">
+                    <label>Account Holder Name</label>
+                    <input type="text" id="paymentAccountAccountName">
+                </div>
+                <div class="form-group">
+                    <label>Account Number</label>
+                    <input type="text" id="paymentAccountAccountNumber">
+                </div>
+                <div class="form-group">
+                    <label>IBAN</label>
+                    <input type="text" id="paymentAccountIban">
+                </div>
+                <div class="form-group">
+                    <label>SWIFT / BIC Code</label>
+                    <input type="text" id="paymentAccountSwiftBic">
+                </div>
+                <div class="form-group">
+                    <label>Routing Number</label>
+                    <input type="text" id="paymentAccountRoutingNumber">
+                </div>
+                <div class="form-group">
+                    <label>Sort Code</label>
+                    <input type="text" id="paymentAccountSortCode">
+                </div>
+                <div class="form-group">
+                    <label>Branch Name</label>
+                    <input type="text" id="paymentAccountBranchName">
+                </div>
+                <div class="form-group">
+                    <label>Branch Address</label>
+                    <input type="text" id="paymentAccountBranchAddress">
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <input type="text" id="paymentAccountCurrency" placeholder="e.g. USD">
+                </div>
+                <div class="form-group">
+                    <label>Intermediary Bank</label>
+                    <input type="text" id="paymentAccountIntermediaryBank">
+                </div>
+                <div class="form-group">
+                    <label>Additional Instructions</label>
+                    <textarea id="paymentAccountAdditionalInstructions" rows="3"></textarea>
+                </div>
+
+                <div class="quote-form-actions">
+                    <button type="submit" class="btn quote-btn-primary">Save Payment Account</button>
+                    <button type="button" class="btn btn-reject" id="deletePaymentAccountBtn" style="display:none;">Delete</button>
+                </div>
             </form>
         </div>
     </div>

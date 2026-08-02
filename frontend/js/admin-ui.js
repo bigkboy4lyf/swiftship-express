@@ -106,6 +106,8 @@ const PAGE_TITLES = {
     'admin-dashboard': 'Admin Dashboard',
     'admin-shipments': 'All Shipments',
     'admin-users': 'Users',
+    'admin-payment-accounts': 'Payment Accounts',
+    'admin-payment-reviews': 'Payment Reviews',
     'admin-reports': 'Reports',
     'admin-settings': 'Settings'
 };
@@ -131,6 +133,12 @@ function switchTab(tabId) {
         document.getElementById('adminUsersBody').innerHTML =
             '<tr class="row-static"><td colspan="5" style="text-align:center;">Loading users...</td></tr>';
         loadAllUsers();
+    }
+    if (tabId === 'admin-payment-accounts') {
+        loadPaymentAccounts();
+    }
+    if (tabId === 'admin-payment-reviews') {
+        loadPaymentReviews();
     }
 
     closeSidebarDrawer();
@@ -531,6 +539,273 @@ window.deleteUser = async function(id) {
         }
     } catch (error) {
         alert('Error deleting user: ' + error.message);
+    }
+};
+
+// =============================================
+// PAYMENT ACCOUNTS (bank transfer details)
+// =============================================
+// Bank transfer is one of two standard payment options offered on every
+// invoice, alongside card checkout -- not restricted to any destination, just
+// recommended for limited-service ones. PARENT_ACCOUNT_CODE is a reserved
+// code for the one account that acts as the fallback for every destination
+// without its own specific entry (set once, covers every country); the rest
+// come from the frontend's own LIMITED_SERVICE_COUNTRIES set
+// (countries-data.js) -- the backend stores whatever country codes it's
+// given without validating against that list, so admin only ever edits
+// accounts for codes this page already knows about. Both the parent account
+// and any country-specific account can be deleted independently.
+// PARENT_ACCOUNT_CODE itself is defined in countries-data.js, shared with
+// dashboard-ui.js so both pages agree on the same reserved value.
+let lastLoadedPaymentAccounts = [];
+
+function paymentAccountDisplayLabel(code) {
+    return code === PARENT_ACCOUNT_CODE ? 'Parent Account' : getCountryName(code);
+}
+
+async function loadPaymentAccounts() {
+    try {
+        const res = await fetch('/api/dashboard/payment-accounts', { headers: authHeaders() });
+        const result = await res.json();
+        if (result.success) {
+            lastLoadedPaymentAccounts = result.data;
+            renderParentPaymentAccount(result.data);
+            renderPaymentAccounts(result.data);
+        }
+    } catch (err) {
+        console.error('Error loading payment accounts:', err);
+    }
+}
+
+// Shared by both the parent-account row and every country row -- only the
+// leading label column differs between the two tables, so that's the only
+// thing each caller builds itself.
+function paymentAccountRowCellsHtml(code, account) {
+    const exists = !!account;
+    const configured = exists && !!(account.bankName || account.accountNumber || account.iban);
+    const label = paymentAccountDisplayLabel(code).replace(/'/g, "\\'");
+    return `
+        <td data-label="Bank">${account?.bankName || '—'}</td>
+        <td data-label="Status"><span class="status-badge ${configured ? 'status-delivered' : 'status-pending'}">${configured ? 'CONFIGURED' : 'NOT SET'}</span></td>
+        <td data-label="Actions">
+            <button class="action-btn" onclick="editPaymentAccount('${code}')" title="Edit"><i class="fas fa-pen"></i></button>
+            <button class="action-btn delete" onclick="deletePaymentAccount('${code}', '${label}')" title="Delete" ${exists ? '' : 'disabled'}><i class="fas fa-trash"></i></button>
+        </td>
+    `;
+}
+
+function renderParentPaymentAccount(accounts) {
+    const tbody = document.getElementById('parentPaymentAccountBody');
+    if (!tbody) return;
+    const account = accounts.find(a => a.countryCode === PARENT_ACCOUNT_CODE);
+    tbody.innerHTML = `<tr>${paymentAccountRowCellsHtml(PARENT_ACCOUNT_CODE, account)}</tr>`;
+}
+
+function renderPaymentAccounts(accounts) {
+    const tbody = document.getElementById('paymentAccountsBody');
+    if (!tbody) return;
+
+    const byCode = {};
+    accounts.forEach(a => { byCode[a.countryCode] = a; });
+
+    tbody.innerHTML = [...LIMITED_SERVICE_COUNTRIES].sort().map(code => `
+        <tr>
+            <td data-label="Country">${getCountryName(code)}</td>
+            ${paymentAccountRowCellsHtml(code, byCode[code])}
+        </tr>
+    `).join('');
+}
+
+window.editPaymentAccount = function(code) {
+    const account = lastLoadedPaymentAccounts.find(a => a.countryCode === code);
+    const form = document.getElementById('paymentAccountForm');
+    form.reset();
+
+    document.getElementById('paymentAccountModalTitle').textContent = `Payment Account -- ${paymentAccountDisplayLabel(code)}`;
+    document.getElementById('paymentAccountCountryCode').value = code;
+    document.getElementById('paymentAccountBankName').value = account?.bankName || '';
+    document.getElementById('paymentAccountAccountName').value = account?.accountName || '';
+    document.getElementById('paymentAccountAccountNumber').value = account?.accountNumber || '';
+    document.getElementById('paymentAccountIban').value = account?.iban || '';
+    document.getElementById('paymentAccountSwiftBic').value = account?.swiftBic || '';
+    document.getElementById('paymentAccountRoutingNumber').value = account?.routingNumber || '';
+    document.getElementById('paymentAccountSortCode').value = account?.sortCode || '';
+    document.getElementById('paymentAccountBranchName').value = account?.branchName || '';
+    document.getElementById('paymentAccountBranchAddress').value = account?.branchAddress || '';
+    document.getElementById('paymentAccountCurrency').value = account?.currency || '';
+    document.getElementById('paymentAccountIntermediaryBank').value = account?.intermediaryBank || '';
+    document.getElementById('paymentAccountAdditionalInstructions').value = account?.additionalInstructions || '';
+
+    document.getElementById('deletePaymentAccountBtn').style.display = account ? '' : 'none';
+
+    document.getElementById('paymentAccountModal').classList.add('active');
+};
+
+// Reusable for both the parent account and any country account, from either
+// a table row's Delete button or the edit modal's own Delete button.
+window.deletePaymentAccount = async function(code, label) {
+    if (!confirm(`Delete the payment account for ${label}? Customers will no longer see these bank transfer details.`)) return;
+
+    try {
+        const res = await fetch(`/api/dashboard/payment-accounts/${code}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        const result = await res.json();
+        if (result.success) {
+            document.getElementById('paymentAccountModal').classList.remove('active');
+            loadPaymentAccounts();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error deleting payment account: ' + error.message);
+    }
+};
+
+document.getElementById('deletePaymentAccountBtn')?.addEventListener('click', () => {
+    const code = document.getElementById('paymentAccountCountryCode').value;
+    window.deletePaymentAccount(code, paymentAccountDisplayLabel(code));
+});
+
+document.getElementById('closePaymentAccountModal')?.addEventListener('click', () => {
+    document.getElementById('paymentAccountModal').classList.remove('active');
+});
+
+document.getElementById('paymentAccountForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const code = document.getElementById('paymentAccountCountryCode').value;
+
+    const data = {
+        bankName: document.getElementById('paymentAccountBankName').value,
+        accountName: document.getElementById('paymentAccountAccountName').value,
+        accountNumber: document.getElementById('paymentAccountAccountNumber').value,
+        iban: document.getElementById('paymentAccountIban').value,
+        swiftBic: document.getElementById('paymentAccountSwiftBic').value,
+        routingNumber: document.getElementById('paymentAccountRoutingNumber').value,
+        sortCode: document.getElementById('paymentAccountSortCode').value,
+        branchName: document.getElementById('paymentAccountBranchName').value,
+        branchAddress: document.getElementById('paymentAccountBranchAddress').value,
+        currency: document.getElementById('paymentAccountCurrency').value,
+        intermediaryBank: document.getElementById('paymentAccountIntermediaryBank').value,
+        additionalInstructions: document.getElementById('paymentAccountAdditionalInstructions').value
+    };
+
+    try {
+        const res = await fetch(`/api/dashboard/payment-accounts/${code}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) {
+            document.getElementById('paymentAccountModal').classList.remove('active');
+            loadPaymentAccounts();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error saving payment account: ' + error.message);
+    }
+});
+
+// =============================================
+// PAYMENT REVIEWS
+// =============================================
+// Lists only shipments with a receipt awaiting review (submitted from either
+// the card or bank transfer flow -- see frontend/submit-receipt.html).
+// Confirming advances the shipment into processing the same way a manual
+// /approve does; rejecting leaves the shipment untouched so the customer's
+// "Payment Processing" button reverts to "View Invoice" and they can retry.
+let lastLoadedPaymentReviews = [];
+
+const PAYMENT_METHOD_LABELS = { card: 'Card', bank_transfer: 'Bank Transfer' };
+
+async function loadPaymentReviews() {
+    const tbody = document.getElementById('paymentReviewsBody');
+    if (tbody) tbody.innerHTML = '<tr class="row-static"><td colspan="7" style="text-align:center;">Loading...</td></tr>';
+
+    try {
+        const res = await fetch('/api/dashboard/shipments?paymentStatus=pending&limit=100', { headers: authHeaders() });
+        const result = await res.json();
+        if (result.success) renderPaymentReviews(result.data);
+    } catch (err) {
+        console.error('Error loading payment reviews:', err);
+    }
+}
+
+function paymentReceiptPreviewHtml(receipt) {
+    if (!receipt?.data) return '—';
+    return receipt.contentType?.startsWith('image/')
+        ? `<a href="${receipt.data}" download="${receipt.filename || 'receipt'}"><img src="${receipt.data}" alt="Payment receipt" style="max-width:56px; max-height:56px; border-radius:4px; display:block;"></a>`
+        : `<a href="${receipt.data}" download="${receipt.filename || 'receipt.pdf'}"><i class="fas fa-file-pdf"></i> Download</a>`;
+}
+
+function renderPaymentReviews(shipments) {
+    lastLoadedPaymentReviews = shipments;
+    const tbody = document.getElementById('paymentReviewsBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = !shipments.length
+        ? '<tr class="row-static"><td colspan="7" style="text-align:center;">No payments awaiting review</td></tr>'
+        : shipments.map(s => `
+        <tr>
+            <td data-label="Tracking #"><strong>${s.trackingNumber || 'N/A'}</strong></td>
+            <td data-label="Customer">${s.userId?.name || s.sender?.name || 'N/A'}</td>
+            <td data-label="Amount">${money(s.totalPrice)}</td>
+            <td data-label="Method">${PAYMENT_METHOD_LABELS[s.paymentReceipt?.method] || 'N/A'}</td>
+            <td data-label="Receipt">${paymentReceiptPreviewHtml(s.paymentReceipt)}</td>
+            <td data-label="Submitted">${s.paymentReceipt?.submittedAt ? new Date(s.paymentReceipt.submittedAt).toLocaleString() : 'N/A'}</td>
+            <td data-label="Actions">
+                <div class="pending-approval-actions">
+                    <button class="btn-approve" onclick="confirmPaymentReceipt('${s._id}')">Confirm</button>
+                    <button class="btn-reject" onclick="rejectPaymentReceipt('${s._id}')">Reject</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+window.confirmPaymentReceipt = async function(id) {
+    const s = lastLoadedPaymentReviews.find(x => x._id === id);
+    if (!confirm(`Confirm payment for shipment ${s?.trackingNumber || id}? This moves it into processing.`)) return;
+
+    try {
+        const res = await fetch(`/api/dashboard/shipments/${id}/receipt/confirm`, { method: 'PATCH', headers: authHeaders() });
+        const result = await res.json();
+        if (result.success) {
+            loadPaymentReviews();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error confirming payment: ' + error.message);
+    }
+};
+
+window.rejectPaymentReceipt = async function(id) {
+    const s = lastLoadedPaymentReviews.find(x => x._id === id);
+    const reason = prompt(`Reason for rejecting the payment for shipment ${s?.trackingNumber || id}:`);
+    if (reason === null) return;
+    if (!reason.trim()) {
+        alert('A reason is required.');
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/dashboard/shipments/${id}/receipt/reject`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ reason: reason.trim() })
+        });
+        const result = await res.json();
+        if (result.success) {
+            loadPaymentReviews();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error rejecting payment: ' + error.message);
     }
 };
 

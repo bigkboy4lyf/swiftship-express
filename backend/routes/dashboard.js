@@ -2,8 +2,30 @@ const express = require('express');
 const router = express.Router();
 const Shipment = require('../models/Shipment');
 const User = require('../models/User');
+const PaymentAccount = require('../models/PaymentAccount');
 const { protect } = require('../middleware/auth');
 const { documentVerificationCode } = require('../utils/verification');
+const sendEmail = require('../utils/sendEmail');
+const { quoteEmail, receiptSubmittedEmail } = require('../utils/emailTemplates');
+
+const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
+
+// Shared by /approve and /receipt/confirm -- both move a shipment from
+// pending_approval into the pipeline at the sorting facility the same way.
+function advanceToProcessing(shipment, historyDescription) {
+    shipment.status = 'processing';
+    shipment.currentLocation = {
+        facility: 'Sorting Facility',
+        city: 'Sorting Facility',
+        timestamp: new Date()
+    };
+    shipment.trackingHistory.push({
+        status: 'processing',
+        location: 'Sorting Facility',
+        description: historyDescription,
+        timestamp: new Date()
+    });
+}
 
 // A shipment stops being "active" once it's fully resolved -- delivered to the
 // customer, or rejected (rejected requests are deleted outright, so this is
@@ -113,13 +135,18 @@ router.get('/stats', protect, async (req, res) => {
 // =============================================
 router.get('/shipments', protect, async (req, res) => {
     try {
-        const { limit = 100, userId, status } = req.query;
+        const { limit = 100, userId, status, paymentStatus } = req.query;
         const isAdmin = req.user.role === 'admin';
         let query = {};
 
         // Filter by status if provided
         if (status) {
             query.status = status;
+        }
+
+        // Powers the admin Payment Reviews tab (e.g. ?paymentStatus=pending)
+        if (paymentStatus) {
+            query['paymentReceipt.status'] = paymentStatus;
         }
 
         // Filter by user
@@ -204,6 +231,28 @@ router.post('/shipments', protect, async (req, res) => {
         const shipment = new Shipment(shipmentData);
         await shipment.save();
 
+        if (shipment.sender?.email) {
+            sendEmail.inBackground(
+                shipment.sender.email,
+                `Your SwiftShip Express Quote -- ${shipment.trackingNumber}`,
+                quoteEmail({
+                    customerName: shipment.sender.name,
+                    trackingNumber: shipment.trackingNumber,
+                    originCity: shipment.sender.city,
+                    originCountry: shipment.sender.country,
+                    destCity: shipment.recipient?.city,
+                    destCountry: shipment.recipient?.country,
+                    serviceType: shipment.serviceType,
+                    weight: shipment.package?.weight,
+                    pricing: shipment.pricing,
+                    totalPrice: shipment.totalPrice,
+                    dashboardUrl: `${req.protocol}://${req.get('host')}/dashboard`,
+                    supportEmail: SUPPORT_EMAIL
+                }),
+                'Quote'
+            );
+        }
+
         res.status(201).json({ success: true, data: shipment });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
@@ -232,18 +281,7 @@ router.patch('/shipments/:id/approve', protect, async (req, res) => {
         // see AWAITING_DECISION_STATUSES above. Approval sends it straight into
         // the pipeline at the sorting facility rather than sitting in a second,
         // separate "pending" holding state.
-        shipment.status = 'processing';
-        shipment.currentLocation = {
-            facility: 'Sorting Facility',
-            city: 'Sorting Facility',
-            timestamp: new Date()
-        };
-        shipment.trackingHistory.push({
-            status: 'processing',
-            location: 'Sorting Facility',
-            description: 'Shipment confirmed - now processing at sorting facility',
-            timestamp: new Date()
-        });
+        advanceToProcessing(shipment, 'Shipment confirmed - now processing at sorting facility');
 
         await shipment.save();
         res.json({ success: true, data: shipment });
@@ -275,6 +313,126 @@ router.patch('/shipments/:id/reject', protect, async (req, res) => {
         await Shipment.findByIdAndDelete(req.params.id);
 
         res.json({ success: true, message: 'Shipment request rejected and removed', data: { _id: req.params.id } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// PAYMENT RECEIPT (submit / admin confirm / admin reject)
+// =============================================
+// Both the card and bank transfer flows converge on the same upload step
+// (frontend/submit-receipt.html) -- whichever method got them there is
+// recorded just for admin's context in the Payment Reviews tab.
+const MAX_RECEIPT_LENGTH = 7 * 1024 * 1024; // ~7MB of base64 text, i.e. up to ~5MB file
+
+router.patch('/shipments/:id/receipt', protect, async (req, res) => {
+    try {
+        const { data, filename, contentType, method } = req.body;
+
+        const shipment = await Shipment.findById(req.params.id);
+        if (!shipment) {
+            return res.status(404).json({ success: false, message: 'Shipment not found' });
+        }
+        if (req.user.role !== 'admin' && String(shipment.userId) !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        if (typeof data !== 'string' || !(data.startsWith('data:image/') || data.startsWith('data:application/pdf'))) {
+            return res.status(400).json({ success: false, message: 'Receipt must be an image or PDF file' });
+        }
+        if (data.length > MAX_RECEIPT_LENGTH) {
+            return res.status(400).json({ success: false, message: 'That file is too large. Please choose a file smaller than 5MB.' });
+        }
+
+        shipment.paymentReceipt = {
+            data,
+            filename: filename || 'receipt',
+            contentType: contentType || '',
+            method: method === 'bank_transfer' ? 'bank_transfer' : 'card',
+            status: 'pending',
+            submittedAt: new Date()
+        };
+        await shipment.save();
+
+        // No notifications engine yet -- an email to support is the interim
+        // signal that a receipt is waiting in the Payment Reviews tab.
+        sendEmail.inBackground(
+            SUPPORT_EMAIL,
+            `Payment receipt submitted -- ${shipment.trackingNumber}`,
+            receiptSubmittedEmail({
+                trackingNumber: shipment.trackingNumber,
+                customerName: shipment.sender?.name,
+                customerEmail: shipment.sender?.email
+            }),
+            'Receipt submission notice'
+        );
+
+        res.json({ success: true, data: shipment });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+router.patch('/shipments/:id/receipt/confirm', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const shipment = await Shipment.findById(req.params.id);
+        if (!shipment) {
+            return res.status(404).json({ success: false, message: 'Shipment not found' });
+        }
+        if (shipment.paymentReceipt?.status !== 'pending') {
+            return res.status(400).json({ success: false, message: 'No pending receipt to confirm' });
+        }
+
+        shipment.paymentReceipt.status = 'confirmed';
+        shipment.paymentReceipt.resolvedAt = new Date();
+
+        // Confirming payment is what actually unblocks the shipment -- same
+        // pipeline entry point as a manual /approve.
+        if (shipment.status === 'pending_approval') {
+            advanceToProcessing(shipment, 'Payment confirmed - now processing at sorting facility');
+        }
+
+        await shipment.save();
+        res.json({ success: true, data: shipment });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.patch('/shipments/:id/receipt/reject', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const { reason } = req.body;
+        if (!reason || !reason.trim()) {
+            return res.status(400).json({ success: false, message: 'A reason is required to reject a payment receipt' });
+        }
+
+        const shipment = await Shipment.findById(req.params.id);
+        if (!shipment) {
+            return res.status(404).json({ success: false, message: 'Shipment not found' });
+        }
+        if (shipment.paymentReceipt?.status !== 'pending') {
+            return res.status(400).json({ success: false, message: 'No pending receipt to reject' });
+        }
+
+        // Shipment itself is left untouched (still pending_approval) so the
+        // customer's invoice button reverts from "Payment Processing" back
+        // to "View Invoice" and they can retry. The reason isn't surfaced
+        // anywhere yet -- it's captured for the future notifications engine.
+        shipment.paymentReceipt.status = 'rejected';
+        shipment.paymentReceipt.rejectionReason = reason.trim();
+        shipment.paymentReceipt.resolvedAt = new Date();
+
+        await shipment.save();
+        res.json({ success: true, data: shipment });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -559,6 +717,67 @@ router.delete('/users/:id', protect, async (req, res) => {
         }
 
         res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// PAYMENT ACCOUNTS (bank transfer details)
+// =============================================
+// Bank transfer is always offered alongside card checkout on every invoice --
+// it's not restricted to any particular destination, just recommended for
+// limited-service ones. Keyed by country code, plus a reserved 'PARENT' entry
+// (the "parent account") used for any destination without its own specific
+// account -- set once, it covers every country by default. Any logged-in
+// user can read these (the paying customer needs to see them for their own
+// shipment's destination); only admins can create/edit/remove them. No fixed
+// country-code list is enforced server-side on purpose -- which countries
+// count as "limited service" lives in the frontend
+// (frontend/js/countries-data.js) and can change without a backend deploy.
+router.get('/payment-accounts', protect, async (req, res) => {
+    try {
+        const accounts = await PaymentAccount.find();
+        res.json({ success: true, data: accounts });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/payment-accounts/:countryCode', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const countryCode = req.params.countryCode.toUpperCase();
+        const {
+            bankName, accountName, accountNumber, iban, swiftBic, routingNumber,
+            sortCode, branchName, branchAddress, currency, intermediaryBank, additionalInstructions
+        } = req.body;
+
+        const account = await PaymentAccount.findOneAndUpdate(
+            { countryCode },
+            {
+                countryCode, bankName, accountName, accountNumber, iban, swiftBic, routingNumber,
+                sortCode, branchName, branchAddress, currency, intermediaryBank, additionalInstructions
+            },
+            { new: true, upsert: true, runValidators: true }
+        );
+
+        res.json({ success: true, data: account });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+router.delete('/payment-accounts/:countryCode', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+        await PaymentAccount.findOneAndDelete({ countryCode: req.params.countryCode.toUpperCase() });
+        res.json({ success: true, message: 'Payment account cleared' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

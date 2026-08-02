@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Shipment = require('../models/Shipment');
 const { calculateShippingPrice } = require('../utils/pricing');
+const sendEmail = require('../utils/sendEmail');
+const { quoteEmail } = require('../utils/emailTemplates');
+
+const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
 
 
 // =============================================
@@ -109,6 +113,29 @@ router.post('/create', async (req, res) => {
         });
 
         await newShipment.save();
+
+        if (sender?.email) {
+            sendEmail.inBackground(
+                sender.email,
+                `Your SwiftShip Express Quote -- ${trackingNumber}`,
+                quoteEmail({
+                    customerName: sender.name,
+                    trackingNumber,
+                    originCity: sender.city,
+                    originCountry: sender.country,
+                    destCity: recipient?.city,
+                    destCountry: recipient?.country,
+                    serviceType,
+                    weight: aggregateWeight,
+                    pricing: { basePrice, insuranceCost, surcharge },
+                    totalPrice,
+                    dashboardUrl: `${req.protocol}://${req.get('host')}/dashboard`,
+                    supportEmail: SUPPORT_EMAIL
+                }),
+                'Quote'
+            );
+        }
+
         res.status(201).json({ success: true, data: newShipment });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
