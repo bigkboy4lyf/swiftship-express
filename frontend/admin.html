@@ -310,7 +310,7 @@
                                 <tr>
                                     <th>Tracking #</th>
                                     <th>Customer</th>
-                                    <th>Amount</th>
+                                    <th>Balance Due</th>
                                     <th>Method</th>
                                     <th>Receipt</th>
                                     <th>Submitted</th>
@@ -568,6 +568,8 @@
                     <tbody id="invoiceLineItems"></tbody>
                     <tfoot>
                         <tr class="invoice-doc-total-row"><td>Total</td><td id="invoiceTotal">$0.00</td></tr>
+                        <tr class="invoice-doc-subtotal-row" id="invoiceAmountPaidRow" style="display:none;"><td>Amount Paid</td><td id="invoiceAmountPaid">$0.00</td></tr>
+                        <tr class="invoice-doc-total-row invoice-doc-balance-row" id="invoiceBalanceDueRow" style="display:none;"><td>Balance Due</td><td id="invoiceBalanceDue">$0.00</td></tr>
                     </tfoot>
                 </table>
 

@@ -25,6 +25,12 @@ const shipmentSchema = new mongoose.Schema({
     // itemized breakdown for invoices/receipts, computed once at creation so
     // a receipt's total never silently changes if the rate formula changes later.
     totalPrice: { type: Number, default: 0 },
+    // Cumulative total confirmed across every receipt admin has accepted so
+    // far (see PATCH /receipt/confirm) -- supports paying an invoice down in
+    // installments. The shipment only advances into processing once this
+    // reaches totalPrice; until then it stays an unpaid/partially-paid
+    // invoice the customer can keep submitting receipts against.
+    amountPaid: { type: Number, default: 0 },
     pricing: {
         basePrice: { type: Number, default: 0 },
         insuranceCost: { type: Number, default: 0 },
@@ -91,6 +97,11 @@ const shipmentSchema = new mongoose.Schema({
         filename: String,
         contentType: String,
         method: { type: String, enum: ['card', 'bank_transfer'] },
+        // Set by admin at confirm time (not by the customer) -- the receipt
+        // image only proves a payment was made, not how much of the
+        // remaining balance it covers, so admin reads that off the receipt
+        // and declares it here. Contributes to amountPaid above.
+        amount: Number,
         status: { type: String, enum: ['pending', 'confirmed', 'rejected'] },
         submittedAt: Date,
         resolvedAt: Date,

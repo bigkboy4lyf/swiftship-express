@@ -1392,6 +1392,18 @@ table.data-table tbody tr.row-static:hover {
     border-radius: 8px;
     padding: 28px 26px;
     background: var(--surface);
+    /* An invoice/receipt is a fixed paper document, not themed UI -- it
+       must read the same whether the dashboard is in light or dark mode,
+       so the theme tokens are pinned to their light values here rather
+       than left to inherit from :root[data-theme="dark"]. */
+    --surface: #ffffff;
+    --surface-alt: #f8f9fa;
+    --text: #212529;
+    --text-muted: #6c757d;
+    --text-faint: #6c757d;
+    --border: #e5e7eb;
+    --border-strong: #222222;
+    color: var(--text);
 }
 
 .invoice-doc-header {
@@ -1445,6 +1457,11 @@ table.data-table tbody tr.row-static:hover {
 .invoice-doc-stamp.paid {
     color: #15803d;
     background: rgba(40, 167, 69, 0.08);
+}
+
+.invoice-doc-stamp.partial {
+    color: #a16207;
+    background: rgba(217, 164, 6, 0.1);
 }
 
 .invoice-doc-meta {
@@ -1512,6 +1529,22 @@ table.data-table tbody tr.row-static:hover {
     font-weight: 700;
     font-size: 1.05rem;
     color: var(--text);
+}
+
+/* Amount already paid toward the total, shown as a plain deduction line
+   between the total and the balance still owed -- only appears once a
+   partial payment has been confirmed. */
+.invoice-doc-subtotal-row td {
+    padding: 6px 0 0;
+    border-bottom: none;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.invoice-doc-balance-row td {
+    border-top: 1px dashed var(--border-strong);
+    padding-top: 10px;
+    color: #a16207;
 }
 
 .invoice-doc-note {
@@ -1582,23 +1615,15 @@ table.data-table tbody tr.row-static:hover {
     }
 
     #invoicePrintArea {
+        /* Color tokens are already pinned to light/paper values by
+           .invoice-doc itself -- print only needs to strip the modal
+           chrome/positioning so the document fills the printed page. */
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         border: none;
         padding: 0;
-        /* Printed paper should always look the same regardless of the
-           viewer's dark/light mode -- redeclaring the theme tokens here
-           overrides whatever :root[data-theme] set, for every descendant
-           that reads them via var(...). */
-        --surface: #ffffff;
-        --surface-alt: #f8f9fa;
-        --text: #212529;
-        --text-muted: #6c757d;
-        --text-faint: #999999;
-        --border: #e5e7eb;
-        --border-strong: #222222;
     }
 
     .invoice-doc-stamp {

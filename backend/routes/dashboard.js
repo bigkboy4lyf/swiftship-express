@@ -374,6 +374,11 @@ router.patch('/shipments/:id/receipt', protect, async (req, res) => {
     }
 });
 
+// Amounts are rounded to the cent before every comparison/store so repeated
+// partial payments can't drift away from a clean $0.00 balance due to
+// floating point error.
+const round2 = (n) => Math.round(n * 100) / 100;
+
 router.patch('/shipments/:id/receipt/confirm', protect, async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
@@ -388,13 +393,38 @@ router.patch('/shipments/:id/receipt/confirm', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'No pending receipt to confirm' });
         }
 
+        const totalPrice = round2(shipment.totalPrice || 0);
+        const balanceDue = round2(totalPrice - (shipment.amountPaid || 0));
+
+        const amount = round2(Number(req.body.amount));
+        if (!Number.isFinite(amount) || amount <= 0) {
+            return res.status(400).json({ success: false, message: 'Enter a valid payment amount greater than zero.' });
+        }
+        // The one thing this endpoint must never allow -- confirming more
+        // than is actually still owed and overcharging the customer.
+        if (amount > balanceDue) {
+            return res.status(400).json({ success: false, message: `That's more than the remaining balance of $${balanceDue.toFixed(2)}.` });
+        }
+
+        shipment.amountPaid = round2((shipment.amountPaid || 0) + amount);
         shipment.paymentReceipt.status = 'confirmed';
+        shipment.paymentReceipt.amount = amount;
         shipment.paymentReceipt.resolvedAt = new Date();
 
+        const fullyPaid = shipment.amountPaid >= totalPrice;
+
         // Confirming payment is what actually unblocks the shipment -- same
-        // pipeline entry point as a manual /approve.
-        if (shipment.status === 'pending_approval') {
+        // pipeline entry point as a manual /approve. Only once the invoice
+        // is fully paid off, though -- a partial payment keeps it an unpaid
+        // invoice so the customer can submit another receipt for the rest.
+        if (fullyPaid && shipment.status === 'pending_approval') {
             advanceToProcessing(shipment, 'Payment confirmed - now processing at sorting facility');
+        } else if (!fullyPaid) {
+            shipment.trackingHistory.push({
+                status: shipment.status,
+                description: `Partial payment of $${amount.toFixed(2)} confirmed -- $${round2(totalPrice - shipment.amountPaid).toFixed(2)} balance remaining`,
+                timestamp: new Date()
+            });
         }
 
         await shipment.save();

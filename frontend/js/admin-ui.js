@@ -714,9 +714,12 @@ document.getElementById('paymentAccountForm')?.addEventListener('submit', async 
 // =============================================
 // Lists only shipments with a receipt awaiting review (submitted from either
 // the card or bank transfer flow -- see frontend/submit-receipt.html).
-// Confirming advances the shipment into processing the same way a manual
-// /approve does; rejecting leaves the shipment untouched so the customer's
-// "Payment Processing" button reverts to "View Invoice" and they can retry.
+// Confirming asks how much of the balance this receipt covers -- partial
+// payments are allowed, so it only advances the shipment into processing
+// once the full balance is paid off; the backend is the source of truth on
+// that and refuses anything over what's still owed. Rejecting leaves the
+// shipment untouched so the customer's "Payment Processing" button reverts
+// to "View Invoice" and they can retry.
 let lastLoadedPaymentReviews = [];
 
 const PAYMENT_METHOD_LABELS = { card: 'Card', bank_transfer: 'Bank Transfer' };
@@ -748,11 +751,16 @@ function renderPaymentReviews(shipments) {
 
     tbody.innerHTML = !shipments.length
         ? '<tr class="row-static"><td colspan="7" style="text-align:center;">No payments awaiting review</td></tr>'
-        : shipments.map(s => `
+        : shipments.map(s => {
+            const balanceDue = Math.max((s.totalPrice || 0) - (s.amountPaid || 0), 0);
+            const balanceCell = s.amountPaid > 0
+                ? `${money(balanceDue)} <span style="color: var(--gray); font-size: 0.8em;">(of ${money(s.totalPrice)}, ${money(s.amountPaid)} already paid)</span>`
+                : money(balanceDue);
+            return `
         <tr>
             <td data-label="Tracking #"><strong>${s.trackingNumber || 'N/A'}</strong></td>
             <td data-label="Customer">${s.userId?.name || s.sender?.name || 'N/A'}</td>
-            <td data-label="Amount">${money(s.totalPrice)}</td>
+            <td data-label="Balance Due">${balanceCell}</td>
             <td data-label="Method">${PAYMENT_METHOD_LABELS[s.paymentReceipt?.method] || 'N/A'}</td>
             <td data-label="Receipt">${paymentReceiptPreviewHtml(s.paymentReceipt)}</td>
             <td data-label="Submitted">${s.paymentReceipt?.submittedAt ? new Date(s.paymentReceipt.submittedAt).toLocaleString() : 'N/A'}</td>
@@ -763,15 +771,39 @@ function renderPaymentReviews(shipments) {
                 </div>
             </td>
         </tr>
-    `).join('');
+    `;
+        }).join('');
 }
 
 window.confirmPaymentReceipt = async function(id) {
     const s = lastLoadedPaymentReviews.find(x => x._id === id);
-    if (!confirm(`Confirm payment for shipment ${s?.trackingNumber || id}? This moves it into processing.`)) return;
+    const balanceDue = Math.max((s?.totalPrice || 0) - (s?.amountPaid || 0), 0);
+
+    const input = prompt(
+        `Amount received for shipment ${s?.trackingNumber || id}?\nBalance due: ${money(balanceDue)}\n\nEnter the full balance to close out the invoice, or a smaller amount to record a partial payment.`,
+        balanceDue.toFixed(2)
+    );
+    if (input === null) return;
+
+    const amount = Number(input);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        alert('Enter a valid amount greater than zero.');
+        return;
+    }
+    // Mirrors the backend check so the admin gets instant feedback, but the
+    // server re-validates -- it's the one place that can't be trusted to
+    // skip, since it's what actually prevents overcharging a customer.
+    if (amount > balanceDue + 0.001) {
+        alert(`That's more than the remaining balance of ${money(balanceDue)}.`);
+        return;
+    }
 
     try {
-        const res = await fetch(`/api/dashboard/shipments/${id}/receipt/confirm`, { method: 'PATCH', headers: authHeaders() });
+        const res = await fetch(`/api/dashboard/shipments/${id}/receipt/confirm`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ amount })
+        });
         const result = await res.json();
         if (result.success) {
             loadPaymentReviews();
@@ -948,13 +980,17 @@ function money(n) {
 
 function openInvoiceOrReceipt(s) {
     const isInvoice = isAwaitingConfirmation(s.status);
+    const totalPrice = Number(s.totalPrice) || 0;
+    const amountPaid = Number(s.amountPaid) || 0;
+    const balanceDue = Math.max(totalPrice - amountPaid, 0);
+    const isPartiallyPaid = isInvoice && amountPaid > 0;
 
     document.getElementById('invoiceModalTitle').textContent = isInvoice ? 'Invoice' : 'Receipt';
     document.getElementById('invoiceDocType').textContent = isInvoice ? 'INVOICE' : 'RECEIPT';
 
     const stamp = document.getElementById('invoiceStatusStamp');
-    stamp.textContent = isInvoice ? 'Unpaid' : 'Paid';
-    stamp.className = 'invoice-doc-stamp ' + (isInvoice ? 'unpaid' : 'paid');
+    stamp.textContent = !isInvoice ? 'Paid' : (isPartiallyPaid ? 'Partially Paid' : 'Unpaid');
+    stamp.className = 'invoice-doc-stamp ' + (!isInvoice ? 'paid' : (isPartiallyPaid ? 'partial' : 'unpaid'));
 
     document.getElementById('invoiceDocNumber').textContent = `${isInvoice ? 'INV' : 'RCT'}-${s.trackingNumber}`;
     document.getElementById('invoiceDocDate').textContent = s.createdAt
@@ -981,11 +1017,25 @@ function openInvoiceOrReceipt(s) {
         `
         : '<tr><td colspan="2">Pricing details are not available for this shipment.</td></tr>';
 
-    document.getElementById('invoiceTotal').textContent = money(s.totalPrice);
+    document.getElementById('invoiceTotal').textContent = money(totalPrice);
 
-    document.getElementById('invoiceFooterNote').textContent = isInvoice
-        ? 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.'
-        : 'This receipt confirms payment has been received and processed for the shipment described above.';
+    const paidRow = document.getElementById('invoiceAmountPaidRow');
+    const dueRow = document.getElementById('invoiceBalanceDueRow');
+    if (isPartiallyPaid) {
+        paidRow.style.display = '';
+        dueRow.style.display = '';
+        document.getElementById('invoiceAmountPaid').textContent = '-' + money(amountPaid);
+        document.getElementById('invoiceBalanceDue').textContent = money(balanceDue);
+    } else {
+        paidRow.style.display = 'none';
+        dueRow.style.display = 'none';
+    }
+
+    document.getElementById('invoiceFooterNote').textContent = !isInvoice
+        ? 'This receipt confirms payment has been received and processed for the shipment described above.'
+        : isPartiallyPaid
+            ? `A partial payment of ${money(amountPaid)} has been confirmed. The remaining balance of ${money(balanceDue)} is still due before this shipment moves into processing.`
+            : 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.';
 
     document.getElementById('invoiceVerificationCode').textContent = s.verificationCode || 'N/A';
 

@@ -908,13 +908,21 @@ let currentInvoiceShipment = null;
 function openInvoiceOrReceipt(s) {
     currentInvoiceShipment = s;
     const isInvoice = isAwaitingConfirmation(s.status);
+    const totalPrice = Number(s.totalPrice) || 0;
+    const amountPaid = Number(s.amountPaid) || 0;
+    const balanceDue = Math.max(totalPrice - amountPaid, 0);
+    // A part-paid invoice is still an invoice (isInvoice), just further along --
+    // it only becomes a receipt once the shipment itself advances, which only
+    // happens once the balance actually reaches zero (see advanceToProcessing
+    // on the backend).
+    const isPartiallyPaid = isInvoice && amountPaid > 0;
 
     document.getElementById('invoiceModalTitle').textContent = isInvoice ? 'Invoice' : 'Receipt';
     document.getElementById('invoiceDocType').textContent = isInvoice ? 'INVOICE' : 'RECEIPT';
 
     const stamp = document.getElementById('invoiceStatusStamp');
-    stamp.textContent = isInvoice ? 'Unpaid' : 'Paid';
-    stamp.className = 'invoice-doc-stamp ' + (isInvoice ? 'unpaid' : 'paid');
+    stamp.textContent = !isInvoice ? 'Paid' : (isPartiallyPaid ? 'Partially Paid' : 'Unpaid');
+    stamp.className = 'invoice-doc-stamp ' + (!isInvoice ? 'paid' : (isPartiallyPaid ? 'partial' : 'unpaid'));
 
     document.getElementById('invoiceDocNumber').textContent = `${isInvoice ? 'INV' : 'RCT'}-${s.trackingNumber}`;
     document.getElementById('invoiceDocDate').textContent = s.createdAt
@@ -941,11 +949,25 @@ function openInvoiceOrReceipt(s) {
         `
         : '<tr><td colspan="2">Pricing details are not available for this shipment.</td></tr>';
 
-    document.getElementById('invoiceTotal').textContent = money(s.totalPrice);
+    document.getElementById('invoiceTotal').textContent = money(totalPrice);
 
-    document.getElementById('invoiceFooterNote').textContent = isInvoice
-        ? 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.'
-        : 'This receipt confirms payment has been received and processed for the shipment described above.';
+    const paidRow = document.getElementById('invoiceAmountPaidRow');
+    const dueRow = document.getElementById('invoiceBalanceDueRow');
+    if (isPartiallyPaid) {
+        paidRow.style.display = '';
+        dueRow.style.display = '';
+        document.getElementById('invoiceAmountPaid').textContent = '-' + money(amountPaid);
+        document.getElementById('invoiceBalanceDue').textContent = money(balanceDue);
+    } else {
+        paidRow.style.display = 'none';
+        dueRow.style.display = 'none';
+    }
+
+    document.getElementById('invoiceFooterNote').textContent = !isInvoice
+        ? 'This receipt confirms payment has been received and processed for the shipment described above.'
+        : isPartiallyPaid
+            ? `A partial payment of ${money(amountPaid)} has been confirmed. The remaining balance of ${money(balanceDue)} is still due before this shipment moves into processing.`
+            : 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.';
 
     document.getElementById('invoiceVerificationCode').textContent = s.verificationCode || 'N/A';
 
@@ -992,9 +1014,10 @@ document.getElementById('closePaymentMethodModal')?.addEventListener('click', ()
 document.getElementById('continueToCardBtn')?.addEventListener('click', () => {
     const s = currentInvoiceShipment;
     if (!s) return;
+    const balanceDue = Math.max((Number(s.totalPrice) || 0) - (Number(s.amountPaid) || 0), 0);
     const params = new URLSearchParams({
         tracking: s.trackingNumber || '',
-        amount: s.totalPrice || 0,
+        amount: balanceDue,
         shipment: s._id || ''
     });
     window.location.href = `pay.html?${params.toString()}`;
@@ -1024,9 +1047,10 @@ async function loadBankTransferDetails(s) {
         const account = accounts.find(a => a.countryCode === s.recipient?.country)
             || accounts.find(a => a.countryCode === PARENT_ACCOUNT_CODE);
 
+        const balanceDue = Math.max((Number(s.totalPrice) || 0) - (Number(s.amountPaid) || 0), 0);
         const rows = account ? [
             ['Payment Reference', s.trackingNumber],
-            ['Amount Due', money(s.totalPrice)],
+            ['Amount Due', money(balanceDue)],
             ['Bank Name', account.bankName],
             ['Account Holder Name', account.accountName],
             ['Account Number', account.accountNumber],
