@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Shipment = require('../models/Shipment');
+const User = require('../models/User');
 const { calculateShippingPrice, estimateDeliveryDate } = require('../utils/pricing');
 const sendEmail = require('../utils/sendEmail');
 const { quoteEmail } = require('../utils/emailTemplates');
@@ -123,9 +124,11 @@ router.post('/create', async (req, res) => {
             link: 'dashboard.html?tab=user-shipments'
         });
 
-        if (sender?.email) {
+        const accountUser = await User.findById(userId).select('email');
+
+        if (accountUser?.email) {
             sendEmail.inBackground(
-                sender.email,
+                accountUser.email,
                 `Your SwiftShip Express Quote -- ${trackingNumber}`,
                 quoteEmail({
                     customerName: sender.name,
