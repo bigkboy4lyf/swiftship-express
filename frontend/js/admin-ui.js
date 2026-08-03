@@ -1178,6 +1178,13 @@ document.getElementById('reopenTicketBtn')?.addEventListener('click', () => {
 let chatConversations = [];
 let activeChatUserId = null;
 let chatThreadPollTimer = null;
+// Bumped on every conversations/thread fetch and every clear -- a response
+// only gets painted if it's still the most recently requested one. Without
+// this, a slow poll response (the 4s thread poll or 15s sidebar poll) can
+// land *after* a Clear Chat call finishes and silently repaint the old
+// messages back onto the screen, making the clear look like it didn't work.
+let chatConversationsRequestId = 0;
+let chatThreadRequestId = 0;
 
 function chatTimeAgo(dateStr) {
     const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
@@ -1189,9 +1196,11 @@ function chatTimeAgo(dateStr) {
 }
 
 async function loadChatConversations() {
+    const requestId = ++chatConversationsRequestId;
     try {
         const res = await fetch('/api/chat/conversations', { headers: authHeaders() });
         const result = await res.json();
+        if (requestId !== chatConversationsRequestId) return; // superseded by a newer request
         if (!result.success) return;
         chatConversations = result.data;
         renderChatConversations();
@@ -1206,7 +1215,12 @@ function renderChatConversations() {
     if (!list) return;
 
     if (!chatConversations.length) {
-        list.innerHTML = '<p class="loading-text">No conversations yet.</p>';
+        list.innerHTML = `
+            <div class="chat-empty-state">
+                <i class="fas fa-comments"></i>
+                <strong>No conversations yet</strong>
+                <span>New messages from customers will show up here.</span>
+            </div>`;
         return;
     }
 
@@ -1258,9 +1272,11 @@ window.openChatThread = async function(userId) {
 async function loadChatThread(userId) {
     const messages = document.getElementById('chatThreadMessages');
     if (!messages) return;
+    const requestId = ++chatThreadRequestId;
     try {
         const res = await fetch(`/api/chat/conversations/${userId}`, { headers: authHeaders() });
         const result = await res.json();
+        if (requestId !== chatThreadRequestId) return; // superseded by a newer request (switched threads, or the thread was cleared)
         if (!result.success) return;
 
         messages.innerHTML = result.data.length
@@ -1270,7 +1286,11 @@ async function loadChatThread(userId) {
                     <span class="chat-thread-msg-time">${new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
                 </div>
             `).join('')
-            : '<p class="loading-text">No messages yet.</p>';
+            : `<div class="chat-empty-state">
+                <i class="fas fa-comment-dots"></i>
+                <strong>No messages yet</strong>
+                <span>Nothing here yet -- a reply from you will start the conversation.</span>
+            </div>`;
         messages.scrollTop = messages.scrollHeight;
 
         // Viewing the thread just cleared its unread count server-side --
@@ -1314,22 +1334,36 @@ document.getElementById('clearChatBtn')?.addEventListener('click', async () => {
             headers: authHeaders()
         });
         const result = await res.json();
-        if (!result.success) return;
+        if (!result.success) {
+            alert(result.message || 'Could not clear this conversation. Please try again.');
+            return;
+        }
+
+        // Invalidate any in-flight thread poll for this conversation so a
+        // slow response that lands after this point can't repaint the
+        // just-cleared messages back onto the screen.
+        chatThreadRequestId++;
+        clearInterval(chatThreadPollTimer);
 
         // The conversation has no messages left, so it drops out of the list
         // entirely (see GET /conversations) -- reset the thread panel to the
         // empty state rather than showing a thread for a user who's no longer listed.
         activeChatUserId = null;
-        document.getElementById('chatThreadHeaderInfo').innerHTML = '<span>Select a conversation</span>';
-        document.getElementById('chatThreadMessages').innerHTML = '';
+        document.getElementById('chatThreadHeaderInfo').innerHTML = '<span>No conversation selected</span>';
+        document.getElementById('chatThreadMessages').innerHTML = `
+            <div class="chat-empty-state">
+                <i class="fas fa-comment-dots"></i>
+                <strong>Select a conversation</strong>
+                <span>Choose a customer from the list on the left to view and reply to their messages.</span>
+            </div>`;
         document.getElementById('chatThreadInput').disabled = true;
         document.querySelector('#chatThreadForm button').disabled = true;
         document.getElementById('clearChatBtn').style.display = 'none';
-        clearInterval(chatThreadPollTimer);
 
         loadChatConversations();
     } catch (err) {
         console.error('Error clearing chat:', err);
+        alert('Could not clear this conversation -- check your connection and try again.');
     }
 });
 

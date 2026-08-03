@@ -1,10 +1,20 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const ChatMessage = require('../models/ChatMessage');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 
 const MAX_MESSAGE_LENGTH = 2000;
+const SUPPORT_NAME = 'SwiftShip Support';
+
+// If it's been this long (or longer) since the last activity in a
+// conversation, support hasn't been actively engaged -- the customer gets an
+// automated "we've got your message" reply, the same away-message pattern
+// most support widgets (Intercom, Zendesk, etc.) use so nobody is left
+// wondering if anyone saw what they just sent.
+const AWAY_MESSAGE_GAP_MS = 24 * 60 * 60 * 1000;
+const AWAY_MESSAGE_TEXT = "Thanks for reaching out to SwiftShip Express Support! Our team typically responds within 24 hours. We've received your message and will be with you as soon as possible.";
 
 function sanitizeMessage(message) {
     if (typeof message !== 'string') return null;
@@ -58,6 +68,11 @@ router.post('/messages', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Message cannot be empty' });
         }
 
+        // Checked before this message is created, so the gap reflects the
+        // silence leading up to it rather than including itself.
+        const lastMessage = await ChatMessage.findOne({ userId: req.user.id }).sort({ createdAt: -1 });
+        const needsAwayMessage = !lastMessage || (Date.now() - lastMessage.createdAt.getTime()) >= AWAY_MESSAGE_GAP_MS;
+
         const user = await User.findById(req.user.id);
         const chatMessage = await ChatMessage.create({
             userId: req.user.id,
@@ -67,6 +82,17 @@ router.post('/messages', protect, async (req, res) => {
             readByUser: true,
             readByAdmin: false
         });
+
+        if (needsAwayMessage) {
+            await ChatMessage.create({
+                userId: req.user.id,
+                senderRole: 'admin',
+                senderName: SUPPORT_NAME,
+                message: AWAY_MESSAGE_TEXT,
+                readByAdmin: true,
+                readByUser: false
+            });
+        }
 
         res.status(201).json({ success: true, data: chatMessage });
     } catch (error) {
@@ -84,6 +110,11 @@ router.get('/conversations', protect, async (req, res) => {
         }
 
         const conversations = await ChatMessage.aggregate([
+            // Excludes any message with no userId (e.g. bad test/manually-inserted
+            // data) -- a group like that has no real customer behind it, so it
+            // can never be opened or replied to; surfacing it just creates a
+            // stuck "Unknown user" thread in the inbox.
+            { $match: { userId: { $ne: null } } },
             { $sort: { createdAt: -1 } },
             {
                 $group: {
@@ -131,6 +162,9 @@ router.get('/conversations/:userId', protect, async (req, res) => {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Forbidden' });
         }
+        if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid conversation' });
+        }
 
         const messages = await ChatMessage.find({ userId: req.params.userId }).sort({ createdAt: 1 });
 
@@ -152,6 +186,9 @@ router.post('/conversations/:userId', protect, async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+        if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid conversation' });
         }
 
         const message = sanitizeMessage(req.body.message);
@@ -182,6 +219,9 @@ router.delete('/conversations/:userId', protect, async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+        if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid conversation' });
         }
 
         await ChatMessage.deleteMany({ userId: req.params.userId });

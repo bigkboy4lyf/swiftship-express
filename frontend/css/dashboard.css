@@ -1887,6 +1887,37 @@ table.data-table tbody tr.row-static:hover {
     border-right: 1px solid var(--border);
 }
 
+/* Centered placeholder shown in either pane when there's nothing to list yet
+   (no conversations at all) or nothing selected (no thread open) -- replaces
+   a bare line of unstyled text sitting in the corner. */
+.chat-empty-state {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    padding: 40px 24px;
+    color: var(--text-muted);
+}
+
+.chat-empty-state i {
+    font-size: 1.9rem;
+    color: var(--border);
+}
+
+.chat-empty-state strong {
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.chat-empty-state span {
+    font-size: 0.82rem;
+    max-width: 220px;
+}
+
 .chat-conversation-item {
     position: relative;
     padding: 14px 18px;

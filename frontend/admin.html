@@ -371,18 +371,27 @@
                         </div>
                         <div class="chat-admin-layout">
                             <div class="chat-conversations-list" id="chatConversationsList">
-                                <p class="loading-text">Loading conversations...</p>
+                                <div class="chat-empty-state">
+                                    <i class="fas fa-comments"></i>
+                                    <strong>Loading conversations...</strong>
+                                </div>
                             </div>
                             <div class="chat-thread-panel">
                                 <div class="chat-thread-header">
                                     <div class="chat-thread-header-info" id="chatThreadHeaderInfo">
-                                        <span>Select a conversation</span>
+                                        <span>No conversation selected</span>
                                     </div>
                                     <button type="button" class="chat-thread-clear-btn" id="clearChatBtn" style="display: none;" title="Permanently clear this conversation">
                                         <i class="fas fa-trash"></i> Clear Chat
                                     </button>
                                 </div>
-                                <div class="chat-thread-messages" id="chatThreadMessages"></div>
+                                <div class="chat-thread-messages" id="chatThreadMessages">
+                                    <div class="chat-empty-state">
+                                        <i class="fas fa-comment-dots"></i>
+                                        <strong>Select a conversation</strong>
+                                        <span>Choose a customer from the list on the left to view and reply to their messages.</span>
+                                    </div>
+                                </div>
                                 <form class="chat-thread-input" id="chatThreadForm">
                                     <input type="text" id="chatThreadInput" placeholder="Type a reply..." autocomplete="off" disabled>
                                     <button type="submit" disabled aria-label="Send"><i class="fas fa-paper-plane"></i></button>
