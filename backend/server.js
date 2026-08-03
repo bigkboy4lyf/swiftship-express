@@ -18,6 +18,7 @@ const shipmentRoutes = require('./routes/shipments');
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const addressRoutes = require('./routes/addresses');
+const chatRoutes = require('./routes/chat');
 
 // Initialize Express app
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/shipments', shipmentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Serve HTML files
 app.get('/', (req, res) => {

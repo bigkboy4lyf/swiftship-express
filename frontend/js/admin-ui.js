@@ -109,6 +109,7 @@ const PAGE_TITLES = {
     'admin-payment-accounts': 'Payment Accounts',
     'admin-payment-reviews': 'Payment Reviews',
     'admin-tickets': 'Support Tickets',
+    'admin-support-chat': 'Support Chat',
     'admin-reports': 'Reports',
     'admin-settings': 'Settings'
 };
@@ -144,6 +145,9 @@ function switchTab(tabId) {
     if (tabId === 'admin-tickets') {
         loadSupportTickets();
     }
+    if (tabId === 'admin-support-chat') {
+        loadChatConversations();
+    }
 
     closeSidebarDrawer();
 }
@@ -174,7 +178,8 @@ async function loadAdminData(token) {
         loadDashboardStats(token),
         loadAllShipments(),
         loadAllUsers(),
-        loadPendingApprovals()
+        loadPendingApprovals(),
+        loadChatConversations()
     ]);
 }
 
@@ -1166,3 +1171,168 @@ document.getElementById('reopenTicketBtn')?.addEventListener('click', () => {
     document.getElementById('ticketDetailModal').classList.remove('active');
     loadSupportTickets();
 });
+
+// =============================================
+// SUPPORT CHAT (backed by /api/chat -- real two-way chat with customers)
+// =============================================
+let chatConversations = [];
+let activeChatUserId = null;
+let chatThreadPollTimer = null;
+
+function chatTimeAgo(dateStr) {
+    const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+}
+
+async function loadChatConversations() {
+    try {
+        const res = await fetch('/api/chat/conversations', { headers: authHeaders() });
+        const result = await res.json();
+        if (!result.success) return;
+        chatConversations = result.data;
+        renderChatConversations();
+        updateChatSidebarBadge();
+    } catch (err) {
+        console.error('Error loading conversations:', err);
+    }
+}
+
+function renderChatConversations() {
+    const list = document.getElementById('chatConversationsList');
+    if (!list) return;
+
+    if (!chatConversations.length) {
+        list.innerHTML = '<p class="loading-text">No conversations yet.</p>';
+        return;
+    }
+
+    list.innerHTML = chatConversations.map(c => `
+        <div class="chat-conversation-item ${String(c.userId) === String(activeChatUserId) ? 'active' : ''}" onclick="openChatThread('${c.userId}')">
+            <div class="chat-conversation-top">
+                <strong>${escapeHtml(c.userName)}</strong>
+                <span class="chat-conversation-time">${chatTimeAgo(c.lastAt)}</span>
+            </div>
+            <div class="chat-conversation-preview">${c.lastSenderRole === 'admin' ? 'You: ' : ''}${escapeHtml(c.lastMessage)}</div>
+            ${c.unreadCount > 0 ? `<span class="chat-conversation-badge">${c.unreadCount}</span>` : ''}
+        </div>
+    `).join('');
+}
+
+function updateChatSidebarBadge() {
+    const badge = document.getElementById('chatUnreadBadge');
+    if (!badge) return;
+    const total = chatConversations.reduce((sum, c) => sum + c.unreadCount, 0);
+    badge.textContent = total > 9 ? '9+' : String(total);
+    badge.style.display = total > 0 ? 'flex' : 'none';
+}
+
+window.openChatThread = async function(userId) {
+    activeChatUserId = userId;
+    renderChatConversations();
+
+    const convo = chatConversations.find(c => String(c.userId) === String(userId));
+    const headerInfo = document.getElementById('chatThreadHeaderInfo');
+    const input = document.getElementById('chatThreadInput');
+    const sendBtn = document.querySelector('#chatThreadForm button');
+    const clearBtn = document.getElementById('clearChatBtn');
+
+    headerInfo.innerHTML = convo
+        ? `<strong>${escapeHtml(convo.userName)}</strong><span>${escapeHtml(convo.userEmail)}</span>`
+        : '<span>Conversation</span>';
+    input.disabled = false;
+    sendBtn.disabled = false;
+    if (clearBtn) clearBtn.style.display = '';
+
+    await loadChatThread(userId);
+
+    // Polls while a thread is open so a customer's follow-up message shows
+    // up without the admin having to click away and back.
+    clearInterval(chatThreadPollTimer);
+    chatThreadPollTimer = setInterval(() => loadChatThread(userId), 4000);
+};
+
+async function loadChatThread(userId) {
+    const messages = document.getElementById('chatThreadMessages');
+    if (!messages) return;
+    try {
+        const res = await fetch(`/api/chat/conversations/${userId}`, { headers: authHeaders() });
+        const result = await res.json();
+        if (!result.success) return;
+
+        messages.innerHTML = result.data.length
+            ? result.data.map(m => `
+                <div class="chat-thread-msg ${m.senderRole === 'admin' ? 'from-admin' : 'from-user'}">
+                    <div class="chat-thread-bubble">${escapeHtml(m.message)}</div>
+                    <span class="chat-thread-msg-time">${new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                </div>
+            `).join('')
+            : '<p class="loading-text">No messages yet.</p>';
+        messages.scrollTop = messages.scrollHeight;
+
+        // Viewing the thread just cleared its unread count server-side --
+        // refresh the list so the sidebar badge total stays in sync.
+        loadChatConversations();
+    } catch (err) {
+        console.error('Error loading chat thread:', err);
+    }
+}
+
+document.getElementById('chatThreadForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!activeChatUserId) return;
+    const input = document.getElementById('chatThreadInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    try {
+        const res = await fetch(`/api/chat/conversations/${activeChatUserId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ message: text })
+        });
+        const result = await res.json();
+        if (result.success) await loadChatThread(activeChatUserId);
+    } catch (err) {
+        console.error('Error sending chat reply:', err);
+    }
+});
+
+document.getElementById('clearChatBtn')?.addEventListener('click', async () => {
+    if (!activeChatUserId) return;
+    const convo = chatConversations.find(c => String(c.userId) === String(activeChatUserId));
+    const name = convo ? convo.userName : 'this customer';
+    if (!confirm(`Permanently clear the entire conversation with ${name}? This cannot be undone.`)) return;
+
+    try {
+        const res = await fetch(`/api/chat/conversations/${activeChatUserId}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        const result = await res.json();
+        if (!result.success) return;
+
+        // The conversation has no messages left, so it drops out of the list
+        // entirely (see GET /conversations) -- reset the thread panel to the
+        // empty state rather than showing a thread for a user who's no longer listed.
+        activeChatUserId = null;
+        document.getElementById('chatThreadHeaderInfo').innerHTML = '<span>Select a conversation</span>';
+        document.getElementById('chatThreadMessages').innerHTML = '';
+        document.getElementById('chatThreadInput').disabled = true;
+        document.querySelector('#chatThreadForm button').disabled = true;
+        document.getElementById('clearChatBtn').style.display = 'none';
+        clearInterval(chatThreadPollTimer);
+
+        loadChatConversations();
+    } catch (err) {
+        console.error('Error clearing chat:', err);
+    }
+});
+
+// Keeps the sidebar badge (and the conversation list, if that tab happens to
+// be open) fresh even while the admin is working elsewhere in the panel.
+setInterval(loadChatConversations, 15000);

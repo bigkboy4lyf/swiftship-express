@@ -555,8 +555,8 @@
         </div>
     </div>
 
-    <!-- Support Chat Bubble -->
-    <div class="chat-bubble-widget">
+    <!-- Support Chat Bubble (shown only while the Support tab is active -- see switchTab() in dashboard-ui.js) -->
+    <div class="chat-bubble-widget" style="display: none;">
         <div class="chat-panel" id="chatPanel">
             <div class="chat-panel-header">
                 <div>
@@ -565,9 +565,7 @@
                 </div>
                 <button class="modal-close" id="closeChatPanel">&times;</button>
             </div>
-            <div class="chat-panel-messages" id="chatMessages">
-                <div class="chat-message bot">Hi! 👋 Our support team will be with you shortly. Feel free to also submit a ticket for tracked follow-up.</div>
-            </div>
+            <div class="chat-panel-messages" id="chatMessages"></div>
             <form class="chat-panel-input" id="chatForm">
                 <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off">
                 <button type="submit" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
@@ -575,6 +573,7 @@
         </div>
         <button class="chat-bubble-btn" id="chatBubbleBtn" aria-label="Open live chat">
             <i class="fas fa-headset"></i>
+            <span class="chat-bubble-badge" id="chatBubbleBadge" style="display: none;">0</span>
         </button>
     </div>
 
@@ -820,6 +819,7 @@
     <script src="js/countries-data.js"></script>
     <script src="js/quote-engine.js"></script>
     <script src="js/tickets-store.js"></script>
+    <script src="js/chat-widget.js"></script>
     <script src="js/dashboard-ui.js"></script>
 </body>
 </html>

@@ -142,6 +142,15 @@ function switchTab(tabId) {
     if (tabId === 'user-addresses') fetchAddresses();
     if (tabId === 'user-support') renderMyTickets();
 
+    // The live chat bubble only makes sense on the Support tab -- showing it
+    // globally on every tab wasted space and kept its poll timers running
+    // even when nobody could see the widget.
+    const chatWidget = document.querySelector('.chat-bubble-widget');
+    if (chatWidget) {
+        chatWidget.style.display = tabId === 'user-support' ? 'flex' : 'none';
+        if (tabId !== 'user-support') window.SwiftShipChat?.close();
+    }
+
     closeSidebarDrawer();
 }
 
@@ -1178,41 +1187,7 @@ document.getElementById('supportTicketForm')?.addEventListener('submit', (e) => 
     renderMyTickets();
 });
 
-// =============================================
-// SUPPORT CHAT BUBBLE (front-end mock -- no backend chat yet)
-// =============================================
-function setupChatBubble() {
-    const bubbleBtn = document.getElementById('chatBubbleBtn');
-    const panel = document.getElementById('chatPanel');
-    const closeBtn = document.getElementById('closeChatPanel');
-    const form = document.getElementById('chatForm');
-    const input = document.getElementById('chatInput');
-    const messages = document.getElementById('chatMessages');
-    if (!bubbleBtn || !panel || !form || !input || !messages) return;
-
-    bubbleBtn.addEventListener('click', () => panel.classList.toggle('open'));
-    closeBtn?.addEventListener('click', () => panel.classList.remove('open'));
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const text = input.value.trim();
-        if (!text) return;
-
-        const userMsg = document.createElement('div');
-        userMsg.className = 'chat-message user';
-        userMsg.textContent = text;
-        messages.appendChild(userMsg);
-        input.value = '';
-        messages.scrollTop = messages.scrollHeight;
-
-        setTimeout(() => {
-            const botMsg = document.createElement('div');
-            botMsg.className = 'chat-message bot';
-            botMsg.textContent = "Thanks for the message! A support agent isn't available right now -- submitting a ticket from the Support tab is the fastest way to get tracked follow-up.";
-            messages.appendChild(botMsg);
-            messages.scrollTop = messages.scrollHeight;
-        }, 600);
-    });
-}
-
-setupChatBubble();
+// Live chat itself lives in chat-widget.js (loaded separately below) so the
+// public marketing page can reuse it without pulling in this file's
+// auth-redirect logic. switchTab() above only shows/hides the widget's
+// container and tells it to stop polling when the Support tab isn't active.

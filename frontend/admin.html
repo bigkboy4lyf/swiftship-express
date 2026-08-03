@@ -55,6 +55,11 @@
                     <i class="fas fa-ticket-alt"></i>
                     <span>Support Tickets</span>
                 </div>
+                <div class="sidebar-menu-item" data-tab="admin-support-chat">
+                    <i class="fas fa-comments"></i>
+                    <span>Support Chat</span>
+                    <span class="sidebar-badge" id="chatUnreadBadge" style="display: none;">0</span>
+                </div>
                 <div class="sidebar-menu-item" data-tab="admin-reports">
                     <i class="fas fa-file-alt"></i>
                     <span>Reports</span>
@@ -355,6 +360,35 @@
                                 <tr class="row-static"><td colspan="7" style="text-align: center;">Loading tickets...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Support Chat -->
+                <div id="adminSupportChat" class="dashboard-section" style="display: none;">
+                    <div class="card chat-admin-card">
+                        <div class="card-header">
+                            <h3>Support Chat</h3>
+                        </div>
+                        <div class="chat-admin-layout">
+                            <div class="chat-conversations-list" id="chatConversationsList">
+                                <p class="loading-text">Loading conversations...</p>
+                            </div>
+                            <div class="chat-thread-panel">
+                                <div class="chat-thread-header">
+                                    <div class="chat-thread-header-info" id="chatThreadHeaderInfo">
+                                        <span>Select a conversation</span>
+                                    </div>
+                                    <button type="button" class="chat-thread-clear-btn" id="clearChatBtn" style="display: none;" title="Permanently clear this conversation">
+                                        <i class="fas fa-trash"></i> Clear Chat
+                                    </button>
+                                </div>
+                                <div class="chat-thread-messages" id="chatThreadMessages"></div>
+                                <form class="chat-thread-input" id="chatThreadForm">
+                                    <input type="text" id="chatThreadInput" placeholder="Type a reply..." autocomplete="off" disabled>
+                                    <button type="submit" disabled aria-label="Send"><i class="fas fa-paper-plane"></i></button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
