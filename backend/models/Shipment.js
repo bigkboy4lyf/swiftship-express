@@ -132,6 +132,12 @@ const shipmentSchema = new mongoose.Schema({
             lastChargedAt: Date
         }
     },
+    // Gates the daily installment-balance reminder job (utils/paymentReminders.js)
+    // the same way fees.<type>.lastChargedAt gates fee accrual -- so a
+    // restart or an extra run within the same day never double-notifies.
+    installmentReminder: {
+        lastSentAt: Date
+    },
     trackingHistory: [trackingHistorySchema],
     estimatedDelivery: Date,
     actualDelivery: Date,

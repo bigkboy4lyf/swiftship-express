@@ -328,6 +328,7 @@
 .notif-item-icon.type-password_changed { background: #f0e6ff; color: #6f42c1; }
 .notif-item-icon.type-admin_message { background: #fff0e6; color: var(--accent); }
 .notif-item-icon.type-fee_charge { background: #fff4e0; color: #d9822b; }
+.notif-item-icon.type-installment_reminder { background: #e6f7f0; color: #1a9d6c; }
 
 .notif-item-body {
     flex: 1;

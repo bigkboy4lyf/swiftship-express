@@ -48,6 +48,19 @@ function isFullyPaid(shipment) {
     return round2(shipment.amountPaid || 0) >= getTotalOwed(shipment);
 }
 
+// Mongo-side equivalent of isFullyPaid() above, for querying "still unpaid"
+// shipments without loading everything into memory first. Shared by the fee
+// accrual query below and utils/paymentReminders.js, so "unpaid" can never
+// mean two different things depending on which job is asking.
+function unpaidExpr() {
+    return {
+        $lt: [
+            '$amountPaid',
+            { $add: ['$totalPrice', { $ifNull: ['$fees.demurrage.accrued', 0] }, { $ifNull: ['$fees.storage.accrued', 0] }] }
+        ]
+    };
+}
+
 // Whether a shipment is currently in the window where demurrage/storage fees
 // are allowed to accrue at all -- unpaid (or only partially paid) and not
 // yet delivered/rejected. The moment either stops being true (fully paid, or
@@ -125,12 +138,7 @@ async function runFeeAccrual() {
     // carries a fee balance would silently fall out of accrual.
     const shipments = await Shipment.find({
         status: { $in: ACCRUAL_ELIGIBLE_STATUSES },
-        $expr: {
-            $lt: [
-                '$amountPaid',
-                { $add: ['$totalPrice', { $ifNull: ['$fees.demurrage.accrued', 0] }, { $ifNull: ['$fees.storage.accrued', 0] }] }
-            ]
-        },
+        $expr: unpaidExpr(),
         $or: activeFeeTypes.map(type => ({ [`fees.${type}.active`]: true }))
     });
 
@@ -175,6 +183,7 @@ module.exports = {
     getBalanceDue,
     isFullyPaid,
     isAccrualEligible,
+    unpaidExpr,
     FEE_TYPES,
     ACCRUAL_ELIGIBLE_STATUSES
 };

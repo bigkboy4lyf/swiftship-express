@@ -485,10 +485,21 @@ router.patch('/shipments/:id/receipt/confirm', protect, async (req, res) => {
         if (fullyPaid && shipment.status === 'pending_approval') {
             advanceToProcessing(shipment, 'Payment confirmed - now processing at sorting facility');
         } else if (!fullyPaid) {
+            const remaining = getBalanceDue(shipment);
             shipment.trackingHistory.push({
                 status: shipment.status,
-                description: `Partial payment of $${amount.toFixed(2)} confirmed -- $${getBalanceDue(shipment).toFixed(2)} balance remaining`,
+                description: `Partial payment of $${amount.toFixed(2)} confirmed -- $${remaining.toFixed(2)} balance remaining`,
                 timestamp: new Date()
+            });
+
+            // Confirming a full payment already notifies via advanceToProcessing
+            // above -- an installment payment deserves the same courtesy
+            // instead of only showing up in tracking history.
+            notifyUser(shipment.userId, {
+                type: 'shipment_status',
+                title: 'Payment Received',
+                message: `A payment of $${amount.toFixed(2)} was confirmed on shipment ${shipment.trackingNumber}. Remaining balance: $${remaining.toFixed(2)}.`,
+                link: SHIPMENTS_TAB_LINK
             });
         } else if (shipment.status !== 'pending_approval') {
             // Fully paid, but this shipment already moved past pending_approval

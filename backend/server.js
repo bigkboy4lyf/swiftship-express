@@ -21,6 +21,7 @@ const addressRoutes = require('./routes/addresses');
 const chatRoutes = require('./routes/chat');
 const notificationRoutes = require('./routes/notifications');
 const { runFeeAccrual } = require('./utils/feeAccrual');
+const { runInstallmentReminders } = require('./utils/paymentReminders');
 
 // Initialize Express app
 const app = express();
@@ -106,14 +107,18 @@ mongoose.connect(process.env.MONGODB_URI)
     .then(() => {
         console.log('MongoDB connected successfully');
 
-        // Demurrage/storage fee accrual: runs once on startup (covers days
-        // the server was offline -- lastChargedAt gating makes this safe to
-        // re-run without double-charging) and then every 24h afterward.
+        // Billing background jobs: demurrage/storage fee accrual and
+        // installment-balance reminders. Both run once on startup (covers
+        // days the server was offline -- their own lastChargedAt/lastSentAt
+        // gating makes that safe to re-run without double-charging or
+        // double-notifying) and then every 24h afterward on the same cycle.
         const DAY_MS = 24 * 60 * 60 * 1000;
-        runFeeAccrual().catch(err => console.error('Fee accrual failed:', err));
-        setInterval(() => {
+        const runBillingJobs = () => {
             runFeeAccrual().catch(err => console.error('Fee accrual failed:', err));
-        }, DAY_MS);
+            runInstallmentReminders().catch(err => console.error('Installment reminders failed:', err));
+        };
+        runBillingJobs();
+        setInterval(runBillingJobs, DAY_MS);
     })
     .catch(err => console.error('MongoDB connection error:', err));
 

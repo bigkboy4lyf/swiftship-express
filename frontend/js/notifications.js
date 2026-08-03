@@ -28,7 +28,8 @@
         shipment_rejected: 'fa-circle-xmark',
         password_changed: 'fa-shield-halved',
         admin_message: 'fa-bullhorn',
-        fee_charge: 'fa-file-invoice-dollar'
+        fee_charge: 'fa-file-invoice-dollar',
+        installment_reminder: 'fa-hand-holding-dollar'
     };
 
     function timeAgo(dateStr) {
