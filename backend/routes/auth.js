@@ -5,6 +5,7 @@ const sendEmail = require('../utils/sendEmail');
 const { createToken } = require('../middleware/auth');
 const { issueOtp, canResend, verifyOtp, clearOtp, trustDevice, isTrustedDevice } = require('../utils/otp');
 const { otpEmail } = require('../utils/emailTemplates');
+const { notifyUser } = require('../utils/notifications');
 
 function publicUser(user) {
     return { id: user._id, name: user.name, email: user.email, role: user.role };
@@ -302,6 +303,13 @@ router.post('/reset-password', async (req, res) => {
         user.password = newPassword; // pre('save') hook re-hashes this
         clearOtp(user);
         await user.save();
+
+        notifyUser(user._id, {
+            type: 'password_changed',
+            title: 'Password Changed',
+            message: "Your account password was just reset. If you didn't do this, contact support immediately.",
+            link: 'dashboard.html?tab=user-profile'
+        });
 
         res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
     } catch (error) {

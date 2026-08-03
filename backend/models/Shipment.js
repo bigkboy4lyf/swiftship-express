@@ -119,4 +119,13 @@ shipmentSchema.pre('save', function(next) {
     next();
 });
 
+// trackingNumber already gets an index for free from `unique: true` above.
+// These cover every other field the dashboard actually filters/sorts on --
+// without them, "my shipments" and every status count in /stats does a full
+// collection scan. Doesn't matter at a handful of documents, but does the
+// moment this collection has real volume.
+shipmentSchema.index({ userId: 1, createdAt: -1 }); // "my shipments", most recent first
+shipmentSchema.index({ status: 1 }); // per-status counts/filters (admin stats, status tab)
+shipmentSchema.index({ 'paymentReceipt.status': 1 }); // Payment Reviews tab
+
 module.exports = mongoose.model('Shipment', shipmentSchema);

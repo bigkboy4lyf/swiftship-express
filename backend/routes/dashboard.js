@@ -8,8 +8,14 @@ const { documentVerificationCode } = require('../utils/verification');
 const sendEmail = require('../utils/sendEmail');
 const { quoteEmail, receiptSubmittedEmail, otpEmail } = require('../utils/emailTemplates');
 const { issueOtp, canResend, verifyOtp, clearOtp } = require('../utils/otp');
+const { notifyUser, statusLabel } = require('../utils/notifications');
 
 const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
+
+// Every shipment-related notification links here -- dashboard.html's "My
+// Shipments" tab shows every shipment for both customers and admins acting
+// on their own account, so it's the right landing spot regardless of role.
+const SHIPMENTS_TAB_LINK = 'dashboard.html?tab=user-shipments';
 
 // Shared by /approve and /receipt/confirm -- both move a shipment from
 // pending_approval into the pipeline at the sorting facility the same way.
@@ -25,6 +31,16 @@ function advanceToProcessing(shipment, historyDescription) {
         location: 'Sorting Facility',
         description: historyDescription,
         timestamp: new Date()
+    });
+
+    // Fire-and-forget: notifyUser never throws, and the notification's
+    // content only needs the in-memory fields already set above, not the
+    // save() that happens afterward in the caller.
+    notifyUser(shipment.userId, {
+        type: 'shipment_status',
+        title: 'Shipment Update',
+        message: `${shipment.trackingNumber}: ${historyDescription}`,
+        link: SHIPMENTS_TAB_LINK
     });
 }
 
@@ -48,7 +64,12 @@ const AWAITING_DECISION_STATUSES = ['pending_approval'];
 // =============================================
 router.get('/stats', protect, async (req, res) => {
     try {
-        const isAdmin = req.user.role === 'admin';
+        // The Profile tab only ever reads activeShipmentsPersonal (see
+        // loadProfileData() in dashboard-ui.js) -- ?scope=personal lets it
+        // skip the whole org-wide block below, including a full-collection
+        // revenue aggregation that's pure waste when nobody's going to look
+        // at it.
+        const isAdmin = req.user.role === 'admin' && req.query.scope !== 'personal';
 
         // Personal stats: always computed for the logged-in user's own shipments,
         // regardless of role. This is what powers the customer-side dashboard cards
@@ -162,18 +183,31 @@ router.get('/shipments', protect, async (req, res) => {
         const parsedLimit = parseInt(limit, 10);
         const finalLimit = isNaN(parsedLimit) || parsedLimit <= 0 ? 100 : parsedLimit;
 
-        const shipments = await Shipment.find(query)
+        const shipmentsQuery = Shipment.find(query)
             .sort({ createdAt: -1 })
             .limit(finalLimit)
-            .populate('userId', 'name email');
+            .populate('userId', 'name email')
+            // Read-only response -- skips Mongoose document hydration since
+            // nothing here needs instance methods, only plain data.
+            .lean();
+
+        // paymentReceipt.data is a base64 image/PDF up to ~7MB *per shipment*.
+        // The only screen that renders it is the Payment Reviews tab (which
+        // always calls this with ?paymentStatus=...) -- My Shipments, All
+        // Shipments, and Recent Shipments never touch it, so they shouldn't
+        // pay to download it either.
+        if (!paymentStatus) {
+            shipmentsQuery.select('-paymentReceipt.data');
+        }
+
+        const shipments = await shipmentsQuery;
 
         // Attached here rather than stored, so it can't go stale relative to
         // the fields it's derived from. See utils/verification.js.
-        const withVerification = shipments.map(s => {
-            const obj = s.toObject();
-            obj.verificationCode = documentVerificationCode(s);
-            return obj;
-        });
+        const withVerification = shipments.map(s => ({
+            ...s,
+            verificationCode: documentVerificationCode(s)
+        }));
 
         res.json({ success: true, data: withVerification });
     } catch (error) {
@@ -231,6 +265,13 @@ router.post('/shipments', protect, async (req, res) => {
 
         const shipment = new Shipment(shipmentData);
         await shipment.save();
+
+        notifyUser(shipment.userId, {
+            type: 'shipment_created',
+            title: 'Shipment Created',
+            message: `Shipment ${shipment.trackingNumber} to ${shipment.recipient?.city || 'your destination'}, ${shipment.recipient?.country || ''} has been created and is ${statusLabel(shipment.status)}.`,
+            link: SHIPMENTS_TAB_LINK
+        });
 
         if (shipment.sender?.email) {
             sendEmail.inBackground(
@@ -308,6 +349,15 @@ router.patch('/shipments/:id/reject', protect, async (req, res) => {
         if (shipment.status !== 'pending_approval') {
             return res.status(400).json({ success: false, message: 'Shipment is not pending approval' });
         }
+
+        // Notified before the delete below -- the record (and its userId)
+        // won't exist to reference afterward.
+        notifyUser(shipment.userId, {
+            type: 'shipment_rejected',
+            title: 'Shipment Request Declined',
+            message: `Your shipment request ${shipment.trackingNumber} was declined. Please contact support if you have questions.`,
+            link: SHIPMENTS_TAB_LINK
+        });
 
         // Rejecting an unapproved request removes it outright -- there's no
         // lingering 'rejected' shipment sitting in the system afterward.
@@ -456,11 +506,17 @@ router.patch('/shipments/:id/receipt/reject', protect, async (req, res) => {
 
         // Shipment itself is left untouched (still pending_approval) so the
         // customer's invoice button reverts from "Payment Processing" back
-        // to "View Invoice" and they can retry. The reason isn't surfaced
-        // anywhere yet -- it's captured for the future notifications engine.
+        // to "View Invoice" and they can retry.
         shipment.paymentReceipt.status = 'rejected';
         shipment.paymentReceipt.rejectionReason = reason.trim();
         shipment.paymentReceipt.resolvedAt = new Date();
+
+        notifyUser(shipment.userId, {
+            type: 'shipment_status',
+            title: 'Payment Receipt Rejected',
+            message: `Your payment receipt for shipment ${shipment.trackingNumber} was rejected: ${reason.trim()}. Please submit a new receipt.`,
+            link: SHIPMENTS_TAB_LINK
+        });
 
         await shipment.save();
         res.json({ success: true, data: shipment });
@@ -506,6 +562,13 @@ router.patch('/shipments/:id/status', protect, async (req, res) => {
         if (status === 'delivered') {
             shipment.actualDelivery = new Date();
         }
+
+        notifyUser(shipment.userId, {
+            type: 'shipment_status',
+            title: 'Shipment Update',
+            message: `${shipment.trackingNumber} is now ${statusLabel(status)}${location ? ` (${String(location)})` : ''}.`,
+            link: SHIPMENTS_TAB_LINK
+        });
 
         await shipment.save();
         res.json({ success: true, data: shipment });
@@ -629,6 +692,13 @@ router.patch('/password', protect, async (req, res) => {
         user.password = newPassword;
         await user.save();
 
+        notifyUser(user._id, {
+            type: 'password_changed',
+            title: 'Password Changed',
+            message: "Your account password was just changed. If you didn't do this, contact support immediately.",
+            link: 'dashboard.html?tab=user-profile'
+        });
+
         res.json({ success: true, message: 'Password updated successfully' });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
@@ -733,7 +803,12 @@ router.get('/users', protect, async (req, res) => {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Forbidden' });
         }
-        const users = await User.find().select('-password');
+        // avatar is a base64 photo up to ~1.5MB per user -- this list only
+        // ever renders name/email/role/status (see renderUsers() in
+        // admin-ui.js), so there's no reason to ship every user's photo
+        // just to populate a table of text. .lean() also skips document
+        // hydration since this is a read-only response.
+        const users = await User.find().select('-password -avatar').lean();
         res.json({ success: true, data: users });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

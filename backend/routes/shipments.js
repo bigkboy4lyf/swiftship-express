@@ -4,6 +4,7 @@ const Shipment = require('../models/Shipment');
 const { calculateShippingPrice, estimateDeliveryDate } = require('../utils/pricing');
 const sendEmail = require('../utils/sendEmail');
 const { quoteEmail } = require('../utils/emailTemplates');
+const { notifyUser, statusLabel } = require('../utils/notifications');
 
 const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
 
@@ -114,6 +115,13 @@ router.post('/create', async (req, res) => {
         });
 
         await newShipment.save();
+
+        notifyUser(userId, {
+            type: 'shipment_created',
+            title: 'Shipment Created',
+            message: `Shipment ${trackingNumber} to ${recipient?.city || 'your destination'}, ${recipient?.country || ''} has been created and is ${statusLabel(newShipment.status)}.`,
+            link: 'dashboard.html?tab=user-shipments'
+        });
 
         if (sender?.email) {
             sendEmail.inBackground(

@@ -174,6 +174,309 @@
     flex-shrink: 0;
 }
 
+/* Notifications bell (header icon + dropdown panel) */
+.notif-menu {
+    position: relative;
+}
+
+.notif-bell-btn {
+    position: relative;
+}
+
+.notif-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: #dc3545;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px var(--surface);
+}
+
+/* Liquid-glass surface for the notification dropdown specifically (every
+   *modal* in the app gets the same look for free from .modal-content
+   further down -- this one exists because the dropdown isn't a modal).
+   Translucent + blurred rather than a flat solid panel, with a soft inset
+   highlight along the top edge to read as a lit sheet of frosted glass in
+   both themes. color-mix() keeps it theme-aware without a separate light/
+   dark override for every property.
+   will-change is deliberately only here (and on .notif-detail-content) --
+   it's worth pre-allocating a compositing layer for something people toggle
+   open/closed repeatedly in one session, like this dropdown. It would be
+   the wrong tradeoff to apply the same hint to every modal in the app, most
+   of which are opened rarely: a one-time, imperceptible construction cost
+   on first open beats reserving a GPU layer for a dialog nobody's looking
+   at. */
+.notif-glass {
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
+    will-change: backdrop-filter, transform;
+}
+
+.notif-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    max-height: 70vh;
+    border-radius: 18px;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.notif-dropdown.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.notif-dropdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+    flex-shrink: 0;
+}
+
+.notif-dropdown-header strong {
+    font-size: 0.95rem;
+}
+
+.notif-mark-all-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.notif-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.notif-empty-state {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 0.85rem;
+    line-height: 1.8;
+}
+
+.notif-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-bottom: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item:hover {
+    background: color-mix(in srgb, var(--surface-alt) 55%, transparent);
+}
+
+.notif-item.unread {
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.notif-item-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    background: var(--surface-alt);
+    color: var(--primary);
+}
+
+.notif-item-icon.type-shipment_created { background: #e0f7e9; color: #28a745; }
+.notif-item-icon.type-shipment_status { background: #e6f0ff; color: var(--primary); }
+.notif-item-icon.type-shipment_rejected { background: #fdecea; color: #dc3545; }
+.notif-item-icon.type-password_changed { background: #f0e6ff; color: #6f42c1; }
+.notif-item-icon.type-admin_message { background: #fff0e6; color: var(--accent); }
+
+.notif-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-item-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.notif-item-message {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    overflow-wrap: break-word;
+}
+
+.notif-item-time {
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    margin-top: 4px;
+}
+
+.notif-item-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    flex-shrink: 0;
+    margin-top: 6px;
+}
+
+.notif-item-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 4px;
+    flex-shrink: 0;
+    align-self: flex-start;
+}
+
+.notif-item-dismiss:hover {
+    color: #dc3545;
+}
+
+/* Notification detail modal (opened by clicking an item in the dropdown --
+   the dropdown itself is too narrow to comfortably read a longer message).
+   Builds its own header/action layout instead of reusing .modal-header /
+   .quote-form-actions, so spacing here isn't at the mercy of margins tuned
+   for other forms. Its glass look now comes from the shared .modal-content
+   rule (every modal has it) -- this only needs its own sizing, plus
+   will-change, since (unlike other modals) this one stays mounted and gets
+   reopened repeatedly in a single session (see #notifDetailModal below). */
+.notif-detail-content {
+    max-width: 420px;
+    padding: 28px;
+    position: relative;
+    border-radius: 24px;
+    will-change: backdrop-filter, transform;
+}
+
+.notif-detail-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--surface-alt) 65%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: background-color 0.15s ease;
+}
+
+.notif-detail-close:hover {
+    background: var(--surface-alt);
+}
+
+.notif-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-right: 34px;
+    margin-bottom: 18px;
+}
+
+.notif-detail-header .notif-item-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 1.05rem;
+}
+
+.notif-detail-header-text h3 {
+    font-size: 1.05rem;
+    line-height: 1.3;
+    margin-bottom: 3px;
+}
+
+.notif-detail-header-text .notif-item-time {
+    font-size: 0.75rem;
+    margin-top: 0;
+}
+
+.notif-detail-message {
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    margin-bottom: 22px;
+}
+
+.notif-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.notif-detail-actions .btn {
+    flex: none;
+    padding: 10px 24px;
+    border-radius: 999px;
+}
+
+/* Overrides the shared .modal display:none/flex toggle (an ID selector
+   always wins that cascade regardless of source order) with an opacity/
+   visibility fade instead. The default toggle fully unmounts the modal on
+   every close, so its backdrop-filter layer has to be rebuilt from scratch
+   on every open -- exactly what was causing the visible stutter each time.
+   Staying mounted (just invisible) lets the browser keep that layer warm. */
+#notifDetailModal {
+    display: flex;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s;
+}
+
+#notifDetailModal.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
 /* User menu (avatar + name, opens a dropdown with profile/settings + logout) */
 .user-menu {
     position: relative;
@@ -541,14 +844,40 @@ table.data-table tbody tr.row-static:hover {
     display: flex;
 }
 
+/* Every modal in the app shares this one rule, so giving it the same
+   frosted-glass treatment as the notification widgets (see .notif-glass
+   above) reskins all of them in a single edit -- no will-change here on
+   purpose. That hint is only worth its GPU/memory reservation cost for
+   something toggled rapidly and repeatedly (the bell). These modals only
+   ever have one instance rendered at a time (display:none when inactive,
+   same as before) and are opened far less often, so a plain one-time
+   construction cost on first open is the right tradeoff, not a standing
+   reservation for every modal in the app. */
 .modal-content {
-    background: var(--surface);
-    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 75%, transparent);
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 color-mix(in srgb, white 25%, transparent);
+    border-radius: 18px;
     padding: 30px;
     max-width: 500px;
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
+}
+
+/* Light theme needs a higher opaque-surface ratio than dark theme does. The
+   modal's blur samples straight through .modal's own dimming layer
+   (--overlay, a 50% black scrim in light mode) behind it -- translucent
+   white over a page darkened by that scrim composites into a muddy gray,
+   not a clean bright panel. Dark mode's overlay and surface are both
+   already dark tones, so the same 75% ratio already reads as one coherent
+   sheet of dark glass there and is left untouched. */
+:root[data-theme="light"] .modal-content {
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
 }
 
 .modal-header {
@@ -771,6 +1100,19 @@ table.data-table tbody tr.row-static:hover {
 
     .modal-content {
         padding: 20px;
+    }
+
+    /* Anchoring the dropdown to a small header icon doesn't leave enough
+       room on a phone screen -- it becomes a fixed panel under the header
+       instead, same idea as the chat widget's mobile treatment. */
+    .notif-dropdown {
+        position: fixed;
+        top: 64px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        max-width: none;
+        max-height: calc(100vh - 100px);
     }
 }
 

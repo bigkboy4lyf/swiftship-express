@@ -28,6 +28,11 @@ document.addEventListener('DOMContentLoaded', function() {
     setupSidebarDrawer();
     setupUserMenu();
     loadAdminData(token);
+
+    // Lets a notification's link (e.g. from the bell dropdown) deep-link
+    // straight into a specific tab instead of always landing on the overview.
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    if (requestedTab && PAGE_TITLES[requestedTab]) switchTab(requestedTab);
 });
 
 // =============================================
@@ -110,6 +115,7 @@ const PAGE_TITLES = {
     'admin-payment-reviews': 'Payment Reviews',
     'admin-tickets': 'Support Tickets',
     'admin-support-chat': 'Support Chat',
+    'admin-notifications': 'Notifications',
     'admin-reports': 'Reports',
     'admin-settings': 'Settings'
 };
@@ -147,6 +153,9 @@ function switchTab(tabId) {
     }
     if (tabId === 'admin-support-chat') {
         loadChatConversations();
+    }
+    if (tabId === 'admin-notifications') {
+        populateNotifyUserSelect();
     }
 
     closeSidebarDrawer();
@@ -1382,3 +1391,83 @@ document.getElementById('clearChatBtn')?.addEventListener('click', async () => {
 // Keeps the sidebar badge (and the conversation list, if that tab happens to
 // be open) fresh even while the admin is working elsewhere in the panel.
 setInterval(loadChatConversations, 15000);
+
+// =============================================
+// SEND NOTIFICATION (manual, admin-only -- consuming the bell/dropdown
+// itself is handled by the shared js/notifications.js widget)
+// =============================================
+// Reuses lastLoadedUsers (populated by loadAllUsers(), already called once
+// on initial page load) rather than firing a second request just for this
+// dropdown -- refreshed here in case a user was added/removed since.
+function populateNotifyUserSelect() {
+    const select = document.getElementById('notifyTargetUser');
+    if (!select) return;
+
+    if (!lastLoadedUsers.length) loadAllUsers().then(renderNotifyUserOptions);
+    else renderNotifyUserOptions();
+
+    function renderNotifyUserOptions() {
+        const current = select.value;
+        select.innerHTML = '<option value="">-- Select a user --</option>' +
+            lastLoadedUsers.map(u => `<option value="${u._id}">${escapeHtml(u.name || u.email)} (${escapeHtml(u.email)})</option>`).join('');
+        select.value = current;
+    }
+}
+
+document.getElementById('notifyTargetType')?.addEventListener('change', (e) => {
+    const isAll = e.target.value === 'all';
+    const userGroup = document.getElementById('notifyUserGroup');
+    const userSelect = document.getElementById('notifyTargetUser');
+    userGroup.style.display = isAll ? 'none' : 'block';
+    userSelect.required = !isAll;
+});
+
+document.getElementById('sendNotificationForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const successEl = document.getElementById('notifyFormSuccess');
+    const errorEl = document.getElementById('notifyFormError');
+    successEl.style.display = 'none';
+    errorEl.style.display = 'none';
+
+    const target = document.getElementById('notifyTargetType').value;
+    const payload = {
+        target,
+        userId: document.getElementById('notifyTargetUser').value,
+        title: document.getElementById('notifyTitle').value.trim(),
+        message: document.getElementById('notifyMessage').value.trim(),
+        link: document.getElementById('notifyLink').value.trim()
+    };
+
+    if (target === 'all' && !confirm('Send this notification to every user? This cannot be undone.')) {
+        return;
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+
+    try {
+        const res = await fetch('/api/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            successEl.textContent = result.message || 'Notification sent.';
+            successEl.style.display = 'block';
+            e.target.reset();
+            document.getElementById('notifyUserGroup').style.display = 'block';
+        } else {
+            errorEl.textContent = result.message || 'Could not send notification. Please try again.';
+            errorEl.style.display = 'block';
+        }
+    } catch (err) {
+        console.error('Error sending notification:', err);
+        errorEl.textContent = 'Could not reach the server. Please try again.';
+        errorEl.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+    }
+});

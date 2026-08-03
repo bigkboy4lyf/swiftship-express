@@ -30,6 +30,11 @@ document.addEventListener('DOMContentLoaded', function() {
     setupUserMenu();
     setupDashboardQuoteEngine();
     loadDashboardData(token, user);
+
+    // Lets a notification's link (e.g. from the bell dropdown) deep-link
+    // straight into a specific tab instead of always landing on Dashboard.
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    if (requestedTab && PAGE_TITLES[requestedTab]) switchTab(requestedTab);
 });
 
 // =============================================
@@ -380,9 +385,15 @@ async function loadProfileData() {
     const editBtn = document.getElementById('editProfileBtn');
     if (editBtn) editBtn.disabled = true;
     try {
-        const res = await fetch('/api/dashboard/profile', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // Fired together rather than one after the other -- these two don't
+        // depend on each other, so there's no reason the stats call should
+        // sit and wait for the profile call to finish first. scope=personal
+        // also tells /stats to skip the org-wide queries (admin counts,
+        // revenue aggregation) this page never reads anyway.
+        const [res, statsRes] = await Promise.all([
+            fetch('/api/dashboard/profile', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('/api/dashboard/stats?scope=personal', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
         const result = await res.json();
         if (!result.success) throw new Error(result.message || 'Could not load profile');
 
@@ -408,9 +419,6 @@ async function loadProfileData() {
         setElementText('profileTotalShipments', document.getElementById('totalShipments')?.textContent || '0');
 
         try {
-            const statsRes = await fetch('/api/dashboard/stats', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
             const statsResult = await statsRes.json();
             if (statsResult.success) {
                 setElementText('profileActiveShipments', statsResult.data.activeShipmentsPersonal ?? 0);
