@@ -2076,6 +2076,18 @@ table.data-table tbody tr.row-static:hover {
     border-bottom-right-radius: 2px;
 }
 
+/* The automated 24h-gap away message -- greyed out so it can't be mistaken
+   for a real human admin reply. */
+.chat-thread-msg.automated .chat-thread-bubble {
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.chat-thread-msg.automated .chat-thread-msg-time {
+    font-style: italic;
+}
+
 .chat-thread-msg-time {
     font-size: 0.7rem;
     color: var(--text-muted);

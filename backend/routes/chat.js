@@ -90,7 +90,8 @@ router.post('/messages', protect, async (req, res) => {
                 senderName: SUPPORT_NAME,
                 message: AWAY_MESSAGE_TEXT,
                 readByAdmin: true,
-                readByUser: false
+                readByUser: false,
+                automated: true
             });
         }
 
@@ -121,6 +122,7 @@ router.get('/conversations', protect, async (req, res) => {
                     _id: '$userId',
                     lastMessage: { $first: '$message' },
                     lastSenderRole: { $first: '$senderRole' },
+                    lastAutomated: { $first: '$automated' },
                     lastAt: { $first: '$createdAt' },
                     unreadCount: {
                         $sum: {
@@ -143,6 +145,7 @@ router.get('/conversations', protect, async (req, res) => {
                 userEmail: user?.email || '',
                 lastMessage: c.lastMessage,
                 lastSenderRole: c.lastSenderRole,
+                lastAutomated: !!c.lastAutomated,
                 lastAt: c.lastAt,
                 unreadCount: c.unreadCount
             };

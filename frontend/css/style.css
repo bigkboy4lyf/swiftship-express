@@ -1017,6 +1017,13 @@ footer {
     border-bottom-left-radius: 2px;
 }
 
+/* The automated 24h-gap away message -- dimmed a step further than a real
+   support reply so it reads as a system note rather than a person typing. */
+.chat-message.bot.automated {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
 .chat-message.bot a {
     color: var(--accent);
     font-weight: 600;

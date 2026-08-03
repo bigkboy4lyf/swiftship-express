@@ -23,7 +23,7 @@
 
     function renderChatMessages(msgs, container) {
         container.innerHTML = msgs.length
-            ? msgs.map(m => `<div class="chat-message ${m.senderRole === 'user' ? 'user' : 'bot'}">${escapeChatHtml(m.message)}</div>`).join('')
+            ? msgs.map(m => `<div class="chat-message ${m.senderRole === 'user' ? 'user' : 'bot'}${m.automated ? ' automated' : ''}">${escapeChatHtml(m.message)}</div>`).join('')
             : '<div class="chat-message bot">Hi! 👋 Send us a message and our support team will reply here as soon as they can.</div>';
         container.scrollTop = container.scrollHeight;
     }

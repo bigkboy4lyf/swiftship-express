@@ -18,6 +18,10 @@ const chatMessageSchema = new mongoose.Schema({
     // the widget, regardless of what's happening on the other side.
     readByAdmin: { type: Boolean, default: false },
     readByUser: { type: Boolean, default: false },
+    // True only for the system-generated 24h-gap away message (see
+    // AWAY_MESSAGE_TEXT in routes/chat.js) -- lets the UI grey it out so it
+    // doesn't get mistaken for an actual human admin reply.
+    automated: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 

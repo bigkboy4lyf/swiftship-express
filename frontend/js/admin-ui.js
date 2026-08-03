@@ -1230,7 +1230,7 @@ function renderChatConversations() {
                 <strong>${escapeHtml(c.userName)}</strong>
                 <span class="chat-conversation-time">${chatTimeAgo(c.lastAt)}</span>
             </div>
-            <div class="chat-conversation-preview">${c.lastSenderRole === 'admin' ? 'You: ' : ''}${escapeHtml(c.lastMessage)}</div>
+            <div class="chat-conversation-preview">${c.lastAutomated ? 'Auto-reply: ' : (c.lastSenderRole === 'admin' ? 'You: ' : '')}${escapeHtml(c.lastMessage)}</div>
             ${c.unreadCount > 0 ? `<span class="chat-conversation-badge">${c.unreadCount}</span>` : ''}
         </div>
     `).join('');
@@ -1281,9 +1281,9 @@ async function loadChatThread(userId) {
 
         messages.innerHTML = result.data.length
             ? result.data.map(m => `
-                <div class="chat-thread-msg ${m.senderRole === 'admin' ? 'from-admin' : 'from-user'}">
+                <div class="chat-thread-msg ${m.senderRole === 'admin' ? 'from-admin' : 'from-user'}${m.automated ? ' automated' : ''}">
                     <div class="chat-thread-bubble">${escapeHtml(m.message)}</div>
-                    <span class="chat-thread-msg-time">${new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                    <span class="chat-thread-msg-time">${m.automated ? 'Automated reply · ' : ''}${new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
                 </div>
             `).join('')
             : `<div class="chat-empty-state">
