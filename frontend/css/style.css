@@ -989,6 +989,14 @@ footer {
     opacity: 0.85;
 }
 
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-faint);
+}
+
 .chat-panel-header .modal-close {
     color: white;
 }
