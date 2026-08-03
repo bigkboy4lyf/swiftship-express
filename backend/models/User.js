@@ -114,7 +114,7 @@ const userSchema = new mongoose.Schema({
                 Country: { type: String, required: true }
             }
         ],
-        validate: [val => val.length <= 3, 'Exceeds the limit of 3 addresses']
+        validate: [val => val.length <= 4, 'Exceeds the limit of 4 addresses']
     },
     newsletter: {
         type: Boolean,

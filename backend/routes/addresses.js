@@ -32,8 +32,8 @@ router.post('/', protect, async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        if (user.addresses.length >= 3) {
-            return res.status(400).json({ message: 'Address limit of 3 reached.' });
+        if (user.addresses.length >= 4) {
+            return res.status(400).json({ message: 'Address limit of 4 reached.' });
         }
 
         const { fullName, phone, street, city, state, zipCode, country } = req.body;

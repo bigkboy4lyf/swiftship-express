@@ -1212,7 +1212,7 @@ document.getElementById('confirmQuoteBookingBtn')?.addEventListener('click', asy
             // Best-effort: a brand new recipient address the user chose to
             // keep gets saved to their address book too, so next time it
             // shows up as a one-click option instead of a full retype. This
-            // must never block the shipment itself -- e.g. the 3-address
+            // must never block the shipment itself -- e.g. the 4-address
             // cap is a fine reason to skip it, not to fail the whole request.
             if (recipient.saveToAddressBook && recipient.newAddressPayload) {
                 fetch(ADDR_API, { method: 'POST', headers: getHeaders(), body: JSON.stringify(recipient.newAddressPayload) })
@@ -1275,7 +1275,7 @@ function renderAddresses(addresses) {
                 <p>No saved addresses yet. Add one to speed up checkout.</p>
            </div>`;
 
-    if (toggleBtn) toggleBtn.style.display = addresses.length >= 3 ? 'none' : '';
+    if (toggleBtn) toggleBtn.style.display = addresses.length >= 4 ? 'none' : '';
 }
 
 function toggleAddressForm(show) {
