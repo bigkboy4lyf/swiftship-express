@@ -1,17 +1,23 @@
+// The same truck-fast glyph used for the site logo/favicon, inlined as raw
+// SVG markup (not a remote <img>) so the brand mark still renders with zero
+// network dependency -- email clients block/strip remote images by default,
+// but there's nothing to block when the vector data is already in the markup.
+const LOGO_SVG_PATH = 'M112 0C85.5 0 64 21.5 64 48V96H16c-8.8 0-16 7.2-16 16s7.2 16 16 16H64 272c8.8 0 16 7.2 16 16s-7.2 16-16 16H64 48c-8.8 0-16 7.2-16 16s7.2 16 16 16H64 240c8.8 0 16 7.2 16 16s-7.2 16-16 16H64 16c-8.8 0-16 7.2-16 16s7.2 16 16 16H64 208c8.8 0 16 7.2 16 16s-7.2 16-16 16H64V416c0 53 43 96 96 96s96-43 96-96H384c0 53 43 96 96 96s96-43 96-96h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V288 256 237.3c0-17-6.7-33.3-18.7-45.3L512 114.7c-12-12-28.3-18.7-45.3-18.7H416V48c0-26.5-21.5-48-48-48H112zM544 237.3V256H416V160h50.7L544 237.3zM160 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96zm272 48a48 48 0 1 1 96 0 48 48 0 1 1 -96 0z';
+
 // Shared branded wrapper for every outgoing email, so a customer's inbox
 // consistently looks like it came from SwiftShip Express regardless of which
 // flow (verification, password reset, etc.) triggered it. Built with inline
-// styles and no external image -- email clients (Outlook especially) strip
-// <style> blocks and often block remote images, so an emoji + inline-styled
-// text logo is the one thing guaranteed to render everywhere.
+// styles and no remote image -- email clients (Outlook especially) strip
+// <style> blocks and often block remote images, so inline SVG + inline-styled
+// text is what's guaranteed to render everywhere.
 function brandedEmail(bodyHtml) {
     const year = new Date().getFullYear();
     return `
     <div style="font-family: Arial, Helvetica, sans-serif; background: #f5f7fa; padding: 32px 16px;">
         <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
             <div style="background: linear-gradient(135deg, #0056b3, #00a2ff); padding: 26px 30px; text-align: center;">
-                <span style="font-size: 1.4rem; vertical-align: middle;">&#128666;</span>
-                <span style="color: #ffffff; font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: middle; margin-left: 8px;">SwiftShip Express</span>
+                <svg width="26" height="26" viewBox="0 0 640 512" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path fill="#ffffff" d="${LOGO_SVG_PATH}"/></svg>
+                <span style="color: #ffffff; font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: middle; margin-left: 10px;">SwiftShip Express</span>
             </div>
             <div style="padding: 32px 30px;">
                 ${bodyHtml}
