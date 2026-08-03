@@ -3,6 +3,8 @@ const router = express.Router();
 const Shipment = require('../models/Shipment');
 const User = require('../models/User');
 const PaymentAccount = require('../models/PaymentAccount');
+const FeeSettings = require('../models/FeeSettings');
+const { FEE_TYPES, setShipmentFeeActive, getFeesAccrued, getTotalOwed, getBalanceDue, isFullyPaid } = require('../utils/feeAccrual');
 const { protect } = require('../middleware/auth');
 const { documentVerificationCode } = require('../utils/verification');
 const sendEmail = require('../utils/sendEmail');
@@ -202,14 +204,23 @@ router.get('/shipments', protect, async (req, res) => {
 
         const shipments = await shipmentsQuery;
 
-        // Attached here rather than stored, so it can't go stale relative to
-        // the fields it's derived from. See utils/verification.js.
-        const withVerification = shipments.map(s => ({
+        // Attached here rather than stored, so none of it can go stale
+        // relative to the fields it's derived from -- verificationCode
+        // (utils/verification.js) is pinned to the original charge, while
+        // feesAccrued/totalOwed/balanceDue (utils/feeAccrual.js) reflect
+        // whatever's accrued as of right now. Every screen that shows an
+        // invoice, a receipt, or a balance (dashboard, admin panel, payment
+        // review queue) reads these instead of re-deriving them, so they can
+        // never disagree with each other or with the accrual job.
+        const withBilling = shipments.map(s => ({
             ...s,
-            verificationCode: documentVerificationCode(s)
+            verificationCode: documentVerificationCode(s),
+            feesAccrued: getFeesAccrued(s),
+            totalOwed: getTotalOwed(s),
+            balanceDue: getBalanceDue(s)
         }));
 
-        res.json({ success: true, data: withVerification });
+        res.json({ success: true, data: withBilling });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -444,8 +455,11 @@ router.patch('/shipments/:id/receipt/confirm', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'No pending receipt to confirm' });
         }
 
-        const totalPrice = round2(shipment.totalPrice || 0);
-        const balanceDue = round2(totalPrice - (shipment.amountPaid || 0));
+        // Balance due includes any demurrage/storage accrued since the
+        // original invoice -- see utils/feeAccrual.js. A shipment can't be
+        // confirmed as settled while a fee balance remains outstanding, even
+        // if the original shipping charge itself was paid off long ago.
+        const balanceDue = getBalanceDue(shipment);
 
         const amount = round2(Number(req.body.amount));
         if (!Number.isFinite(amount) || amount <= 0) {
@@ -462,7 +476,7 @@ router.patch('/shipments/:id/receipt/confirm', protect, async (req, res) => {
         shipment.paymentReceipt.amount = amount;
         shipment.paymentReceipt.resolvedAt = new Date();
 
-        const fullyPaid = shipment.amountPaid >= totalPrice;
+        const fullyPaid = isFullyPaid(shipment);
 
         // Confirming payment is what actually unblocks the shipment -- same
         // pipeline entry point as a manual /approve. Only once the invoice
@@ -473,7 +487,18 @@ router.patch('/shipments/:id/receipt/confirm', protect, async (req, res) => {
         } else if (!fullyPaid) {
             shipment.trackingHistory.push({
                 status: shipment.status,
-                description: `Partial payment of $${amount.toFixed(2)} confirmed -- $${round2(totalPrice - shipment.amountPaid).toFixed(2)} balance remaining`,
+                description: `Partial payment of $${amount.toFixed(2)} confirmed -- $${getBalanceDue(shipment).toFixed(2)} balance remaining`,
+                timestamp: new Date()
+            });
+        } else if (shipment.status !== 'pending_approval') {
+            // Fully paid, but this shipment already moved past pending_approval
+            // before this payment -- so this settled a fee balance that
+            // accrued after the original invoice, not the initial shipment
+            // charge. There's no status transition to make, just a record
+            // that the account is now current.
+            shipment.trackingHistory.push({
+                status: shipment.status,
+                description: `Payment of $${amount.toFixed(2)} confirmed -- outstanding balance fully settled`,
                 timestamp: new Date()
             });
         }
@@ -976,6 +1001,86 @@ router.delete('/payment-accounts/:countryCode', protect, async (req, res) => {
         res.json({ success: true, message: 'Payment account cleared' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// FEE SETTINGS (demurrage / storage) -- read or set the uniform per-day
+// rate for one fee type. This is the only thing kept platform-wide; which
+// shipments actually get charged that rate is targeted per-shipment below.
+// The daily accrual job (utils/feeAccrual.js) reads this same document every
+// run, so a rate change here takes effect on the next 24h pass with no
+// restart needed.
+// =============================================
+router.get('/fee-settings', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+        const settings = await FeeSettings.getSingleton();
+        res.json({ success: true, data: settings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.patch('/fee-settings/:type', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const { type } = req.params;
+        if (!FEE_TYPES.includes(type)) {
+            return res.status(400).json({ success: false, message: 'Unknown fee type' });
+        }
+
+        const rate = Number(req.body.ratePerDay);
+        if (!Number.isFinite(rate) || rate < 0) {
+            return res.status(400).json({ success: false, message: 'Rate must be a non-negative number' });
+        }
+
+        const settings = await FeeSettings.getSingleton();
+        settings[type].ratePerDay = round2(rate);
+        settings.updatedAt = new Date();
+        settings.updatedBy = req.user.id;
+        await settings.save();
+
+        res.json({ success: true, data: settings });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// PER-SHIPMENT FEE TARGETING -- flags an individual shipment as subject to
+// demurrage and/or storage. This is the actual "which accounts get charged"
+// control: the rate above is uniform, but nothing accrues on any shipment
+// until admin opts it in here. setShipmentFeeActive also fires the
+// "fee activated" notification the moment it's switched on.
+// =============================================
+router.patch('/shipments/:id/fees/:type', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const { type } = req.params;
+        if (!FEE_TYPES.includes(type)) {
+            return res.status(400).json({ success: false, message: 'Unknown fee type' });
+        }
+
+        const shipment = await Shipment.findById(req.params.id);
+        if (!shipment) {
+            return res.status(404).json({ success: false, message: 'Shipment not found' });
+        }
+
+        await setShipmentFeeActive(shipment, type, !!req.body.active);
+        await shipment.save();
+
+        res.json({ success: true, data: shipment });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
     }
 });
 

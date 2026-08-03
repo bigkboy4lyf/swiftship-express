@@ -477,9 +477,33 @@
                 <div id="adminSettings" class="dashboard-section" style="display: none;">
                     <div class="card">
                         <div class="card-header">
-                            <h3>Settings</h3>
+                            <h3>Demurrage &amp; Storage Fees</h3>
                         </div>
-                        <p class="placeholder-text">System settings would go here.</p>
+                        <p class="placeholder-text" style="margin-top: -10px;">
+                            These rates apply uniformly to every shipment platform-wide -- setting a rate does not charge anyone by itself. To actually start charging a specific shipment, open it from <strong>All Shipments</strong> and turn on demurrage or storage from that shipment's detail view; the customer is notified immediately when you do. From then on, it's charged the rate below once every 24 hours, with the customer notified of their new balance each time. Charging stops automatically once a shipment is paid in full or delivered.
+                        </p>
+
+                        <form id="demurrageFeeForm" class="fee-settings-form">
+                            <div class="form-group">
+                                <label>Demurrage rate per day ($)</label>
+                                <input type="number" id="demurrageRate" min="0" step="0.01" placeholder="e.g. 15.00">
+                            </div>
+                            <p id="demurrageFeeSuccess" class="form-error form-success" style="display:none;"></p>
+                            <p id="demurrageFeeError" class="form-error" style="display:none;"></p>
+                            <button type="submit" class="btn">Save Demurrage Rate</button>
+                        </form>
+
+                        <hr style="margin: 24px 0; border-color: var(--border);">
+
+                        <form id="storageFeeForm" class="fee-settings-form">
+                            <div class="form-group">
+                                <label>Storage rate per day ($)</label>
+                                <input type="number" id="storageRate" min="0" step="0.01" placeholder="e.g. 10.00">
+                            </div>
+                            <p id="storageFeeSuccess" class="form-error form-success" style="display:none;"></p>
+                            <p id="storageFeeError" class="form-error" style="display:none;"></p>
+                            <button type="submit" class="btn">Save Storage Rate</button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -708,6 +732,27 @@
                 <button class="modal-close" id="closeShipmentDetailModal">&times;</button>
             </div>
             <dl class="profile-detail-list" id="shipmentDetailBody"></dl>
+
+            <div id="shipmentFeesSection" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <h4 style="margin-bottom: 12px;">Demurrage &amp; Storage</h4>
+                <div class="form-group fee-settings-toggle-row">
+                    <label for="shipmentDemurrageActive">
+                        <input type="checkbox" id="shipmentDemurrageActive">
+                        Charge demurrage on this shipment
+                    </label>
+                </div>
+                <p class="form-hint" id="shipmentDemurrageAccrued"></p>
+                <div class="form-group fee-settings-toggle-row">
+                    <label for="shipmentStorageActive">
+                        <input type="checkbox" id="shipmentStorageActive">
+                        Charge storage on this shipment
+                    </label>
+                </div>
+                <p class="form-hint" id="shipmentStorageAccrued"></p>
+                <p id="shipmentFeesError" class="form-error" style="display:none;"></p>
+                <button type="button" id="saveShipmentFeesBtn" class="btn" style="width:100%;">Save Fee Settings</button>
+            </div>
+
             <div class="quote-form-actions">
                 <button type="button" id="shipmentDetailDocBtn" class="btn quote-btn-primary">View Invoice</button>
             </div>

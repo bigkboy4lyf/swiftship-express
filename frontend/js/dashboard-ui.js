@@ -1332,10 +1332,6 @@ function isAwaitingConfirmation(status) {
     return status === 'pending_approval';
 }
 
-function money(n) {
-    return `$${(Number(n) || 0).toFixed(2)}`;
-}
-
 // The invoice currently open in the modal -- lets the Pay Now button branch
 // on destination country and pull the right tracking number/amount without a
 // second lookup.
@@ -1344,23 +1340,25 @@ let currentInvoiceShipment = null;
 function openInvoiceOrReceipt(s) {
     currentInvoiceShipment = s;
     const isInvoice = isAwaitingConfirmation(s.status);
-    const totalPrice = Number(s.totalPrice) || 0;
-    const amountPaid = Number(s.amountPaid) || 0;
-    const balanceDue = Math.max(totalPrice - amountPaid, 0);
-    // A part-paid invoice is still an invoice (isInvoice), just further along --
-    // it only becomes a receipt once the shipment itself advances, which only
-    // happens once the balance actually reaches zero (see advanceToProcessing
-    // on the backend).
-    const isPartiallyPaid = isInvoice && amountPaid > 0;
+    const billing = getShipmentBilling(s);
+    const hasBalance = billing.balanceDue > 0.001;
+    // Demurrage/storage can accrue after a shipment's original invoice was
+    // already paid off and approved -- so "still owes something" (hasBalance),
+    // not just "hasn't been approved yet" (isInvoice), is what actually
+    // decides whether this document is an invoice or a settled receipt. A
+    // shipment that picked up a fee balance after approval gets treated as a
+    // supplementary invoice for that fee, same document, same flow.
+    const isDocInvoice = isInvoice || hasBalance;
+    const isPartiallyPaid = billing.amountPaid > 0 && hasBalance;
 
-    document.getElementById('invoiceModalTitle').textContent = isInvoice ? 'Invoice' : 'Receipt';
-    document.getElementById('invoiceDocType').textContent = isInvoice ? 'INVOICE' : 'RECEIPT';
+    document.getElementById('invoiceModalTitle').textContent = isDocInvoice ? 'Invoice' : 'Receipt';
+    document.getElementById('invoiceDocType').textContent = isDocInvoice ? 'INVOICE' : 'RECEIPT';
 
     const stamp = document.getElementById('invoiceStatusStamp');
-    stamp.textContent = !isInvoice ? 'Paid' : (isPartiallyPaid ? 'Partially Paid' : 'Unpaid');
-    stamp.className = 'invoice-doc-stamp ' + (!isInvoice ? 'paid' : (isPartiallyPaid ? 'partial' : 'unpaid'));
+    stamp.textContent = !hasBalance ? 'Paid' : (isPartiallyPaid ? 'Partially Paid' : 'Unpaid');
+    stamp.className = 'invoice-doc-stamp ' + (!hasBalance ? 'paid' : (isPartiallyPaid ? 'partial' : 'unpaid'));
 
-    document.getElementById('invoiceDocNumber').textContent = `${isInvoice ? 'INV' : 'RCT'}-${s.trackingNumber}`;
+    document.getElementById('invoiceDocNumber').textContent = `${isDocInvoice ? 'INV' : 'RCT'}-${s.trackingNumber}`;
     document.getElementById('invoiceDocDate').textContent = s.createdAt
         ? new Date(s.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
         : 'N/A';
@@ -1376,39 +1374,33 @@ function openInvoiceOrReceipt(s) {
         Contents: ${describePackageContents(s.package)}
     `;
 
-    const p = s.pricing || {};
-    document.getElementById('invoiceLineItems').innerHTML = s.totalPrice
-        ? `
-            <tr><td>Base Shipping Rate</td><td>${money(p.basePrice)}</td></tr>
-            ${p.insuranceCost ? `<tr><td>Insurance</td><td>${money(p.insuranceCost)}</td></tr>` : ''}
-            <tr><td>Service Surcharge</td><td>${money(p.surcharge)}</td></tr>
-        `
-        : '<tr><td colspan="2">Pricing details are not available for this shipment.</td></tr>';
-
-    document.getElementById('invoiceTotal').textContent = money(totalPrice);
+    document.getElementById('invoiceLineItems').innerHTML = buildInvoiceLineItemsHtml(s);
+    document.getElementById('invoiceTotal').textContent = money(billing.totalOwed);
 
     const paidRow = document.getElementById('invoiceAmountPaidRow');
     const dueRow = document.getElementById('invoiceBalanceDueRow');
     if (isPartiallyPaid) {
         paidRow.style.display = '';
         dueRow.style.display = '';
-        document.getElementById('invoiceAmountPaid').textContent = '-' + money(amountPaid);
-        document.getElementById('invoiceBalanceDue').textContent = money(balanceDue);
+        document.getElementById('invoiceAmountPaid').textContent = '-' + money(billing.amountPaid);
+        document.getElementById('invoiceBalanceDue').textContent = money(billing.balanceDue);
     } else {
         paidRow.style.display = 'none';
         dueRow.style.display = 'none';
     }
 
-    document.getElementById('invoiceFooterNote').textContent = !isInvoice
+    document.getElementById('invoiceFooterNote').textContent = !hasBalance
         ? 'This receipt confirms payment has been received and processed for the shipment described above.'
         : isPartiallyPaid
-            ? `A partial payment of ${money(amountPaid)} has been confirmed. The remaining balance of ${money(balanceDue)} is still due before this shipment moves into processing.`
-            : 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.';
+            ? `A partial payment of ${money(billing.amountPaid)} has been confirmed. The remaining balance of ${money(billing.balanceDue)} is still due${isInvoice ? ' before this shipment moves into processing' : ''}.`
+            : isInvoice
+                ? 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.'
+                : 'Additional fees have accrued on this shipment since it was approved. Please settle the balance below to bring the account current.';
 
     document.getElementById('invoiceVerificationCode').textContent = s.verificationCode || 'N/A';
 
     const payBtn = document.getElementById('payNowBtn');
-    if (payBtn) payBtn.style.display = isInvoice ? '' : 'none';
+    if (payBtn) payBtn.style.display = hasBalance ? '' : 'none';
 
     document.getElementById('invoiceReceiptModal').classList.add('active');
 }
@@ -1450,10 +1442,9 @@ document.getElementById('closePaymentMethodModal')?.addEventListener('click', ()
 document.getElementById('continueToCardBtn')?.addEventListener('click', () => {
     const s = currentInvoiceShipment;
     if (!s) return;
-    const balanceDue = Math.max((Number(s.totalPrice) || 0) - (Number(s.amountPaid) || 0), 0);
     const params = new URLSearchParams({
         tracking: s.trackingNumber || '',
-        amount: balanceDue,
+        amount: getShipmentBilling(s).balanceDue,
         shipment: s._id || ''
     });
     window.location.href = `pay.html?${params.toString()}`;
@@ -1483,10 +1474,9 @@ async function loadBankTransferDetails(s) {
         const account = accounts.find(a => a.countryCode === s.recipient?.country)
             || accounts.find(a => a.countryCode === PARENT_ACCOUNT_CODE);
 
-        const balanceDue = Math.max((Number(s.totalPrice) || 0) - (Number(s.amountPaid) || 0), 0);
         const rows = account ? [
             ['Payment Reference', s.trackingNumber],
-            ['Amount Due', money(balanceDue)],
+            ['Amount Due', money(getShipmentBilling(s).balanceDue)],
             ['Bank Name', account.bankName],
             ['Account Holder Name', account.accountName],
             ['Account Number', account.accountNumber],

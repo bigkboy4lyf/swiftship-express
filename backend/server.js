@@ -20,6 +20,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const addressRoutes = require('./routes/addresses');
 const chatRoutes = require('./routes/chat');
 const notificationRoutes = require('./routes/notifications');
+const { runFeeAccrual } = require('./utils/feeAccrual');
 
 // Initialize Express app
 const app = express();
@@ -102,7 +103,18 @@ app.use((err, req, res, next) => {
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('MongoDB connected successfully'))
+    .then(() => {
+        console.log('MongoDB connected successfully');
+
+        // Demurrage/storage fee accrual: runs once on startup (covers days
+        // the server was offline -- lastChargedAt gating makes this safe to
+        // re-run without double-charging) and then every 24h afterward.
+        const DAY_MS = 24 * 60 * 60 * 1000;
+        runFeeAccrual().catch(err => console.error('Fee accrual failed:', err));
+        setInterval(() => {
+            runFeeAccrual().catch(err => console.error('Fee accrual failed:', err));
+        }, DAY_MS);
+    })
     .catch(err => console.error('MongoDB connection error:', err));
 
 // Start server

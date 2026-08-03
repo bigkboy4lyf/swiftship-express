@@ -107,6 +107,31 @@ const shipmentSchema = new mongoose.Schema({
         resolvedAt: Date,
         rejectionReason: String
     },
+    // Whether/how much this specific shipment owes in demurrage and storage
+    // fees. `active` is admin's per-shipment opt-in -- FeeSettings only sets
+    // the uniform per-day rate; nothing accrues on any shipment until admin
+    // flags it here too (see PATCH /shipments/:id/fees/:type, which also
+    // fires the "fee activated" notification and stamps activatedAt).
+    // Daily accrual (utils/feeAccrual.js) counts from activatedAt, not from
+    // when the shipment was created, so turning a fee on today never
+    // back-charges for days it wasn't active. Accrual only ever adds to
+    // `accrued`, even after `active` is turned back off, so a fee already
+    // charged is never silently forgiven. lastChargedAt gates the daily job
+    // so restarts/reruns within the same day never double-charge.
+    fees: {
+        demurrage: {
+            active: { type: Boolean, default: false },
+            activatedAt: Date,
+            accrued: { type: Number, default: 0 },
+            lastChargedAt: Date
+        },
+        storage: {
+            active: { type: Boolean, default: false },
+            activatedAt: Date,
+            accrued: { type: Number, default: 0 },
+            lastChargedAt: Date
+        }
+    },
     trackingHistory: [trackingHistorySchema],
     estimatedDelivery: Date,
     actualDelivery: Date,

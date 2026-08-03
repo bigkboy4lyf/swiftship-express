@@ -157,6 +157,9 @@ function switchTab(tabId) {
     if (tabId === 'admin-notifications') {
         populateNotifyUserSelect();
     }
+    if (tabId === 'admin-settings') {
+        loadFeeSettings();
+    }
 
     closeSidebarDrawer();
 }
@@ -317,11 +320,76 @@ window.viewShipmentDetail = function(id) {
     const docBtn = document.getElementById('shipmentDetailDocBtn');
     if (docBtn) docBtn.textContent = isAwaitingConfirmation(s.status) ? 'View Invoice' : 'View Receipt';
 
+    renderShipmentFeesSection(s);
+
     document.getElementById('shipmentDetailModal').classList.add('active');
 };
 
 document.getElementById('closeShipmentDetailModal')?.addEventListener('click', () => {
     document.getElementById('shipmentDetailModal').classList.remove('active');
+});
+
+// =============================================
+// PER-SHIPMENT DEMURRAGE / STORAGE TARGETING (inside the Shipment Details
+// modal) -- this is what actually opts a specific shipment into the fee
+// schedule configured in Admin > Settings. See PATCH
+// /api/dashboard/shipments/:id/fees/:type.
+// =============================================
+function renderShipmentFeesSection(s) {
+    const errorEl = document.getElementById('shipmentFeesError');
+    if (errorEl) errorEl.style.display = 'none';
+
+    document.getElementById('shipmentDemurrageActive').checked = !!s.fees?.demurrage?.active;
+    document.getElementById('shipmentStorageActive').checked = !!s.fees?.storage?.active;
+
+    const demurrageAccrued = s.fees?.demurrage?.accrued || 0;
+    const storageAccrued = s.fees?.storage?.accrued || 0;
+    document.getElementById('shipmentDemurrageAccrued').textContent =
+        demurrageAccrued > 0 ? `$${demurrageAccrued.toFixed(2)} accrued so far` : 'Nothing accrued yet';
+    document.getElementById('shipmentStorageAccrued').textContent =
+        storageAccrued > 0 ? `$${storageAccrued.toFixed(2)} accrued so far` : 'Nothing accrued yet';
+}
+
+document.getElementById('saveShipmentFeesBtn')?.addEventListener('click', async function() {
+    if (!currentDetailShipment) return;
+
+    const errorEl = document.getElementById('shipmentFeesError');
+    errorEl.style.display = 'none';
+
+    const updates = {
+        demurrage: document.getElementById('shipmentDemurrageActive').checked,
+        storage: document.getElementById('shipmentStorageActive').checked
+    };
+
+    this.disabled = true;
+    try {
+        const results = await Promise.all(Object.entries(updates).map(([type, active]) =>
+            fetch(`/api/dashboard/shipments/${currentDetailShipment._id}/fees/${type}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                body: JSON.stringify({ active })
+            }).then(res => res.json())
+        ));
+
+        const failed = results.find(r => !r.success);
+        if (failed) {
+            errorEl.textContent = failed.message || 'Could not save fee settings. Please try again.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        const updatedShipment = results[results.length - 1].data;
+        const idx = lastLoadedShipments.findIndex(x => x._id === updatedShipment._id);
+        if (idx !== -1) lastLoadedShipments[idx] = updatedShipment;
+        currentDetailShipment = updatedShipment;
+        renderShipmentFeesSection(updatedShipment);
+    } catch (err) {
+        console.error('Error saving shipment fee settings:', err);
+        errorEl.textContent = 'Could not reach the server. Please try again.';
+        errorEl.style.display = 'block';
+    } finally {
+        this.disabled = false;
+    }
 });
 
 document.getElementById('shipmentDetailDocBtn')?.addEventListener('click', () => {
@@ -782,10 +850,10 @@ function renderPaymentReviews(shipments) {
     tbody.innerHTML = !shipments.length
         ? '<tr class="row-static"><td colspan="7" style="text-align:center;">No payments awaiting review</td></tr>'
         : shipments.map(s => {
-            const balanceDue = Math.max((s.totalPrice || 0) - (s.amountPaid || 0), 0);
-            const balanceCell = s.amountPaid > 0
-                ? `${money(balanceDue)} <span style="color: var(--gray); font-size: 0.8em;">(of ${money(s.totalPrice)}, ${money(s.amountPaid)} already paid)</span>`
-                : money(balanceDue);
+            const billing = getShipmentBilling(s);
+            const balanceCell = billing.amountPaid > 0
+                ? `${money(billing.balanceDue)} <span style="color: var(--gray); font-size: 0.8em;">(of ${money(billing.totalOwed)}, ${money(billing.amountPaid)} already paid)</span>`
+                : money(billing.balanceDue);
             return `
         <tr>
             <td data-label="Tracking #"><strong>${s.trackingNumber || 'N/A'}</strong></td>
@@ -807,7 +875,7 @@ function renderPaymentReviews(shipments) {
 
 window.confirmPaymentReceipt = async function(id) {
     const s = lastLoadedPaymentReviews.find(x => x._id === id);
-    const balanceDue = Math.max((s?.totalPrice || 0) - (s?.amountPaid || 0), 0);
+    const balanceDue = s ? getShipmentBilling(s).balanceDue : 0;
 
     const input = prompt(
         `Amount received for shipment ${s?.trackingNumber || id}?\nBalance due: ${money(balanceDue)}\n\nEnter the full balance to close out the invoice, or a smaller amount to record a partial payment.`,
@@ -1004,25 +1072,25 @@ function isAwaitingConfirmation(status) {
     return status === 'pending_approval';
 }
 
-function money(n) {
-    return `$${(Number(n) || 0).toFixed(2)}`;
-}
-
 function openInvoiceOrReceipt(s) {
     const isInvoice = isAwaitingConfirmation(s.status);
-    const totalPrice = Number(s.totalPrice) || 0;
-    const amountPaid = Number(s.amountPaid) || 0;
-    const balanceDue = Math.max(totalPrice - amountPaid, 0);
-    const isPartiallyPaid = isInvoice && amountPaid > 0;
+    const billing = getShipmentBilling(s);
+    const hasBalance = billing.balanceDue > 0.001;
+    // Demurrage/storage can accrue after a shipment's original invoice was
+    // already paid off and approved -- so "still owes something" (hasBalance),
+    // not just "hasn't been approved yet" (isInvoice), is what actually
+    // decides whether this document is an invoice or a settled receipt.
+    const isDocInvoice = isInvoice || hasBalance;
+    const isPartiallyPaid = billing.amountPaid > 0 && hasBalance;
 
-    document.getElementById('invoiceModalTitle').textContent = isInvoice ? 'Invoice' : 'Receipt';
-    document.getElementById('invoiceDocType').textContent = isInvoice ? 'INVOICE' : 'RECEIPT';
+    document.getElementById('invoiceModalTitle').textContent = isDocInvoice ? 'Invoice' : 'Receipt';
+    document.getElementById('invoiceDocType').textContent = isDocInvoice ? 'INVOICE' : 'RECEIPT';
 
     const stamp = document.getElementById('invoiceStatusStamp');
-    stamp.textContent = !isInvoice ? 'Paid' : (isPartiallyPaid ? 'Partially Paid' : 'Unpaid');
-    stamp.className = 'invoice-doc-stamp ' + (!isInvoice ? 'paid' : (isPartiallyPaid ? 'partial' : 'unpaid'));
+    stamp.textContent = !hasBalance ? 'Paid' : (isPartiallyPaid ? 'Partially Paid' : 'Unpaid');
+    stamp.className = 'invoice-doc-stamp ' + (!hasBalance ? 'paid' : (isPartiallyPaid ? 'partial' : 'unpaid'));
 
-    document.getElementById('invoiceDocNumber').textContent = `${isInvoice ? 'INV' : 'RCT'}-${s.trackingNumber}`;
+    document.getElementById('invoiceDocNumber').textContent = `${isDocInvoice ? 'INV' : 'RCT'}-${s.trackingNumber}`;
     document.getElementById('invoiceDocDate').textContent = s.createdAt
         ? new Date(s.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
         : 'N/A';
@@ -1038,34 +1106,28 @@ function openInvoiceOrReceipt(s) {
         Contents: ${describePackageContents(s.package)}
     `;
 
-    const p = s.pricing || {};
-    document.getElementById('invoiceLineItems').innerHTML = s.totalPrice
-        ? `
-            <tr><td>Base Shipping Rate</td><td>${money(p.basePrice)}</td></tr>
-            ${p.insuranceCost ? `<tr><td>Insurance</td><td>${money(p.insuranceCost)}</td></tr>` : ''}
-            <tr><td>Service Surcharge</td><td>${money(p.surcharge)}</td></tr>
-        `
-        : '<tr><td colspan="2">Pricing details are not available for this shipment.</td></tr>';
-
-    document.getElementById('invoiceTotal').textContent = money(totalPrice);
+    document.getElementById('invoiceLineItems').innerHTML = buildInvoiceLineItemsHtml(s);
+    document.getElementById('invoiceTotal').textContent = money(billing.totalOwed);
 
     const paidRow = document.getElementById('invoiceAmountPaidRow');
     const dueRow = document.getElementById('invoiceBalanceDueRow');
     if (isPartiallyPaid) {
         paidRow.style.display = '';
         dueRow.style.display = '';
-        document.getElementById('invoiceAmountPaid').textContent = '-' + money(amountPaid);
-        document.getElementById('invoiceBalanceDue').textContent = money(balanceDue);
+        document.getElementById('invoiceAmountPaid').textContent = '-' + money(billing.amountPaid);
+        document.getElementById('invoiceBalanceDue').textContent = money(billing.balanceDue);
     } else {
         paidRow.style.display = 'none';
         dueRow.style.display = 'none';
     }
 
-    document.getElementById('invoiceFooterNote').textContent = !isInvoice
+    document.getElementById('invoiceFooterNote').textContent = !hasBalance
         ? 'This receipt confirms payment has been received and processed for the shipment described above.'
         : isPartiallyPaid
-            ? `A partial payment of ${money(amountPaid)} has been confirmed. The remaining balance of ${money(balanceDue)} is still due before this shipment moves into processing.`
-            : 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.';
+            ? `A partial payment of ${money(billing.amountPaid)} has been confirmed. The remaining balance of ${money(billing.balanceDue)} is still due${isInvoice ? ' before this shipment moves into processing' : ''}.`
+            : isInvoice
+                ? 'This is an invoice, not a receipt. Once this shipment request is approved, this same document becomes a downloadable receipt.'
+                : 'Additional fees have accrued on this shipment since it was approved. The customer still owes the balance below.';
 
     document.getElementById('invoiceVerificationCode').textContent = s.verificationCode || 'N/A';
 
@@ -1471,3 +1533,79 @@ document.getElementById('sendNotificationForm')?.addEventListener('submit', asyn
         submitBtn.disabled = false;
     }
 });
+
+// =============================================
+// FEE SETTINGS (demurrage / storage) -- one form per fee type, both driven
+// by the same GET/PATCH pair since they're just two independent rate slots
+// on the same settings document (see backend/models/FeeSettings.js). This
+// rate is the only thing uniform platform-wide; which shipments actually
+// get charged it is targeted per-shipment from the Shipment Details modal
+// (see renderShipmentFeesSection / saveShipmentFeesBtn below).
+// =============================================
+const FEE_FORM_CONFIG = {
+    demurrage: { rateId: 'demurrageRate', successId: 'demurrageFeeSuccess', errorId: 'demurrageFeeError' },
+    storage: { rateId: 'storageRate', successId: 'storageFeeSuccess', errorId: 'storageFeeError' }
+};
+
+async function loadFeeSettings() {
+    try {
+        const res = await fetch('/api/dashboard/fee-settings', { headers: authHeaders() });
+        const result = await res.json();
+        if (!result.success) return;
+
+        Object.entries(FEE_FORM_CONFIG).forEach(([type, ids]) => {
+            const feeState = result.data[type] || {};
+            document.getElementById(ids.rateId).value = feeState.ratePerDay || '';
+        });
+    } catch (err) {
+        console.error('Error loading fee settings:', err);
+    }
+}
+
+function setupFeeSettingsForm(type) {
+    const { rateId, successId, errorId } = FEE_FORM_CONFIG[type];
+    const form = document.getElementById(`${type}FeeForm`);
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const successEl = document.getElementById(successId);
+        const errorEl = document.getElementById(errorId);
+        successEl.style.display = 'none';
+        errorEl.style.display = 'none';
+
+        const payload = {
+            ratePerDay: Number(document.getElementById(rateId).value) || 0
+        };
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/dashboard/fee-settings/${type}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                successEl.textContent = 'Settings saved.';
+                successEl.style.display = 'block';
+            } else {
+                errorEl.textContent = result.message || 'Could not save settings. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        } catch (err) {
+            console.error(`Error saving ${type} fee settings:`, err);
+            errorEl.textContent = 'Could not reach the server. Please try again.';
+            errorEl.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+}
+
+setupFeeSettingsForm('demurrage');
+setupFeeSettingsForm('storage');

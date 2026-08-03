@@ -98,6 +98,54 @@ function getStatusLabel(status) {
 }
 
 // =============================================
+// SHIPMENT BILLING -- shared by dashboard-ui.js (customer invoice/receipt)
+// and admin-ui.js (admin invoice view + payment review queue) so every
+// screen that shows a total or a balance agrees on the same number. These
+// read fields the backend already computed and attached to each shipment
+// (feesAccrued/totalOwed/balanceDue -- see GET /api/dashboard/shipments and
+// backend/utils/feeAccrual.js) rather than re-deriving the math client-side;
+// the `??` fallbacks only matter for a shipment object that hasn't gone
+// through that endpoint yet.
+// =============================================
+function money(n) {
+    return `$${(Number(n) || 0).toFixed(2)}`;
+}
+
+function getShipmentBilling(s) {
+    const totalPrice = Number(s.totalPrice) || 0;
+    const amountPaid = Number(s.amountPaid) || 0;
+    const demurrageAccrued = Number(s.fees?.demurrage?.accrued) || 0;
+    const storageAccrued = Number(s.fees?.storage?.accrued) || 0;
+    const feesAccrued = Number(s.feesAccrued?.total ?? (demurrageAccrued + storageAccrued));
+    const totalOwed = Number(s.totalOwed ?? (totalPrice + feesAccrued));
+    const balanceDue = Number(s.balanceDue ?? Math.max(totalOwed - amountPaid, 0));
+
+    return { totalPrice, amountPaid, demurrageAccrued, storageAccrued, feesAccrued, totalOwed, balanceDue };
+}
+
+// Itemized invoice/receipt line items: the shipping price breakdown plus one
+// row per fee type that's actually accrued something. Shared by both
+// dashboard-ui.js and admin-ui.js's invoice modal so a fee added on one side
+// (admin activates it) shows up identically wherever the document is viewed.
+function buildInvoiceLineItemsHtml(s) {
+    if (!s.totalPrice) {
+        return '<tr><td colspan="2">Pricing details are not available for this shipment.</td></tr>';
+    }
+
+    const p = s.pricing || {};
+    const billing = getShipmentBilling(s);
+    const rows = [
+        ['Base Shipping Rate', p.basePrice],
+        p.insuranceCost ? ['Insurance', p.insuranceCost] : null,
+        ['Service Surcharge', p.surcharge],
+        billing.demurrageAccrued > 0 ? ['Demurrage Fee', billing.demurrageAccrued] : null,
+        billing.storageAccrued > 0 ? ['Storage Fee', billing.storageAccrued] : null
+    ].filter(Boolean);
+
+    return rows.map(([label, amount]) => `<tr><td>${label}</td><td>${money(amount)}</td></tr>`).join('');
+}
+
+// =============================================
 // TRACKING FUNCTIONALITY (CHAIN STYLE)
 // =============================================
 const trackingForm = document.getElementById('trackingForm');

@@ -27,7 +27,8 @@
         shipment_status: 'fa-truck',
         shipment_rejected: 'fa-circle-xmark',
         password_changed: 'fa-shield-halved',
-        admin_message: 'fa-bullhorn'
+        admin_message: 'fa-bullhorn',
+        fee_charge: 'fa-file-invoice-dollar'
     };
 
     function timeAgo(dateStr) {

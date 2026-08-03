@@ -327,6 +327,7 @@
 .notif-item-icon.type-shipment_rejected { background: #fdecea; color: #dc3545; }
 .notif-item-icon.type-password_changed { background: #f0e6ff; color: #6f42c1; }
 .notif-item-icon.type-admin_message { background: #fff0e6; color: var(--accent); }
+.notif-item-icon.type-fee_charge { background: #fff4e0; color: #d9822b; }
 
 .notif-item-body {
     flex: 1;
@@ -920,6 +921,17 @@ table.data-table tbody tr.row-static:hover {
 .form-group input:disabled {
     background: var(--surface-alt);
     cursor: not-allowed;
+}
+
+.fee-settings-toggle-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.fee-settings-toggle-row input[type="checkbox"] {
+    width: auto;
 }
 
 .form-hint {
