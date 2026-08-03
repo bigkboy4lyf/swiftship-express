@@ -2171,6 +2171,24 @@ table.data-table tbody tr.row-static:hover {
         display: none !important;
     }
 
+    /* Dark theme's body background would otherwise bleed through anywhere
+       the invoice document doesn't cover -- landscape especially, where the
+       printed page is much wider than the ~560px-wide document. */
+    body {
+        background: #fff !important;
+    }
+
+    /* visibility:hidden (below) still leaves .dashboard-container occupying
+       its full on-screen height -- sidebar plus main content, easily
+       several page-lengths tall. Chrome paginates print output to fit that
+       full invisible height, AND repeats any position:fixed element (the
+       invoice modal included) on every one of those pages -- which is why
+       the receipt was printing twice. Removing it from layout entirely
+       drops the page count back to exactly what the receipt itself needs. */
+    .dashboard-container {
+        display: none !important;
+    }
+
     body * {
         visibility: hidden;
     }
@@ -2180,13 +2198,36 @@ table.data-table tbody tr.row-static:hover {
         visibility: visible;
     }
 
+    /* #invoiceReceiptModal keeps its own fixed positioning (inherited from
+       .modal) -- switching it to static flow would let it fall in after the
+       entire rest of the dashboard, which is invisible but still occupies
+       its full layout height, pushing the receipt below a blank leading
+       page. Only its visual chrome needs stripping: .invoice-modal-content's
+       backdrop-filter blur rasterizes as a solid black rectangle when
+       printed (a known Chromium limitation), and its overflow-y:auto +
+       max-height:80vh would otherwise only print whatever was scrolled into
+       view on screen, cutting the rest of the invoice off. */
+    #invoiceReceiptModal {
+        background: none;
+    }
+
+    #invoiceReceiptModal .invoice-modal-content {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        background: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+    }
+
     #invoicePrintArea {
         /* Color tokens are already pinned to light/paper values by
            .invoice-doc itself -- print only needs to strip the modal
            chrome/positioning so the document fills the printed page. */
-        position: absolute;
-        top: 0;
-        left: 0;
+        position: static;
         width: 100%;
         border: none;
         padding: 0;
