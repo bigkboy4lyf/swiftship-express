@@ -53,6 +53,14 @@ const userSchema = new mongoose.Schema({
         select: false,
         default: null
     },
+    // Set while an email change is awaiting OTP confirmation (sent to this
+    // address, not the current one, to prove the user actually owns it).
+    // Cleared once confirmed (moved into `email`) or abandoned.
+    pendingEmail: {
+        type: String,
+        select: false,
+        default: null
+    },
     // Defaults to true so existing accounts (created before this field
     // existed) aren't retroactively locked out -- new registrations set this
     // to false explicitly until the OTP flow confirms the address.

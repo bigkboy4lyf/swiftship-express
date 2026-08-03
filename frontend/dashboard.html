@@ -15,6 +15,7 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SwiftShip Express | Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -418,6 +419,9 @@
                             <div class="profile-summary-avatar">
                                 <img id="profileAvatarImg" src="" alt="Avatar" style="display:none;">
                                 <span id="profileAvatar">JD</span>
+                                <button type="button" class="profile-avatar-edit-btn profile-edit-trigger" title="Change photo" aria-label="Change photo">
+                                    <i class="fas fa-camera"></i>
+                                </button>
                             </div>
                             <h3 class="profile-summary-name loading" id="profileNameDisplay">&ndash;</h3>
                             <span class="profile-summary-badge loading" id="profileAccountTypeBadge">&ndash;</span>
@@ -442,29 +446,55 @@
 
                         <div class="card profile-details-card">
                             <div class="card-header">
-                                <h3>Contact Information</h3>
+                                <h3><i class="fas fa-address-card"></i> Contact Information</h3>
                             </div>
-                            <dl class="profile-detail-list">
-                                <div class="profile-detail-row">
-                                    <dt>Email Address</dt>
-                                    <dd id="profileEmailDisplay" class="loading">&ndash;</dd>
+                            <div class="profile-field">
+                                <div class="profile-field-label-row">
+                                    <label>Email Address</label>
+                                    <a href="#" class="profile-field-edit-link" id="changeEmailTriggerLink">Edit</a>
                                 </div>
-                                <div class="profile-detail-row">
-                                    <dt>Phone Number</dt>
-                                    <dd id="profilePhoneDisplay" class="loading">&ndash;</dd>
+                                <div class="profile-field-box">
+                                    <i class="fas fa-envelope"></i>
+                                    <span id="profileEmailDisplay" class="loading">&ndash;</span>
                                 </div>
-                                <div class="profile-detail-row">
-                                    <dt>Account Type</dt>
-                                    <dd id="profileAccountTypeDisplay" class="loading">&ndash;</dd>
+                            </div>
+                            <div class="profile-field">
+                                <div class="profile-field-label-row">
+                                    <label>Phone Number</label>
+                                    <a href="#" class="profile-field-edit-link profile-edit-trigger">Edit</a>
                                 </div>
-                            </dl>
+                                <div class="profile-field-box">
+                                    <i class="fas fa-phone"></i>
+                                    <span id="profilePhoneDisplay" class="loading">&ndash;</span>
+                                </div>
+                            </div>
+                            <div class="profile-field">
+                                <div class="profile-field-label-row">
+                                    <label>Account Type</label>
+                                </div>
+                                <div class="profile-field-box">
+                                    <i class="fas fa-id-badge"></i>
+                                    <span id="profileAccountTypeDisplay" class="loading">&ndash;</span>
+                                </div>
+                            </div>
 
                             <div class="card-header profile-section-header">
-                                <h3>Security</h3>
+                                <h3><i class="fas fa-shield-halved"></i> Security</h3>
                             </div>
-                            <div class="profile-detail-row">
-                                <dt>Password</dt>
-                                <dd><button class="btn profile-secondary-btn" id="changePasswordBtn">Change Password</button></dd>
+                            <div class="profile-field">
+                                <div class="profile-field-label-row">
+                                    <label>Password</label>
+                                </div>
+                                <div class="profile-field-box profile-field-box-action">
+                                    <i class="fas fa-lock"></i>
+                                    <span>Keep your account secure with a strong password</span>
+                                    <button class="btn profile-secondary-btn" id="changePasswordBtn">Change Password</button>
+                                </div>
+                            </div>
+
+                            <div class="profile-info-callout">
+                                <i class="fas fa-circle-info"></i>
+                                <p><strong>Account Information</strong><br>Your name, phone number, and photo can be updated any time via Edit Profile. Changing your email requires confirming a code sent to the new address first.</p>
                             </div>
                         </div>
                     </div>
@@ -607,7 +637,7 @@
                 <div class="form-group">
                     <label>Email Address</label>
                     <input type="email" id="editEmail" disabled>
-                    <small class="form-hint">Contact support to change your email.</small>
+                    <small class="form-hint">Use the Edit link next to Email Address on your Profile page to change this.</small>
                 </div>
                 <div class="form-group">
                     <label>Phone Number</label>
@@ -669,10 +699,20 @@
             </div>
 
             <form id="changePasswordForm">
-                <div class="form-group">
+                <div class="form-group" id="currentPasswordGroup">
                     <label>Current Password</label>
                     <input type="password" id="currentPassword" required>
                 </div>
+
+                <div class="form-group" id="resetCodeGroup" style="display:none;">
+                    <label>Verification Code</label>
+                    <input type="text" id="passwordResetCode" inputmode="numeric" maxlength="6" placeholder="6-digit code">
+                    <small class="form-hint">Sent to <span id="resetCodeEmailDisplay"></span> &mdash; expires in 15 minutes.</small>
+                </div>
+
+                <p class="profile-field-edit-link" id="forgotCurrentPasswordLink" style="cursor:pointer; margin: -8px 0 16px;">Forgot your current password?</p>
+                <p class="profile-field-edit-link" id="backToCurrentPasswordLink" style="cursor:pointer; margin: -8px 0 16px; display:none;">Use your current password instead</p>
+
                 <div class="form-group">
                     <label>New Password</label>
                     <input type="password" id="newPassword" required minlength="6">
@@ -682,8 +722,40 @@
                     <input type="password" id="confirmNewPassword" required minlength="6">
                 </div>
                 <p id="passwordFormError" class="form-error" style="display:none;"></p>
+                <button type="button" class="btn profile-secondary-btn" id="sendPasswordCodeBtn" style="width:100%; margin-bottom:12px; display:none;">Send Verification Code</button>
                 <button type="submit" class="btn" id="savePasswordBtn">Update Password</button>
             </form>
+        </div>
+    </div>
+
+    <div class="modal" id="changeEmailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change Email Address</h3>
+                <button class="modal-close" id="closeChangeEmailModal">&times;</button>
+            </div>
+
+            <div id="emailStepRequest">
+                <p class="form-hint" style="display:block; margin-bottom: 16px;">Your current email is <strong id="currentEmailDisplay"></strong>. Enter a new address and we'll send a code to confirm you own it.</p>
+                <div class="form-group">
+                    <label>New Email Address</label>
+                    <input type="email" id="newEmailInput" required>
+                </div>
+                <p id="emailRequestError" class="form-error" style="display:none;"></p>
+                <button type="button" class="btn" id="sendEmailCodeBtn" style="width:100%;">Send Verification Code</button>
+            </div>
+
+            <div id="emailStepVerify" style="display:none;">
+                <p class="form-hint" style="display:block; margin-bottom: 16px;">We sent a 6-digit code to <strong id="pendingEmailDisplay"></strong>. It expires in 15 minutes.</p>
+                <div class="form-group">
+                    <label>Verification Code</label>
+                    <input type="text" id="emailVerifyCode" inputmode="numeric" maxlength="6" placeholder="6-digit code">
+                </div>
+                <p id="emailVerifyError" class="form-error" style="display:none;"></p>
+                <button type="button" class="btn" id="confirmEmailChangeBtn" style="width:100%; margin-bottom:10px;">Confirm New Email</button>
+                <p class="profile-field-edit-link" id="resendEmailCodeLink" style="cursor:pointer; text-align:center;">Resend code</p>
+                <p class="profile-field-edit-link" id="changeEmailAddressLink" style="cursor:pointer; text-align:center; margin-top: 6px;">Use a different email</p>
+            </div>
         </div>
     </div>
 

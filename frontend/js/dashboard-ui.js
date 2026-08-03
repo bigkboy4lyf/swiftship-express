@@ -434,12 +434,94 @@ document.getElementById('editProfileBtn')?.addEventListener('click', () => {
     document.getElementById('editProfileModal').classList.add('active');
 });
 
+// The avatar camera badge and the Phone row's "Edit" link are just shortcuts
+// into the same Edit Profile modal -- no separate flow to maintain.
+document.querySelectorAll('.profile-edit-trigger').forEach(el => {
+    el.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('editProfileBtn')?.click();
+    });
+});
+
+// =============================================
+// CHANGE PASSWORD -- either with the current password, or (if forgotten)
+// with a one-time code emailed to the account, reusing the same
+// /api/auth/forgot-password + /api/auth/reset-password endpoints the
+// logged-out "Forgot password?" flow on the login page uses.
+// =============================================
+let passwordResetMode = false;
+let passwordResetCodeSent = false;
+
+function setPasswordResetMode(resetMode) {
+    passwordResetMode = resetMode;
+    passwordResetCodeSent = false;
+    document.getElementById('currentPasswordGroup').style.display = resetMode ? 'none' : '';
+    document.getElementById('currentPassword').required = !resetMode;
+    document.getElementById('resetCodeGroup').style.display = 'none';
+    document.getElementById('passwordResetCode').value = '';
+    document.getElementById('forgotCurrentPasswordLink').style.display = resetMode ? 'none' : '';
+    document.getElementById('backToCurrentPasswordLink').style.display = resetMode ? '' : 'none';
+    document.getElementById('sendPasswordCodeBtn').style.display = resetMode ? '' : 'none';
+    document.getElementById('sendPasswordCodeBtn').textContent = 'Send Verification Code';
+    document.getElementById('savePasswordBtn').style.display = resetMode ? 'none' : '';
+}
+
 document.getElementById('changePasswordBtn')?.addEventListener('click', () => {
     document.getElementById('changePasswordForm').reset();
     const errorEl = document.getElementById('passwordFormError');
     errorEl.style.display = 'none';
     errorEl.classList.remove('form-success');
+    setPasswordResetMode(false);
     document.getElementById('changePasswordModal').classList.add('active');
+});
+
+document.getElementById('forgotCurrentPasswordLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    setPasswordResetMode(true);
+    document.getElementById('passwordFormError').style.display = 'none';
+});
+
+document.getElementById('backToCurrentPasswordLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    setPasswordResetMode(false);
+    document.getElementById('passwordFormError').style.display = 'none';
+});
+
+document.getElementById('sendPasswordCodeBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('sendPasswordCodeBtn');
+    const errorEl = document.getElementById('passwordFormError');
+    const email = document.getElementById('profileEmailDisplay').textContent.trim();
+    errorEl.style.display = 'none';
+
+    btn.disabled = true;
+    const wasResend = passwordResetCodeSent;
+    btn.textContent = wasResend ? 'Resending...' : 'Sending...';
+    try {
+        const res = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Could not send code');
+
+        passwordResetCodeSent = true;
+        document.getElementById('resetCodeEmailDisplay').textContent = email;
+        document.getElementById('resetCodeGroup').style.display = '';
+        document.getElementById('savePasswordBtn').style.display = '';
+        btn.textContent = 'Resend Code';
+
+        errorEl.classList.add('form-success');
+        errorEl.textContent = wasResend ? 'A new code has been sent.' : `A verification code has been sent to ${email}.`;
+        errorEl.style.display = 'block';
+    } catch (err) {
+        errorEl.classList.remove('form-success');
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+        btn.textContent = wasResend ? 'Resend Code' : 'Send Verification Code';
+    } finally {
+        btn.disabled = false;
+    }
 });
 
 document.getElementById('closeEditProfileModal')?.addEventListener('click', () => {
@@ -447,6 +529,140 @@ document.getElementById('closeEditProfileModal')?.addEventListener('click', () =
 });
 document.getElementById('closeChangePasswordModal')?.addEventListener('click', () => {
     document.getElementById('changePasswordModal').classList.remove('active');
+});
+
+// =============================================
+// CHANGE EMAIL ADDRESS -- new address is only applied once the code sent
+// to it (not the current address) is confirmed, proving they own it.
+// =============================================
+let pendingNewEmail = '';
+
+function showEmailStep(step) {
+    document.getElementById('emailStepRequest').style.display = step === 'request' ? '' : 'none';
+    document.getElementById('emailStepVerify').style.display = step === 'verify' ? '' : 'none';
+}
+
+document.getElementById('changeEmailTriggerLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('currentEmailDisplay').textContent = document.getElementById('profileEmailDisplay').textContent.trim();
+    document.getElementById('newEmailInput').value = '';
+    document.getElementById('emailRequestError').style.display = 'none';
+    showEmailStep('request');
+    document.getElementById('changeEmailModal').classList.add('active');
+});
+
+document.getElementById('closeChangeEmailModal')?.addEventListener('click', () => {
+    document.getElementById('changeEmailModal').classList.remove('active');
+});
+
+document.getElementById('sendEmailCodeBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('sendEmailCodeBtn');
+    const errorEl = document.getElementById('emailRequestError');
+    const newEmail = document.getElementById('newEmailInput').value.trim();
+    errorEl.style.display = 'none';
+
+    if (!newEmail) {
+        errorEl.textContent = 'Please enter a new email address.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    try {
+        const res = await fetch('/api/dashboard/profile/email/request', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ newEmail })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Could not send verification code');
+
+        pendingNewEmail = newEmail;
+        document.getElementById('pendingEmailDisplay').textContent = newEmail;
+        document.getElementById('emailVerifyCode').value = '';
+        document.getElementById('emailVerifyError').style.display = 'none';
+        showEmailStep('verify');
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Verification Code';
+    }
+});
+
+document.getElementById('changeEmailAddressLink')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('emailRequestError').style.display = 'none';
+    showEmailStep('request');
+});
+
+document.getElementById('resendEmailCodeLink')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('emailVerifyError');
+    errorEl.style.display = 'none';
+    try {
+        const res = await fetch('/api/dashboard/profile/email/request', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ newEmail: pendingNewEmail })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Could not resend code');
+        errorEl.classList.add('form-success');
+        errorEl.textContent = 'A new code has been sent.';
+        errorEl.style.display = 'block';
+    } catch (err) {
+        errorEl.classList.remove('form-success');
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+    }
+});
+
+document.getElementById('confirmEmailChangeBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('confirmEmailChangeBtn');
+    const errorEl = document.getElementById('emailVerifyError');
+    const code = document.getElementById('emailVerifyCode').value.trim();
+    errorEl.classList.remove('form-success');
+    errorEl.style.display = 'none';
+
+    if (!code) {
+        errorEl.textContent = 'Please enter the verification code.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Confirming...';
+    try {
+        const res = await fetch('/api/dashboard/profile/email/verify', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ code })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Could not confirm email change');
+
+        const newEmail = result.data.email;
+        setElementText('profileEmailDisplay', newEmail);
+        document.getElementById('editEmail').value = newEmail;
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        localStorage.setItem('user', JSON.stringify({ ...storedUser, email: newEmail }));
+
+        errorEl.classList.add('form-success');
+        errorEl.textContent = 'Email address updated successfully.';
+        errorEl.style.display = 'block';
+        setTimeout(() => {
+            document.getElementById('changeEmailModal').classList.remove('active');
+        }, 1200);
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirm New Email';
+    }
 });
 
 // Clicking the dimmed backdrop closes whichever modal is open
@@ -574,6 +790,7 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
     errorEl.style.display = 'none';
 
     const currentPassword = document.getElementById('currentPassword').value;
+    const resetCode = document.getElementById('passwordResetCode').value.trim();
     const newPassword = document.getElementById('newPassword').value;
     const confirmPassword = document.getElementById('confirmNewPassword').value;
 
@@ -591,7 +808,16 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
         showError('New passwords do not match.');
         return;
     }
-    if (newPassword === currentPassword) {
+    if (passwordResetMode) {
+        if (!passwordResetCodeSent) {
+            showError('Please send a verification code first.');
+            return;
+        }
+        if (!resetCode) {
+            showError('Please enter the verification code.');
+            return;
+        }
+    } else if (newPassword === currentPassword) {
         showError('New password must be different from your current password.');
         return;
     }
@@ -599,11 +825,21 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
     saveBtn.disabled = true;
     saveBtn.textContent = 'Updating...';
     try {
-        const res = await fetch('/api/dashboard/password', {
-            method: 'PATCH',
-            headers: getHeaders(),
-            body: JSON.stringify({ currentPassword, newPassword })
-        });
+        const res = passwordResetMode
+            ? await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('profileEmailDisplay').textContent.trim(),
+                    code: resetCode,
+                    newPassword
+                })
+            })
+            : await fetch('/api/dashboard/password', {
+                method: 'PATCH',
+                headers: getHeaders(),
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
         const result = await res.json();
         if (!result.success) throw new Error(result.message || 'Could not update password');
 

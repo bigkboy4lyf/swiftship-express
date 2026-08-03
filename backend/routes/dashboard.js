@@ -6,7 +6,8 @@ const PaymentAccount = require('../models/PaymentAccount');
 const { protect } = require('../middleware/auth');
 const { documentVerificationCode } = require('../utils/verification');
 const sendEmail = require('../utils/sendEmail');
-const { quoteEmail, receiptSubmittedEmail } = require('../utils/emailTemplates');
+const { quoteEmail, receiptSubmittedEmail, otpEmail } = require('../utils/emailTemplates');
+const { issueOtp, canResend, verifyOtp, clearOtp } = require('../utils/otp');
 
 const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
 
@@ -629,6 +630,96 @@ router.patch('/password', protect, async (req, res) => {
         await user.save();
 
         res.json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+const EMAIL_PATTERN = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+
+// =============================================
+// REQUEST AN EMAIL CHANGE -- sends a code to the NEW address to confirm
+// the user actually owns it before it replaces the one on file. Also used
+// to resend: calling it again with the same newEmail just issues a fresh code.
+// =============================================
+router.post('/profile/email/request', protect, async (req, res) => {
+    try {
+        const newEmail = String(req.body.newEmail || '').trim().toLowerCase();
+        if (!newEmail || !EMAIL_PATTERN.test(newEmail)) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+        }
+
+        const user = await User.findById(req.user.id).select('+otpLastSentAt');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        if (newEmail === user.email) {
+            return res.status(400).json({ success: false, message: 'That is already your email address' });
+        }
+
+        const existing = await User.findOne({ email: newEmail });
+        if (existing) {
+            return res.status(400).json({ success: false, message: 'That email address is already in use' });
+        }
+        if (!canResend(user)) {
+            return res.status(429).json({ success: false, message: 'Please wait a moment before requesting another code.' });
+        }
+
+        user.pendingEmail = newEmail;
+        const code = await issueOtp(user);
+        await user.save();
+
+        sendEmail.inBackground(newEmail, 'Confirm your new SwiftShip Express email', otpEmail({
+            heading: 'Confirm your new email address',
+            message: `Hi ${user.name || ''}, use the code below to confirm this address as your new SwiftShip Express login email.`,
+            code
+        }), 'Email change verification');
+
+        res.json({ success: true, message: `A verification code has been sent to ${newEmail}.` });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// VERIFY THE CODE AND APPLY THE PENDING EMAIL CHANGE
+// =============================================
+router.post('/profile/email/verify', protect, async (req, res) => {
+    try {
+        const code = req.body.code;
+        if (!code) {
+            return res.status(400).json({ success: false, message: 'Verification code is required' });
+        }
+
+        const user = await User.findById(req.user.id).select('+otpCodeHash +otpCodeExpires +pendingEmail');
+        if (!user || !user.pendingEmail) {
+            return res.status(400).json({ success: false, message: 'No pending email change to confirm' });
+        }
+
+        const result = await verifyOtp(user, code);
+        if (!result.ok) {
+            const message = result.reason === 'expired'
+                ? 'That code has expired. Please request a new one.'
+                : 'Invalid verification code.';
+            return res.status(400).json({ success: false, message });
+        }
+
+        // Guards against another account claiming the address during the
+        // window the code was outstanding.
+        const existing = await User.findOne({ email: user.pendingEmail });
+        if (existing) {
+            user.pendingEmail = null;
+            clearOtp(user);
+            await user.save();
+            return res.status(400).json({ success: false, message: 'That email address was just claimed by another account. Please start over with a different address.' });
+        }
+
+        user.email = user.pendingEmail;
+        user.pendingEmail = null;
+        clearOtp(user);
+        await user.save();
+
+        res.json({ success: true, message: 'Email address updated successfully', data: { email: user.email } });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
