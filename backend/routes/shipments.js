@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Shipment = require('../models/Shipment');
-const { calculateShippingPrice } = require('../utils/pricing');
+const { calculateShippingPrice, estimateDeliveryDate } = require('../utils/pricing');
 const sendEmail = require('../utils/sendEmail');
 const { quoteEmail } = require('../utils/emailTemplates');
 
@@ -105,6 +105,7 @@ router.post('/create', async (req, res) => {
             status: 'pending_approval',
             totalPrice,
             pricing: { basePrice, insuranceCost, surcharge },
+            estimatedDelivery: estimateDeliveryDate(serviceType),
             trackingHistory: [{
                 status: 'pending_approval',
                 location: sender.city,

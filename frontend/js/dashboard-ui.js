@@ -284,6 +284,17 @@ function renderUserShipments(shipments) {
 // Invoice/Receipt" button build its document without a second lookup.
 let currentDetailShipment = null;
 
+// The full street address a shipment is actually going to -- previously only
+// city/country made it into this view, which told the customer which
+// country their package was headed to but not whether it had a real
+// delivery address on file at all.
+function formatDeliveryAddress(recipient) {
+    if (!recipient) return 'N/A';
+    const line2 = [recipient.city, recipient.postalCode].filter(Boolean).join(' ');
+    const parts = [recipient.address, line2, getCountryName(recipient.country) || recipient.country].filter(Boolean);
+    return parts.length ? parts.join(', ') : 'N/A';
+}
+
 window.viewShipmentDetail = function(id) {
     const s = lastLoadedUserShipments.find(x => x._id === id);
     if (!s) return;
@@ -303,8 +314,10 @@ window.viewShipmentDetail = function(id) {
         ['Dimensions', dimensionsText],
         ['Sender Name', s.sender?.name || 'Not specified'],
         ['Sender Email', s.sender?.email || 'Not specified'],
-        ['Destination', [s.recipient?.city, s.recipient?.country].filter(Boolean).join(', ') || 'N/A'],
-        ['Requested', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'N/A']
+        ['Recipient', s.recipient?.name ? `${s.recipient.name}${s.recipient.phone ? ' &middot; ' + s.recipient.phone : ''}` : 'Not specified'],
+        ['Delivery Address', formatDeliveryAddress(s.recipient)],
+        ['Requested', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'N/A'],
+        ['Estimated Delivery', s.estimatedDelivery ? new Date(s.estimatedDelivery).toLocaleDateString() : 'N/A']
     ];
 
     document.getElementById('shipmentDetailBody').innerHTML = rows.map(([label, value]) => `
@@ -881,7 +894,137 @@ function resetQuoteTab() {
         if (note) note.style.display = 'none';
     });
     lastDashboardQuoteContext = null;
+    resetRecipientAddressPicker();
 }
+
+// =============================================
+// RECIPIENT ADDRESS PICKER (Get Quote tab)
+// Lets a user ship to a saved address instead of retyping it every time,
+// same "pick one or add a new one" pattern as most checkout flows. Saved
+// addresses are cached here rather than re-fetched from renderAddresses()
+// (the Addresses tab) since the two lists can be open/edited independently.
+// =============================================
+let dashRecipientAddresses = [];
+let selectedRecipientAddressId = null;
+
+async function loadDashRecipientAddresses() {
+    try {
+        const res = await fetch(ADDR_API, { headers: getHeaders() });
+        dashRecipientAddresses = res.ok ? await res.json() : [];
+    } catch (err) {
+        console.error('Failed to load saved addresses:', err);
+        dashRecipientAddresses = [];
+    }
+    renderRecipientAddressOptions();
+}
+
+function renderRecipientAddressOptions() {
+    const container = document.getElementById('dashRecipientAddressList');
+    if (!container) return;
+
+    const destination = document.getElementById('dashDestination')?.value || '';
+    if (!destination) {
+        container.innerHTML = `<p class="recipient-address-hint">Select a destination country above to see matching saved addresses.</p>`;
+        return;
+    }
+
+    // Addresses created before this feature existed (e.g. the one address
+    // registration itself collects) may not have a recipient name/phone on
+    // file -- exclude those rather than let a shipment go out with a blank
+    // recipient. addr-fullname/addr-phone are required on every address the
+    // Addresses tab or this picker create going forward.
+    const matches = dashRecipientAddresses.filter(a => a.Country === destination && a.fullName && a.phone);
+    if (!matches.length) {
+        container.innerHTML = `<p class="recipient-address-hint">No saved addresses in ${getCountryName(destination)} yet. Add one below.</p>`;
+        return;
+    }
+
+    container.innerHTML = matches.map(addr => `
+        <label class="recipient-address-card">
+            <input type="radio" name="dashRecipientAddress" value="${addr._id}" ${selectedRecipientAddressId === addr._id ? 'checked' : ''}>
+            <div class="recipient-address-card-body">
+                <strong>${addr.fullName || 'Unnamed'}</strong>
+                <span>${addr.street}</span>
+                <span>${addr.city}, ${addr.state} ${addr.zipCode}</span>
+                ${addr.phone ? `<span>${addr.phone}</span>` : ''}
+            </div>
+        </label>
+    `).join('');
+
+    container.querySelectorAll('input[name="dashRecipientAddress"]').forEach(input => {
+        input.addEventListener('change', () => {
+            selectedRecipientAddressId = input.value;
+            showNewRecipientForm(false);
+        });
+    });
+}
+
+function showNewRecipientForm(show) {
+    const wrap = document.getElementById('dashNewRecipientForm');
+    if (wrap) wrap.style.display = show ? 'block' : 'none';
+    if (show) {
+        selectedRecipientAddressId = null;
+        document.querySelectorAll('input[name="dashRecipientAddress"]').forEach(r => { r.checked = false; });
+    }
+}
+
+function resetRecipientAddressPicker() {
+    dashRecipientAddresses = [];
+    selectedRecipientAddressId = null;
+    showNewRecipientForm(false);
+    const container = document.getElementById('dashRecipientAddressList');
+    if (container) container.innerHTML = `<p class="recipient-address-hint">Select a destination country above to see matching saved addresses.</p>`;
+}
+
+// Resolves whichever option the user actually chose (a saved address, or
+// the inline new-address form) into the plain shape shipments.js expects.
+// Returns null when nothing usable was provided, so the caller can block
+// submission with a clear message instead of shipping a blank recipient.
+function resolveRecipientDetails(destinationCode) {
+    const newFormOpen = document.getElementById('dashNewRecipientForm')?.style.display === 'block';
+
+    if (!newFormOpen && selectedRecipientAddressId) {
+        const addr = dashRecipientAddresses.find(a => a._id === selectedRecipientAddressId);
+        if (!addr) return null;
+        return {
+            name: addr.fullName,
+            phone: addr.phone,
+            address: addr.street,
+            city: addr.city,
+            postalCode: addr.zipCode,
+            country: addr.Country
+        };
+    }
+
+    if (newFormOpen) {
+        const name = document.getElementById('dashRecipName')?.value.trim();
+        const phone = document.getElementById('dashRecipPhone')?.value.trim();
+        const street = document.getElementById('dashRecipStreet')?.value.trim();
+        const city = document.getElementById('dashRecipCity')?.value.trim();
+        const state = document.getElementById('dashRecipState')?.value.trim();
+        const zipCode = document.getElementById('dashRecipZip')?.value.trim();
+        if (!name || !phone || !street || !city) return null;
+
+        return {
+            name, phone, address: street, city, postalCode: zipCode, country: destinationCode,
+            saveToAddressBook: document.getElementById('dashSaveRecipientAddress')?.checked,
+            newAddressPayload: { fullName: name, phone, street, city, state, zipCode, country: destinationCode }
+        };
+    }
+
+    return null;
+}
+
+document.getElementById('dashAddNewRecipientBtn')?.addEventListener('click', () => {
+    const wrap = document.getElementById('dashNewRecipientForm');
+    showNewRecipientForm(wrap?.style.display !== 'block');
+});
+
+document.getElementById('dashDestination')?.addEventListener('change', () => {
+    selectedRecipientAddressId = null;
+    showNewRecipientForm(false);
+    renderRecipientAddressOptions();
+});
 
 document.getElementById('dismissTrackingConfirm')?.addEventListener('click', () => {
     document.getElementById('trackingConfirmModal').classList.remove('active');
@@ -896,6 +1039,7 @@ document.getElementById('dismissTrackingConfirm')?.addEventListener('click', () 
 document.getElementById('openQuoteFormBtn')?.addEventListener('click', () => {
     document.getElementById('quoteCtaState').style.display = 'none';
     document.getElementById('quoteFormState').style.display = 'grid';
+    loadDashRecipientAddresses();
 });
 
 document.getElementById('closeQuoteFormBtn')?.addEventListener('click', () => {
@@ -932,6 +1076,7 @@ function setupDashLimitedServiceNotice(selectId, noteId) {
 function setupDashboardQuoteEngine() {
     populateCountrySelect(document.getElementById('dashOrigin'), 'Select country');
     populateCountrySelect(document.getElementById('dashDestination'), 'Select country');
+    populateCountrySelect(document.getElementById('addr-country'), 'Select country');
     setupDashLimitedServiceNotice('dashOrigin', 'dashOriginLimitedNote');
     setupDashLimitedServiceNotice('dashDestination', 'dashDestinationLimitedNote');
     initItemsRepeater(document.getElementById('dashItemsContainer'), document.getElementById('dashAddItemBtn'));
@@ -973,9 +1118,15 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
         return;
     }
 
+    const recipient = resolveRecipientDetails(destination);
+    if (!recipient) {
+        alert('Please select a saved recipient address, or add a new one with a name, phone, street, and city.');
+        return;
+    }
+
     const quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions: dimensionsInput });
 
-    lastDashboardQuoteContext = { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items };
+    lastDashboardQuoteContext = { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items, recipient };
 
     document.getElementById('dashResultService').textContent = QUOTE_SERVICE_DETAILS[serviceType]?.name || serviceType;
     document.getElementById('dashResultRoute').textContent = `${getCountryName(origin)} → ${getCountryName(destination)}`;
@@ -1003,13 +1154,20 @@ document.getElementById('confirmQuoteBookingBtn')?.addEventListener('click', asy
 
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user')) || {};
-    const { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items } = lastDashboardQuoteContext;
+    const { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items, recipient } = lastDashboardQuoteContext;
 
     const payload = {
         userId: user.id || user._id,
         serviceType,
         sender: { name: senderName || user.name || 'Customer', email: senderEmail, city: getCountryName(origin), country: origin },
-        recipient: { name: 'To Be Determined', city: getCountryName(destination), country: destination },
+        recipient: {
+            name: recipient.name,
+            phone: recipient.phone,
+            address: recipient.address,
+            city: recipient.city,
+            postalCode: recipient.postalCode,
+            country: recipient.country
+        },
         packageDetails: {
             dimensions: parseDimensions(dimensionsInput),
             items
@@ -1033,6 +1191,15 @@ document.getElementById('confirmQuoteBookingBtn')?.addEventListener('click', asy
         const result = await res.json();
 
         if (result.success) {
+            // Best-effort: a brand new recipient address the user chose to
+            // keep gets saved to their address book too, so next time it
+            // shows up as a one-click option instead of a full retype. This
+            // must never block the shipment itself -- e.g. the 3-address
+            // cap is a fine reason to skip it, not to fail the whole request.
+            if (recipient.saveToAddressBook && recipient.newAddressPayload) {
+                fetch(ADDR_API, { method: 'POST', headers: getHeaders(), body: JSON.stringify(recipient.newAddressPayload) })
+                    .catch(err => console.error('Could not save new recipient address:', err));
+            }
             showTrackingConfirmation(result.data.trackingNumber);
             loadDashboardData(token, user);
         } else {
@@ -1074,9 +1241,11 @@ function renderAddresses(addresses) {
             <div class="address-card">
                 <div class="address-card-icon"><i class="fas fa-map-marker-alt"></i></div>
                 <div class="address-card-body">
-                    <strong>${addr.street}</strong>
+                    <strong>${addr.fullName || 'Unnamed'}</strong>
+                    <span>${addr.street}</span>
                     <span>${addr.city}, ${addr.state} ${addr.zipCode}</span>
-                    <span>${addr.Country || ''}</span>
+                    <span>${getCountryName(addr.Country) || addr.Country || ''}</span>
+                    ${addr.phone ? `<span>${addr.phone}</span>` : ''}
                 </div>
                 <button type="button" class="address-card-delete" onclick="deleteAddress('${addr._id}')" title="Delete address" aria-label="Delete address">
                     <i class="fas fa-trash-alt"></i>
@@ -1101,6 +1270,8 @@ document.getElementById('cancel-address-btn')?.addEventListener('click', () => t
 document.getElementById('add-address-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
+        fullName: document.getElementById('addr-fullname').value.trim(),
+        phone: document.getElementById('addr-phone').value.trim(),
         street: document.getElementById('addr-street').value,
         city: document.getElementById('addr-city').value,
         state: document.getElementById('addr-state').value,

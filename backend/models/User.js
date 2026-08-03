@@ -100,6 +100,13 @@ const userSchema = new mongoose.Schema({
     addresses: {
         type: [
             {
+                // Not marked `required` even though the route always sends
+                // them -- addresses saved before this field existed lack it,
+                // and Mongoose re-validates every item in the array on any
+                // save(), so a `required` here would permanently block those
+                // older accounts from ever adding another address.
+                fullName: { type: String, default: '' },
+                phone: { type: String, default: '' },
                 street: { type: String, required: true },
                 city: { type: String, required: true },
                 state: { type: String, required: true },

@@ -18,6 +18,26 @@ const DISTANCE_FACTORS = {
     'US-CN': 3.3, 'US-IN': 3.4
 };
 
+// Same day ranges shown in the service dropdown copy on both quote forms
+// (frontend/js/quote-engine.js's QUOTE_SERVICE_DETAILS) -- kept here too
+// since that file never loads on the server. Used to turn "Express Delivery
+// (1-3 days)" into an actual calendar date once a shipment is created.
+const SERVICE_DELIVERY_DAYS = {
+    express: [1, 3],
+    standard: [5, 10],
+    economy: [10, 20],
+    international: [3, 7],
+    cargo: [7, 14]
+};
+
+// Estimates a single "arrives by" date -- the slower end of the range, since
+// that's the date a customer should actually plan around -- measured from
+// when the shipment request was made.
+function estimateDeliveryDate(serviceType, fromDate = new Date()) {
+    const [, maxDays] = SERVICE_DELIVERY_DAYS[serviceType] || SERVICE_DELIVERY_DAYS.standard;
+    return new Date(fromDate.getTime() + maxDays * 24 * 60 * 60 * 1000);
+}
+
 function calculateShippingPrice({ originCountry, destinationCountry, serviceType, weight, insuranceValue }) {
     const routeKey = `${String(originCountry || '').toUpperCase()}-${String(destinationCountry || '').toUpperCase()}`;
     const distanceFactor = DISTANCE_FACTORS[routeKey] || 2.0;
@@ -38,4 +58,4 @@ function calculateShippingPrice({ originCountry, destinationCountry, serviceType
     };
 }
 
-module.exports = { calculateShippingPrice };
+module.exports = { calculateShippingPrice, estimateDeliveryDate };

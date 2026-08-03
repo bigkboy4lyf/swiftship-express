@@ -262,6 +262,16 @@ function renderAllShipments(shipments) {
 // Invoice/Receipt" button build its document without a second lookup.
 let currentDetailShipment = null;
 
+// The full street address a shipment is actually going to -- previously only
+// city/country made it into this view, which told admin which country a
+// package was headed to but not the actual address to ship it to.
+function formatDeliveryAddress(recipient) {
+    if (!recipient) return 'N/A';
+    const line2 = [recipient.city, recipient.postalCode].filter(Boolean).join(' ');
+    const parts = [recipient.address, line2, getCountryName(recipient.country) || recipient.country].filter(Boolean);
+    return parts.length ? parts.join(', ') : 'N/A';
+}
+
 window.viewShipmentDetail = function(id) {
     const s = lastLoadedShipments.find(x => x._id === id);
     if (!s) return;
@@ -282,8 +292,10 @@ window.viewShipmentDetail = function(id) {
         ['Dimensions', dimensionsText],
         ['Sender Name', s.sender?.name || 'Not specified'],
         ['Sender Email', s.sender?.email || 'Not specified'],
-        ['Destination', [s.recipient?.city, s.recipient?.country].filter(Boolean).join(', ') || 'N/A'],
-        ['Requested', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'N/A']
+        ['Recipient', s.recipient?.name ? `${s.recipient.name}${s.recipient.phone ? ' &middot; ' + s.recipient.phone : ''}` : 'Not specified'],
+        ['Delivery Address', formatDeliveryAddress(s.recipient)],
+        ['Requested', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'N/A'],
+        ['Estimated Delivery', s.estimatedDelivery ? new Date(s.estimatedDelivery).toLocaleDateString() : 'N/A']
     ];
 
     document.getElementById('shipmentDetailBody').innerHTML = rows.map(([label, value]) => `

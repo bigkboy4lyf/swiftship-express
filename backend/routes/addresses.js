@@ -36,9 +36,14 @@ router.post('/', protect, async (req, res) => {
             return res.status(400).json({ message: 'Address limit of 3 reached.' });
         }
 
-        const { street, city, state, zipCode, country } = req.body;
+        const { fullName, phone, street, city, state, zipCode, country } = req.body;
+        if (!fullName || !phone || !street || !city || !state || !zipCode || !country) {
+            return res.status(400).json({ message: 'Please fill in every field, including recipient name and phone.' });
+        }
 
         user.addresses.push({
+            fullName,
+            phone,
             street,
             city,
             state,

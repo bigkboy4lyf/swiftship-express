@@ -270,6 +270,51 @@
                                 <p class="quote-limited-service-note" id="dashOriginLimitedNote" style="display:none;"></p>
                                 <p class="quote-limited-service-note" id="dashDestinationLimitedNote" style="display:none;"></p>
 
+                                <div class="quote-recipient-section">
+                                    <label>Recipient Address *</label>
+                                    <div id="dashRecipientAddressList" class="recipient-address-list">
+                                        <p class="recipient-address-hint">Select a destination country above to see matching saved addresses.</p>
+                                    </div>
+                                    <button type="button" id="dashAddNewRecipientBtn" class="quote-add-item-btn">
+                                        <i class="fas fa-plus"></i> Add a new address
+                                    </button>
+
+                                    <div id="dashNewRecipientForm" class="address-form-wrapper" style="display:none;">
+                                        <div class="form-group">
+                                            <label>Recipient Full Name *</label>
+                                            <input type="text" id="dashRecipName" placeholder="Who receives this package">
+                                        </div>
+                                        <div class="quote-field-row">
+                                            <div class="form-group">
+                                                <label>Phone *</label>
+                                                <input type="tel" id="dashRecipPhone" placeholder="Phone number">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Street Address *</label>
+                                                <input type="text" id="dashRecipStreet" placeholder="e.g., 123 Main St">
+                                            </div>
+                                        </div>
+                                        <div class="quote-field-row">
+                                            <div class="form-group">
+                                                <label>City *</label>
+                                                <input type="text" id="dashRecipCity" placeholder="City">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>State / Province</label>
+                                                <input type="text" id="dashRecipState" placeholder="State">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Zip / Postal Code</label>
+                                                <input type="text" id="dashRecipZip" placeholder="Zip code">
+                                            </div>
+                                        </div>
+                                        <label class="quote-checkbox-label">
+                                            <input type="checkbox" id="dashSaveRecipientAddress" checked>
+                                            Save this address to my address book for next time
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <div class="form-group">
                                     <label>Shipping Service *</label>
                                     <select id="dashServiceType" required>
@@ -376,6 +421,17 @@
                         <div id="address-form-wrapper" class="address-form-wrapper" style="display: none;">
                             <h4>Add New Address</h4>
                             <form id="add-address-form">
+                                <div class="quote-field-row">
+                                    <div class="form-group">
+                                        <label>Recipient Full Name *</label>
+                                        <input type="text" id="addr-fullname" placeholder="Who receives packages here" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Phone Number *</label>
+                                        <input type="tel" id="addr-phone" placeholder="Phone number" required>
+                                    </div>
+                                </div>
+
                                 <div class="form-group">
                                     <label>Street Address *</label>
                                     <input type="text" id="addr-street" placeholder="e.g., 123 Main St" required>
@@ -399,7 +455,9 @@
                                     </div>
                                     <div class="form-group">
                                         <label>Country *</label>
-                                        <input type="text" id="addr-country" placeholder="Country" required>
+                                        <select id="addr-country" required>
+                                            <option value="">Select country</option>
+                                        </select>
                                     </div>
                                 </div>
 
