@@ -1124,7 +1124,17 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
         return;
     }
 
-    const quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions: dimensionsInput });
+    const submitBtn = this.querySelector('button[type="submit"]');
+    let quote;
+    try {
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Calculating...'; }
+        quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions: dimensionsInput });
+    } catch (error) {
+        alert(error.message);
+        return;
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Calculate Quote'; }
+    }
 
     lastDashboardQuoteContext = { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items, recipient };
 

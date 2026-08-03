@@ -32,13 +32,6 @@ const QUOTE_SERVICE_DETAILS = {
     cargo: { name: 'Cargo/Freight Shipping', delivery: '7-14 days', baseMultiplier: 1.5 }
 };
 
-// Used only by the local fallback calculator when the backend is unreachable.
-// Anything not listed falls back to a flat distance factor of 2.0.
-const QUOTE_DISTANCE_FACTORS = {
-    'US-CA': 1.0, 'US-UK': 2.5, 'US-GB': 2.5, 'US-DE': 2.7,
-    'US-FR': 2.8, 'US-AU': 3.5, 'US-JP': 3.2, 'US-CN': 3.3, 'US-IN': 3.4
-};
-
 function categoryLabel(value) {
     const match = ITEM_CATEGORIES.find(([v]) => v === value);
     return match ? match[1] : (value || 'Other');
@@ -172,39 +165,22 @@ function summarizeItems(items) {
 // =============================================
 // CALCULATION
 // =============================================
-function calculateLocalFallback({ originCountry, destinationCountry, serviceType, items }) {
-    const { totalWeight, totalValue } = summarizeItems(items);
-    const route = `${originCountry}-${destinationCountry}`;
-    const reverseRoute = `${destinationCountry}-${originCountry}`;
-    const distanceFactor = QUOTE_DISTANCE_FACTORS[route] || QUOTE_DISTANCE_FACTORS[reverseRoute] || 2.0;
-
-    const weightFactor = (totalWeight || 1) * 0.5;
-    const serviceFactor = QUOTE_SERVICE_DETAILS[serviceType]?.baseMultiplier || 1.0;
-    const basePrice = Math.max(10 + (distanceFactor * 5) + (weightFactor * 2) * serviceFactor, 15);
-    const insuranceCost = totalValue > 0 ? totalValue * 0.01 : 0;
-    const surcharge = basePrice * 0.075;
-    const totalPrice = basePrice + insuranceCost + surcharge;
-
-    const round2 = n => Math.round(n * 100) / 100;
-    return {
-        basePrice: round2(basePrice),
-        insuranceCost: round2(insuranceCost),
-        surcharge: round2(surcharge),
-        totalPrice: round2(totalPrice),
-        totalWeight,
-        totalValue,
-        source: 'local'
-    };
-}
-
-// Calls the backend calculator (pure -- no shipment is created at this
-// stage) and falls back to an equivalent local calculation if the request
-// fails, so the quote step never just breaks if the network hiccups.
+// Pricing lives in exactly one place: backend/utils/pricing.js (the
+// distance-driven per-country-pair rate card). This used to fall back to a
+// crude local approximation -- a flat "distance factor" of 2.0 for every
+// route except 8 hardcoded ones -- whenever the request failed. That's not
+// just stale now that the real engine prices every country pair distinctly;
+// a silently-substituted wrong price is actively worse than an honest error,
+// since whatever the quote preview shows here, the shipment gets created
+// (and actually priced) by the same backend anyway. So a failed request
+// throws instead of guessing, and the caller is expected to show the error
+// rather than quietly displaying a made-up number.
 async function calculateQuote({ originCountry, destinationCountry, serviceType, items, dimensions }) {
-    const { totalWeight, totalValue, description, category } = summarizeItems(items);
+    const { totalWeight, totalValue } = summarizeItems(items);
 
+    let response;
     try {
-        const response = await fetch('/api/quotes/calculate', {
+        response = await fetch('/api/quotes/calculate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -212,25 +188,22 @@ async function calculateQuote({ originCountry, destinationCountry, serviceType, 
                 items, dimensions
             })
         });
-        const result = await response.json();
-        if (result.success) {
-            return {
-                basePrice: result.data.basePrice,
-                insuranceCost: result.data.insuranceCost,
-                surcharge: result.data.surcharge,
-                totalPrice: result.data.totalPrice,
-                totalWeight: result.data.totalWeight ?? totalWeight,
-                totalValue: result.data.totalValue ?? totalValue,
-                deliveryEstimate: result.data.deliveryEstimate,
-                source: 'backend'
-            };
-        }
     } catch (error) {
-        console.warn('Quote backend unavailable, using local fallback calculation.', error);
+        throw new Error('Could not reach the pricing service. Check your connection and try again.');
+    }
+
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Could not calculate a quote right now. Please try again.');
     }
 
     return {
-        ...calculateLocalFallback({ originCountry, destinationCountry, serviceType, items }),
-        deliveryEstimate: QUOTE_SERVICE_DETAILS[serviceType]?.delivery || '5-10 days'
+        basePrice: result.data.basePrice,
+        insuranceCost: result.data.insuranceCost,
+        surcharge: result.data.surcharge,
+        totalPrice: result.data.totalPrice,
+        totalWeight: result.data.totalWeight ?? totalWeight,
+        totalValue: result.data.totalValue ?? totalValue,
+        deliveryEstimate: result.data.deliveryEstimate
     };
 }

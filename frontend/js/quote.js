@@ -75,7 +75,17 @@ function setupQuoteFormHandler(token, user) {
             return;
         }
 
-        const quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions });
+        const submitBtn = quoteForm.querySelector('button[type="submit"]');
+        let quote;
+        try {
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Calculating...'; }
+            quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions });
+        } catch (error) {
+            alert(error.message);
+            return;
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Calculate Quote'; }
+        }
 
         // Kept so "Book Now" creates exactly the shipment that was just
         // quoted, instead of re-deriving it from the form a second time.
