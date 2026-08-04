@@ -304,7 +304,7 @@ window.viewShipmentDetail = function(id) {
         ['Weight', s.package?.weight ? `${s.package.weight} kg` : 'Not specified'],
         ['Dimensions', dimensionsText],
         ['Sender Name', s.sender?.name || 'Not specified'],
-        ['Sender Email', s.sender?.email || 'Not specified'],
+        ['Contact Email', s.contactEmail || s.sender?.email || 'Not specified'],
         ['Recipient', s.recipient?.name ? `${s.recipient.name}${s.recipient.phone ? ' &middot; ' + s.recipient.phone : ''}` : 'Not specified'],
         ['Delivery Address', formatDeliveryAddress(s.recipient)],
         ['Requested', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'N/A'],
@@ -1098,7 +1098,7 @@ function openInvoiceOrReceipt(s) {
 
     document.getElementById('invoiceBillTo').innerHTML = `
         <strong>${s.sender?.name || s.userId?.name || 'N/A'}</strong><br>
-        ${s.sender?.email || s.userId?.email || ''}
+        ${s.contactEmail || s.sender?.email || s.userId?.email || ''}
     `;
     document.getElementById('invoiceShipmentSummary').innerHTML = `
         Tracking: <strong>${s.trackingNumber}</strong><br>

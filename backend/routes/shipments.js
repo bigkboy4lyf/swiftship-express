@@ -58,7 +58,7 @@ router.get('/track/:trackingNumber', async (req, res) => {
 // =============================================
 router.post('/create', async (req, res) => {
     try {
-        const { sender, recipient, packageDetails, serviceType, userId } = req.body;
+        const { sender, recipient, packageDetails, serviceType, userId, contactEmail } = req.body;
 
         const senderCountry = String(sender?.country || '').toUpperCase();
         const recipientCountry = String(recipient?.country || '').toUpperCase();
@@ -111,6 +111,9 @@ router.post('/create', async (req, res) => {
             userId: userId, // Links the shipment to the logged-in user
             serviceType,
             shipmentType,
+            // Falls back to sender.email for any direct API caller still using
+            // the old shape -- see the contactEmail comment in the schema.
+            contactEmail: contactEmail || sender?.email,
             sender,
             recipient,
             package: {
@@ -143,27 +146,26 @@ router.post('/create', async (req, res) => {
 
         const accountUser = await User.findById(userId).select('email');
 
-        if (accountUser?.email) {
-            sendEmail.inBackground(
-                accountUser.email,
-                `Your SwiftShip Express Quote -- ${trackingNumber}`,
-                quoteEmail({
-                    customerName: sender.name,
-                    trackingNumber,
-                    originCity: sender.city,
-                    originCountry: sender.country,
-                    destCity: recipient?.city,
-                    destCountry: recipient?.country,
-                    serviceType,
-                    weight: aggregateWeight,
-                    pricing: { basePrice, insuranceCost, surcharge },
-                    totalPrice,
-                    dashboardUrl: `${req.protocol}://${req.get('host')}/dashboard`,
-                    supportEmail: SUPPORT_EMAIL
-                }),
-                'Quote'
-            );
-        }
+        sendEmail.toShipmentContacts(
+            newShipment,
+            accountUser?.email,
+            `Your SwiftShip Express Quote -- ${trackingNumber}`,
+            quoteEmail({
+                customerName: sender.name,
+                trackingNumber,
+                originCity: sender.city,
+                originCountry: sender.country,
+                destCity: recipient?.city,
+                destCountry: recipient?.country,
+                serviceType,
+                weight: aggregateWeight,
+                pricing: { basePrice, insuranceCost, surcharge },
+                totalPrice,
+                dashboardUrl: `${req.protocol}://${req.get('host')}/dashboard`,
+                supportEmail: SUPPORT_EMAIL
+            }),
+            'Quote'
+        );
 
         res.status(201).json({ success: true, data: newShipment });
     } catch (error) {

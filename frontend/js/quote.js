@@ -13,9 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (user) {
         const senderNameInput = document.getElementById('senderName');
-        const senderEmailInput = document.getElementById('senderEmail');
+        const contactEmailInput = document.getElementById('contactEmail');
         if (senderNameInput && !senderNameInput.value) senderNameInput.value = user.name || '';
-        if (senderEmailInput && !senderEmailInput.value) senderEmailInput.value = user.email || '';
+        if (contactEmailInput && !contactEmailInput.value) contactEmailInput.value = user.email || '';
     }
 
     const shipmentTypeToggle = setupShipmentTypeToggle({
@@ -64,12 +64,12 @@ function setupQuoteFormHandler(token, user, shipmentTypeToggle) {
         const serviceType = document.getElementById('serviceType').value;
         const dimensions = document.getElementById('dimensions').value || 'N/A';
         const senderName = document.getElementById('senderName').value;
-        const senderEmail = document.getElementById('senderEmail').value;
+        const contactEmail = document.getElementById('contactEmail').value;
         const items = collectItems(document.getElementById('quoteItemsContainer'));
         const isLocal = shipmentTypeToggle?.isLocalMode() || false;
         const shipmentType = isLocal ? 'local' : 'international';
 
-        if (!origin || !destination || !serviceType || !senderName || !senderEmail) {
+        if (!origin || !destination || !serviceType || !senderName || !contactEmail) {
             alert('Please fill in all required fields.');
             return;
         }
@@ -103,7 +103,7 @@ function setupQuoteFormHandler(token, user, shipmentTypeToggle) {
 
         // Kept so "Book Now" creates exactly the shipment that was just
         // quoted, instead of re-deriving it from the form a second time.
-        lastQuoteContext = { origin, destination, serviceType, shipmentType, dimensions, senderName, senderEmail, items, quote, user };
+        lastQuoteContext = { origin, destination, serviceType, shipmentType, dimensions, senderName, contactEmail, items, quote, user };
 
         displayUnifiedQuote({
             serviceName: QUOTE_SERVICE_DETAILS[serviceType]?.name || serviceType,
@@ -388,7 +388,7 @@ function setupBookingEngine() {
             return;
         }
 
-        const { origin, destination, serviceType, shipmentType, dimensions, senderName, senderEmail, items, user } = lastQuoteContext;
+        const { origin, destination, serviceType, shipmentType, dimensions, senderName, contactEmail, items, user } = lastQuoteContext;
         const dimArray = (dimensions && dimensions !== 'N/A' ? dimensions : '0x0x0').toLowerCase().split('x').map(n => parseFloat(n.trim()) || 0);
 
         const bookingPayload = {
@@ -398,7 +398,8 @@ function setupBookingEngine() {
             userId: user ? (user.id || user._id) : '65f1a2b3c4d5e6f7a8b9c0d1',
             serviceType,
             shipmentType,
-            sender: { name: senderName, email: senderEmail, country: origin, city: getCountryName(origin) },
+            contactEmail,
+            sender: { name: senderName, country: origin, city: getCountryName(origin) },
             recipient: { name: `${senderName} - Recipient`, city: getCountryName(destination), country: destination },
             packageDetails: {
                 dimensions: { length: dimArray[0] || 0, width: dimArray[1] || 0, height: dimArray[2] || 0 },

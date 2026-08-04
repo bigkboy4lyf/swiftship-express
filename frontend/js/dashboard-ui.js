@@ -319,7 +319,7 @@ window.viewShipmentDetail = function(id) {
         ['Weight', s.package?.weight ? `${s.package.weight} kg` : 'Not specified'],
         ['Dimensions', dimensionsText],
         ['Sender Name', s.sender?.name || 'Not specified'],
-        ['Sender Email', s.sender?.email || 'Not specified'],
+        ['Contact Email', s.contactEmail || s.sender?.email || 'Not specified'],
         ['Recipient', s.recipient?.name ? `${s.recipient.name}${s.recipient.phone ? ' &middot; ' + s.recipient.phone : ''}` : 'Not specified'],
         ['Delivery Address', formatDeliveryAddress(s.recipient)],
         ['Requested', s.createdAt ? new Date(s.createdAt).toLocaleString() : 'N/A'],
@@ -1117,7 +1117,7 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
     e.preventDefault();
 
     const senderName = document.getElementById('dashSenderName')?.value.trim();
-    const senderEmail = document.getElementById('dashSenderEmail')?.value.trim();
+    const contactEmail = document.getElementById('dashContactEmail')?.value.trim();
     const origin = document.getElementById('dashOrigin')?.value || '';
     const destination = document.getElementById('dashDestination')?.value || '';
     const serviceType = document.getElementById('dashServiceType')?.value || 'standard';
@@ -1161,7 +1161,7 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Calculate Quote'; }
     }
 
-    lastDashboardQuoteContext = { senderName, senderEmail, origin, destination, serviceType, shipmentType, dimensionsInput, items, recipient };
+    lastDashboardQuoteContext = { senderName, contactEmail, origin, destination, serviceType, shipmentType, dimensionsInput, items, recipient };
 
     document.getElementById('dashResultService').textContent = QUOTE_SERVICE_DETAILS[serviceType]?.name || serviceType;
     document.getElementById('dashResultRoute').textContent = `${getCountryName(origin)} → ${getCountryName(destination)}`;
@@ -1189,13 +1189,14 @@ document.getElementById('confirmQuoteBookingBtn')?.addEventListener('click', asy
 
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user')) || {};
-    const { senderName, senderEmail, origin, destination, serviceType, shipmentType, dimensionsInput, items, recipient } = lastDashboardQuoteContext;
+    const { senderName, contactEmail, origin, destination, serviceType, shipmentType, dimensionsInput, items, recipient } = lastDashboardQuoteContext;
 
     const payload = {
         userId: user.id || user._id,
         serviceType,
         shipmentType,
-        sender: { name: senderName || user.name || 'Customer', email: senderEmail, city: getCountryName(origin), country: origin },
+        contactEmail,
+        sender: { name: senderName || user.name || 'Customer', city: getCountryName(origin), country: origin },
         recipient: {
             name: recipient.name,
             phone: recipient.phone,
@@ -1383,7 +1384,7 @@ function openInvoiceOrReceipt(s) {
 
     document.getElementById('invoiceBillTo').innerHTML = `
         <strong>${s.sender?.name || 'N/A'}</strong><br>
-        ${s.sender?.email || ''}
+        ${s.contactEmail || s.sender?.email || ''}
     `;
     document.getElementById('invoiceShipmentSummary').innerHTML = `
         Tracking: <strong>${s.trackingNumber}</strong><br>

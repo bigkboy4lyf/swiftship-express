@@ -284,27 +284,28 @@ router.post('/shipments', protect, async (req, res) => {
             link: SHIPMENTS_TAB_LINK
         });
 
-        if (shipment.sender?.email) {
-            sendEmail.inBackground(
-                shipment.sender.email,
-                `Your SwiftShip Express Quote -- ${shipment.trackingNumber}`,
-                quoteEmail({
-                    customerName: shipment.sender.name,
-                    trackingNumber: shipment.trackingNumber,
-                    originCity: shipment.sender.city,
-                    originCountry: shipment.sender.country,
-                    destCity: shipment.recipient?.city,
-                    destCountry: shipment.recipient?.country,
-                    serviceType: shipment.serviceType,
-                    weight: shipment.package?.weight,
-                    pricing: shipment.pricing,
-                    totalPrice: shipment.totalPrice,
-                    dashboardUrl: `${req.protocol}://${req.get('host')}/dashboard`,
-                    supportEmail: SUPPORT_EMAIL
-                }),
-                'Quote'
-            );
-        }
+        const accountUser = await User.findById(shipment.userId).select('email');
+
+        sendEmail.toShipmentContacts(
+            shipment,
+            accountUser?.email,
+            `Your SwiftShip Express Quote -- ${shipment.trackingNumber}`,
+            quoteEmail({
+                customerName: shipment.sender?.name,
+                trackingNumber: shipment.trackingNumber,
+                originCity: shipment.sender?.city,
+                originCountry: shipment.sender?.country,
+                destCity: shipment.recipient?.city,
+                destCountry: shipment.recipient?.country,
+                serviceType: shipment.serviceType,
+                weight: shipment.package?.weight,
+                pricing: shipment.pricing,
+                totalPrice: shipment.totalPrice,
+                dashboardUrl: `${req.protocol}://${req.get('host')}/dashboard`,
+                supportEmail: SUPPORT_EMAIL
+            }),
+            'Quote'
+        );
 
         res.status(201).json({ success: true, data: shipment });
     } catch (error) {

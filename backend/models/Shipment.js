@@ -27,6 +27,12 @@ const shipmentSchema = new mongoose.Schema({
     // backend/utils/countryDistancePricing.js); defaults to 'international'
     // so every shipment created before this field existed reads correctly.
     shipmentType: { type: String, enum: ['international', 'local'], default: 'international' },
+    // Neutral notification address -- may belong to the sender or the
+    // recipient, whichever the customer wants updates sent to. Kept separate
+    // from sender.email (still present below) so this isn't tied to being
+    // "the sender's own email". See utils/sendEmail.js#shipmentRecipients for
+    // how this combines with the account owner's login email.
+    contactEmail: String,
     // totalPrice stays the single source of truth other code already reads
     // (e.g. the admin revenue aggregation) -- pricing below is purely the
     // itemized breakdown for invoices/receipts, computed once at creation so
