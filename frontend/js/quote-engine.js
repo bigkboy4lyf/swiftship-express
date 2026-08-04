@@ -24,13 +24,31 @@ const ITEM_CATEGORIES = [
     ['other', 'Other']
 ];
 
+// `modes` says which shipment type(s) each service tier can be booked under.
+// International Priority is meaningless for a same-country move, so it's
+// international-only; every other tier is a generic speed level that works
+// for both. This is the single source of truth for the Shipping Service
+// dropdown -- populateServiceTypeSelect() below builds the <option> list
+// from it instead of it being hardcoded separately in each form's HTML.
 const QUOTE_SERVICE_DETAILS = {
-    express: { name: 'Express Delivery', delivery: '1-3 days', baseMultiplier: 1.8 },
-    standard: { name: 'Standard Shipping', delivery: '5-10 days', baseMultiplier: 1.0 },
-    economy: { name: 'Economy Shipping', delivery: '10-20 days', baseMultiplier: 0.7 },
-    international: { name: 'International Priority', delivery: '3-7 days', baseMultiplier: 2.2 },
-    cargo: { name: 'Cargo/Freight Shipping', delivery: '7-14 days', baseMultiplier: 1.5 }
+    express: { name: 'Express Delivery', delivery: '1-3 days', baseMultiplier: 1.8, modes: ['local', 'international'] },
+    standard: { name: 'Standard Shipping', delivery: '5-10 days', baseMultiplier: 1.0, modes: ['local', 'international'] },
+    economy: { name: 'Economy Shipping', delivery: '10-20 days', baseMultiplier: 0.7, modes: ['local', 'international'] },
+    international: { name: 'International Priority', delivery: '3-7 days', baseMultiplier: 2.2, modes: ['international'] },
+    cargo: { name: 'Cargo/Freight Shipping', delivery: '7-14 days', baseMultiplier: 1.5, modes: ['local', 'international'] }
 };
+
+// Fills the Shipping Service <select> with only the tiers valid for the
+// given mode ('local' or 'international'). Shared by both quote forms.
+function populateServiceTypeSelect(selectEl, mode) {
+    if (!selectEl) return;
+    const options = [`<option value="">Select service type</option>`];
+    Object.entries(QUOTE_SERVICE_DETAILS).forEach(([value, detail]) => {
+        if (!detail.modes.includes(mode)) return;
+        options.push(`<option value="${value}">${detail.name} (${detail.delivery})</option>`);
+    });
+    selectEl.innerHTML = options.join('');
+}
 
 function categoryLabel(value) {
     const match = ITEM_CATEGORIES.find(([v]) => v === value);
@@ -163,6 +181,78 @@ function summarizeItems(items) {
 }
 
 // =============================================
+// SHIPMENT TYPE TOGGLE (Local vs International)
+// =============================================
+// Shared by both quote forms. In "local" mode, origin/destination are both
+// restricted to LOCAL_SHIPPING_COUNTRIES and locked to the same value (a
+// local shipment is a same-country move); in "international" mode, behavior
+// is exactly what it was before this toggle existed -- full country list,
+// origin and destination picked independently. Returns an isLocalMode()
+// getter so the caller's submit handler can branch its validation/payload.
+function setupShipmentTypeToggle({ radioName, originSelectId, destinationSelectId, noteId, originLabelId, destinationLabelId, serviceTypeSelectId }) {
+    const originSelect = document.getElementById(originSelectId);
+    const destinationSelect = document.getElementById(destinationSelectId);
+    const note = document.getElementById(noteId);
+    const originLabel = document.getElementById(originLabelId);
+    const destinationLabel = document.getElementById(destinationLabelId);
+    const serviceTypeSelect = document.getElementById(serviceTypeSelectId);
+    const radios = document.querySelectorAll(`input[name="${radioName}"]`);
+    if (!originSelect || !destinationSelect || !radios.length) return { isLocalMode: () => false };
+
+    function isLocalMode() {
+        return document.querySelector(`input[name="${radioName}"]:checked`)?.value === 'local';
+    }
+
+    function syncDestinationToOrigin() {
+        destinationSelect.value = originSelect.value;
+        destinationSelect.dispatchEvent(new Event('change'));
+    }
+
+    function apply() {
+        const local = isLocalMode();
+        const prevOrigin = originSelect.value;
+        const prevDestination = destinationSelect.value;
+
+        populateCountrySelect(originSelect, 'Select country', { onlyLocal: local });
+        populateCountrySelect(destinationSelect, 'Select country', { onlyLocal: local });
+        // Keep prior selections when they're still valid options in the new list.
+        if (!local || isLocalShippingCountry(prevOrigin)) originSelect.value = prevOrigin;
+        if (!local && isLocalShippingCountry(prevDestination)) destinationSelect.value = prevDestination;
+
+        destinationSelect.disabled = local;
+        if (originLabel) originLabel.textContent = local ? 'Local Country *' : 'Origin Country *';
+        if (destinationLabel) destinationLabel.textContent = local ? 'Destination (same as origin)' : 'Destination Country *';
+
+        if (serviceTypeSelect) {
+            const prevServiceType = serviceTypeSelect.value;
+            populateServiceTypeSelect(serviceTypeSelect, local ? 'local' : 'international');
+            if (QUOTE_SERVICE_DETAILS[prevServiceType]?.modes.includes(local ? 'local' : 'international')) {
+                serviceTypeSelect.value = prevServiceType;
+            }
+        }
+
+        if (note) {
+            if (local) {
+                const names = [...LOCAL_SHIPPING_COUNTRIES].map(getCountryName).sort().join(', ');
+                note.innerHTML = `<i class="fas fa-info-circle"></i> Local shipping is currently available within: ${names}.`;
+                note.style.display = 'block';
+            } else {
+                note.style.display = 'none';
+            }
+        }
+
+        if (local) syncDestinationToOrigin();
+    }
+
+    radios.forEach(r => r.addEventListener('change', apply));
+    originSelect.addEventListener('change', () => { if (isLocalMode()) syncDestinationToOrigin(); });
+
+    apply();
+
+    return { isLocalMode };
+}
+
+// =============================================
 // CALCULATION
 // =============================================
 // Pricing lives in exactly one place: backend/utils/pricing.js (the
@@ -175,7 +265,7 @@ function summarizeItems(items) {
 // (and actually priced) by the same backend anyway. So a failed request
 // throws instead of guessing, and the caller is expected to show the error
 // rather than quietly displaying a made-up number.
-async function calculateQuote({ originCountry, destinationCountry, serviceType, items, dimensions }) {
+async function calculateQuote({ originCountry, destinationCountry, serviceType, items, dimensions, shipmentType }) {
     const { totalWeight, totalValue } = summarizeItems(items);
 
     let response;
@@ -184,7 +274,7 @@ async function calculateQuote({ originCountry, destinationCountry, serviceType, 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                originCountry, destinationCountry, serviceType,
+                originCountry, destinationCountry, serviceType, shipmentType,
                 items, dimensions
             })
         });

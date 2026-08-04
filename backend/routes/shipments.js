@@ -3,6 +3,7 @@ const router = express.Router();
 const Shipment = require('../models/Shipment');
 const User = require('../models/User');
 const { calculateShippingPrice, estimateDeliveryDate } = require('../utils/pricing');
+const { LOCAL_SHIPPING_COUNTRIES } = require('../utils/countryDistancePricing');
 const sendEmail = require('../utils/sendEmail');
 const { quoteEmail } = require('../utils/emailTemplates');
 const { notifyUser, statusLabel } = require('../utils/notifications');
@@ -59,6 +60,21 @@ router.post('/create', async (req, res) => {
     try {
         const { sender, recipient, packageDetails, serviceType, userId } = req.body;
 
+        const senderCountry = String(sender?.country || '').toUpperCase();
+        const recipientCountry = String(recipient?.country || '').toUpperCase();
+        const isLocal = req.body.shipmentType === 'local';
+
+        if (isLocal && (senderCountry !== recipientCountry || !LOCAL_SHIPPING_COUNTRIES.has(senderCountry))) {
+            return res.status(400).json({ success: false, message: 'Local shipping is only available within a supported country.' });
+        }
+        if (isLocal && serviceType === 'international') {
+            return res.status(400).json({ success: false, message: 'International Priority is not available for local shipments.' });
+        }
+        if (!isLocal && senderCountry && senderCountry === recipientCountry) {
+            return res.status(400).json({ success: false, message: 'Sender and recipient country cannot be the same for an international shipment.' });
+        }
+        const shipmentType = isLocal ? 'local' : 'international';
+
         // Generate a professional tracking number: SS + 9 random digits
         const trackingNumber = 'SS' + Math.floor(100000000 + Math.random() * 900000000);
 
@@ -94,6 +110,7 @@ router.post('/create', async (req, res) => {
             trackingNumber,
             userId: userId, // Links the shipment to the logged-in user
             serviceType,
+            shipmentType,
             sender,
             recipient,
             package: {

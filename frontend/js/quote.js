@@ -18,14 +18,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (senderEmailInput && !senderEmailInput.value) senderEmailInput.value = user.email || '';
     }
 
-    populateCountrySelect(document.getElementById('origin'), 'Select country');
-    populateCountrySelect(document.getElementById('destination'), 'Select country');
+    const shipmentTypeToggle = setupShipmentTypeToggle({
+        radioName: 'shipmentType',
+        originSelectId: 'origin',
+        destinationSelectId: 'destination',
+        noteId: 'localCountryNote',
+        originLabelId: 'originLabel',
+        destinationLabelId: 'destinationLabel',
+        serviceTypeSelectId: 'serviceType'
+    });
     setupLimitedServiceNotice('origin', 'originLimitedNote');
     setupLimitedServiceNotice('destination', 'destinationLimitedNote');
 
     initItemsRepeater(document.getElementById('quoteItemsContainer'), document.getElementById('quoteAddItemBtn'));
 
-    setupQuoteFormHandler(token, user);
+    setupQuoteFormHandler(token, user, shipmentTypeToggle);
     setupPrintEngine();
     setupBookingEngine();
 });
@@ -45,7 +52,7 @@ function setupLimitedServiceNotice(selectId, noteId) {
     });
 }
 
-function setupQuoteFormHandler(token, user) {
+function setupQuoteFormHandler(token, user, shipmentTypeToggle) {
     const quoteForm = document.getElementById('shippingQuoteForm');
     if (!quoteForm) return;
 
@@ -59,13 +66,20 @@ function setupQuoteFormHandler(token, user) {
         const senderName = document.getElementById('senderName').value;
         const senderEmail = document.getElementById('senderEmail').value;
         const items = collectItems(document.getElementById('quoteItemsContainer'));
+        const isLocal = shipmentTypeToggle?.isLocalMode() || false;
+        const shipmentType = isLocal ? 'local' : 'international';
 
         if (!origin || !destination || !serviceType || !senderName || !senderEmail) {
             alert('Please fill in all required fields.');
             return;
         }
 
-        if (origin === destination) {
+        if (isLocal && !isLocalShippingCountry(origin)) {
+            alert('Local shipping is only available within a supported country.');
+            return;
+        }
+
+        if (!isLocal && origin === destination) {
             alert('Origin and destination cannot be the same.');
             return;
         }
@@ -79,7 +93,7 @@ function setupQuoteFormHandler(token, user) {
         let quote;
         try {
             if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Calculating...'; }
-            quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions });
+            quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions, shipmentType });
         } catch (error) {
             alert(error.message);
             return;
@@ -89,7 +103,7 @@ function setupQuoteFormHandler(token, user) {
 
         // Kept so "Book Now" creates exactly the shipment that was just
         // quoted, instead of re-deriving it from the form a second time.
-        lastQuoteContext = { origin, destination, serviceType, dimensions, senderName, senderEmail, items, quote, user };
+        lastQuoteContext = { origin, destination, serviceType, shipmentType, dimensions, senderName, senderEmail, items, quote, user };
 
         displayUnifiedQuote({
             serviceName: QUOTE_SERVICE_DETAILS[serviceType]?.name || serviceType,
@@ -108,6 +122,10 @@ function setupQuoteFormHandler(token, user) {
         if (quoteResult) quoteResult.style.display = 'none';
         resetItemsRepeater(document.getElementById('quoteItemsContainer'));
         lastQuoteContext = null;
+        // Radios haven't reverted to their default-checked state yet at click
+        // time (the native reset runs after this listener) -- defer so the
+        // toggle re-applies against the post-reset "International" state.
+        setTimeout(() => document.getElementById('shipmentTypeIntl')?.dispatchEvent(new Event('change')), 0);
         ['originLimitedNote', 'destinationLimitedNote'].forEach(id => {
             const note = document.getElementById(id);
             if (note) note.style.display = 'none';
@@ -370,7 +388,7 @@ function setupBookingEngine() {
             return;
         }
 
-        const { origin, destination, serviceType, dimensions, senderName, senderEmail, items, user } = lastQuoteContext;
+        const { origin, destination, serviceType, shipmentType, dimensions, senderName, senderEmail, items, user } = lastQuoteContext;
         const dimArray = (dimensions && dimensions !== 'N/A' ? dimensions : '0x0x0').toLowerCase().split('x').map(n => parseFloat(n.trim()) || 0);
 
         const bookingPayload = {
@@ -379,6 +397,7 @@ function setupBookingEngine() {
             // app already uses when there's no real user to attach the record to.
             userId: user ? (user.id || user._id) : '65f1a2b3c4d5e6f7a8b9c0d1',
             serviceType,
+            shipmentType,
             sender: { name: senderName, email: senderEmail, country: origin, city: getCountryName(origin) },
             recipient: { name: `${senderName} - Recipient`, city: getCountryName(destination), country: destination },
             packageDetails: {

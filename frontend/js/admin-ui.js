@@ -298,6 +298,7 @@ window.viewShipmentDetail = function(id) {
         ['Tracking Number', s.trackingNumber || 'N/A'],
         ['Status', getStatusLabel(s.status)],
         ['Service Type', s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'N/A'],
+        ['Shipment Type', s.shipmentType === 'local' ? 'Local (Domestic)' : 'International'],
         ['Account Holder', s.userId?.name ? `${s.userId.name} (${s.userId.email || 'no email on file'})` : 'N/A'],
         ['Contents', describePackageContents(s.package)],
         ['Weight', s.package?.weight ? `${s.package.weight} kg` : 'Not specified'],

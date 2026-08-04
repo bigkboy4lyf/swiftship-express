@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { calculateShippingPrice } = require('../utils/pricing');
+const { LOCAL_SHIPPING_COUNTRIES } = require('../utils/countryDistancePricing');
 
 const DELIVERY_ESTIMATES = {
     express: '1-3 days',
@@ -19,6 +20,20 @@ const DELIVERY_ESTIMATES = {
 router.post('/calculate', async (req, res) => {
     try {
         const { originCountry, destinationCountry, serviceType, items } = req.body;
+
+        const origin = String(originCountry || '').toUpperCase();
+        const destination = String(destinationCountry || '').toUpperCase();
+        const isLocal = req.body.shipmentType === 'local';
+
+        if (isLocal && (origin !== destination || !LOCAL_SHIPPING_COUNTRIES.has(origin))) {
+            return res.status(400).json({ success: false, message: 'Local shipping is only available within a supported country.' });
+        }
+        if (isLocal && serviceType === 'international') {
+            return res.status(400).json({ success: false, message: 'International Priority is not available for local shipments.' });
+        }
+        if (!isLocal && origin && origin === destination) {
+            return res.status(400).json({ success: false, message: 'Origin and destination cannot be the same for an international shipment.' });
+        }
 
         const itemList = Array.isArray(items) && items.length ? items : [];
         const totalWeight = itemList.reduce((sum, i) => sum + (parseFloat(i.weight) || 0), 0) || parseFloat(req.body.weight) || 1;

@@ -268,15 +268,30 @@
                                     </div>
                                 </div>
 
+                                <div class="form-group">
+                                    <label>Shipment Type *</label>
+                                    <div class="quote-shipment-type-options">
+                                        <label class="quote-radio-label">
+                                            <input type="radio" name="dashShipmentType" id="dashShipmentTypeIntl" value="international" checked>
+                                            International
+                                        </label>
+                                        <label class="quote-radio-label">
+                                            <input type="radio" name="dashShipmentType" id="dashShipmentTypeLocal" value="local">
+                                            Local (Domestic)
+                                        </label>
+                                    </div>
+                                    <p class="quote-limited-service-note" id="dashLocalCountryNote" style="display:none;"></p>
+                                </div>
+
                                 <div class="quote-field-row">
                                     <div class="form-group">
-                                        <label>Origin Country *</label>
+                                        <label id="dashOriginLabel">Origin Country *</label>
                                         <select id="dashOrigin" required>
                                             <option value="">Select country</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>Destination Country *</label>
+                                        <label id="dashDestinationLabel">Destination Country *</label>
                                         <select id="dashDestination" required>
                                             <option value="">Select country</option>
                                         </select>
@@ -334,11 +349,6 @@
                                     <label>Shipping Service *</label>
                                     <select id="dashServiceType" required>
                                         <option value="">Select service type</option>
-                                        <option value="express">Express Delivery (1-3 days)</option>
-                                        <option value="standard">Standard Shipping (5-10 days)</option>
-                                        <option value="economy">Economy Shipping (10-20 days)</option>
-                                        <option value="international">International Priority (3-7 days)</option>
-                                        <option value="cargo">Cargo/Freight Shipping</option>
                                     </select>
                                 </div>
 

@@ -314,6 +314,7 @@ window.viewShipmentDetail = function(id) {
         ['Tracking Number', s.trackingNumber || 'N/A'],
         ['Status', getStatusLabel(s.status)],
         ['Service Type', s.serviceType ? s.serviceType.charAt(0).toUpperCase() + s.serviceType.slice(1) : 'N/A'],
+        ['Shipment Type', s.shipmentType === 'local' ? 'Local (Domestic)' : 'International'],
         ['Contents', describePackageContents(s.package)],
         ['Weight', s.package?.weight ? `${s.package.weight} kg` : 'Not specified'],
         ['Dimensions', dimensionsText],
@@ -1064,6 +1065,7 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('reset', () => {
         resetItemsRepeater(document.getElementById('dashItemsContainer'));
         document.getElementById('quoteResultState').style.display = 'none';
         document.getElementById('quoteInfoBoxState').style.display = 'block';
+        document.getElementById('dashShipmentTypeIntl')?.dispatchEvent(new Event('change'));
     }, 0);
 });
 
@@ -1081,9 +1083,18 @@ function setupDashLimitedServiceNotice(selectId, noteId) {
     });
 }
 
+let dashShipmentTypeToggle = null;
+
 function setupDashboardQuoteEngine() {
-    populateCountrySelect(document.getElementById('dashOrigin'), 'Select country');
-    populateCountrySelect(document.getElementById('dashDestination'), 'Select country');
+    dashShipmentTypeToggle = setupShipmentTypeToggle({
+        radioName: 'dashShipmentType',
+        originSelectId: 'dashOrigin',
+        destinationSelectId: 'dashDestination',
+        noteId: 'dashLocalCountryNote',
+        originLabelId: 'dashOriginLabel',
+        destinationLabelId: 'dashDestinationLabel',
+        serviceTypeSelectId: 'dashServiceType'
+    });
     populateCountrySelect(document.getElementById('addr-country'), 'Select country');
     setupDashLimitedServiceNotice('dashOrigin', 'dashOriginLimitedNote');
     setupDashLimitedServiceNotice('dashDestination', 'dashDestinationLimitedNote');
@@ -1112,12 +1123,18 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
     const serviceType = document.getElementById('dashServiceType')?.value || 'standard';
     const dimensionsInput = document.getElementById('dashDimensions')?.value || '';
     const items = collectItems(document.getElementById('dashItemsContainer'));
+    const isLocal = dashShipmentTypeToggle?.isLocalMode() || false;
+    const shipmentType = isLocal ? 'local' : 'international';
 
     if (!origin || !destination) {
         alert('Please select an origin and destination country.');
         return;
     }
-    if (origin === destination) {
+    if (isLocal && !isLocalShippingCountry(origin)) {
+        alert('Local shipping is only available within a supported country.');
+        return;
+    }
+    if (!isLocal && origin === destination) {
         alert('Origin and destination cannot be the same.');
         return;
     }
@@ -1136,7 +1153,7 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
     let quote;
     try {
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Calculating...'; }
-        quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions: dimensionsInput });
+        quote = await calculateQuote({ originCountry: origin, destinationCountry: destination, serviceType, items, dimensions: dimensionsInput, shipmentType });
     } catch (error) {
         alert(error.message);
         return;
@@ -1144,7 +1161,7 @@ document.getElementById('dashboardQuoteForm')?.addEventListener('submit', async 
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Calculate Quote'; }
     }
 
-    lastDashboardQuoteContext = { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items, recipient };
+    lastDashboardQuoteContext = { senderName, senderEmail, origin, destination, serviceType, shipmentType, dimensionsInput, items, recipient };
 
     document.getElementById('dashResultService').textContent = QUOTE_SERVICE_DETAILS[serviceType]?.name || serviceType;
     document.getElementById('dashResultRoute').textContent = `${getCountryName(origin)} → ${getCountryName(destination)}`;
@@ -1172,11 +1189,12 @@ document.getElementById('confirmQuoteBookingBtn')?.addEventListener('click', asy
 
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user')) || {};
-    const { senderName, senderEmail, origin, destination, serviceType, dimensionsInput, items, recipient } = lastDashboardQuoteContext;
+    const { senderName, senderEmail, origin, destination, serviceType, shipmentType, dimensionsInput, items, recipient } = lastDashboardQuoteContext;
 
     const payload = {
         userId: user.id || user._id,
         serviceType,
+        shipmentType,
         sender: { name: senderName || user.name || 'Customer', email: senderEmail, city: getCountryName(origin), country: origin },
         recipient: {
             name: recipient.name,

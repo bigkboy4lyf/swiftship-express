@@ -69,6 +69,17 @@ function isLimitedServiceCountry(code) {
     return LIMITED_SERVICE_COUNTRIES.has(String(code || '').toUpperCase());
 }
 
+// Countries our network can run same-country ("local") ground shipments in,
+// as opposed to the country-to-country international lanes every other
+// route uses. Intentionally small and easy to extend here in one place.
+// Mirrored server-side in backend/utils/countryDistancePricing.js since the
+// frontend and backend don't share a module system.
+const LOCAL_SHIPPING_COUNTRIES = new Set(['US', 'GB', 'CA']);
+
+function isLocalShippingCountry(code) {
+    return LOCAL_SHIPPING_COUNTRIES.has(String(code || '').toUpperCase());
+}
+
 // Reserved payment-account code for the one "parent" bank transfer account
 // that acts as the fallback for every destination without its own specific
 // account (see admin-ui.js's Payment Accounts tab and dashboard-ui.js's Pay
@@ -82,11 +93,16 @@ function getCountryName(code) {
 
 // Fills a <select> with every country, alphabetically, flagging limited-
 // service destinations with a warning marker + dedicated class so they can
-// be styled or filtered differently from the rest of the list.
-function populateCountrySelect(selectEl, placeholder) {
+// be styled or filtered differently from the rest of the list. Pass
+// { onlyLocal: true } to restrict the list to LOCAL_SHIPPING_COUNTRIES
+// instead -- used when the shipment-type toggle is set to "Local".
+function populateCountrySelect(selectEl, placeholder, { onlyLocal = false } = {}) {
     if (!selectEl) return;
 
-    const sorted = [...ALL_COUNTRIES].sort((a, b) => a[1].localeCompare(b[1]));
+    const source = onlyLocal
+        ? ALL_COUNTRIES.filter(([code]) => isLocalShippingCountry(code))
+        : ALL_COUNTRIES;
+    const sorted = [...source].sort((a, b) => a[1].localeCompare(b[1]));
     const options = [`<option value="">${placeholder || 'Select country'}</option>`];
 
     sorted.forEach(([code, name]) => {

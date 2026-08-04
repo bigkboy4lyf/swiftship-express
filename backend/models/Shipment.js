@@ -20,6 +20,13 @@ const shipmentSchema = new mongoose.Schema({
         default: 'pending_approval'
     },
     serviceType: { type: String, enum: ['express', 'standard', 'international', 'economy', 'cargo'], default: 'standard' },
+    // Same-country ("local") vs cross-border move -- independent of
+    // serviceType above, which is a delivery-speed tier (e.g. its own
+    // 'international' value is a fast priority option, not this category).
+    // Local is only offered for LOCAL_SHIPPING_COUNTRIES (see
+    // backend/utils/countryDistancePricing.js); defaults to 'international'
+    // so every shipment created before this field existed reads correctly.
+    shipmentType: { type: String, enum: ['international', 'local'], default: 'international' },
     // totalPrice stays the single source of truth other code already reads
     // (e.g. the admin revenue aggregation) -- pricing below is purely the
     // itemized breakdown for invoices/receipts, computed once at creation so

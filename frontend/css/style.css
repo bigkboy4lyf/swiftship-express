@@ -731,6 +731,24 @@ footer {
     margin-bottom: 20px;
 }
 
+.quote-shipment-type-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.quote-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.quote-radio-label input {
+    accent-color: var(--accent, #2563eb);
+}
+
 /* =============================================
    SHARED QUOTE RESULT PANEL
    ============================================= */

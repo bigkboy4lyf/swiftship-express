@@ -76,6 +76,18 @@ const CONFLICT_ZONE_COUNTRIES = new Set(['CU', 'IR', 'KP', 'SY', 'RU', 'BY', 'MM
 // premium, not the distance, is what dominates the cost of those routes.
 const CONFLICT_ZONE_FLOOR = 7000;
 
+// Countries our network can run same-country ("local") ground shipments in.
+// Mirrored in frontend/js/countries-data.js's LOCAL_SHIPPING_COUNTRIES,
+// kept in sync manually the same way CONFLICT_ZONE_COUNTRIES is.
+const LOCAL_SHIPPING_COUNTRIES = new Set(['US', 'GB', 'CA']);
+
+// Flat lane contribution for a local/domestic shipment -- deliberately not
+// distance-derived like the international lanes above: a same-country move
+// is ground-only with no customs/air-freight handling, so it undercuts even
+// the cheapest international lane (~$35 for the short US-Canada hop) rather
+// than scaling with intra-country distance the way cross-border lanes do.
+const DOMESTIC_LANE_PRICE = 12;
+
 function haversineKm([lat1, lon1], [lat2, lon2]) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -143,6 +155,12 @@ function getLaneBasePrice(originCountry, destinationCountry) {
     const origin = String(originCountry || '').toUpperCase();
     const destination = String(destinationCountry || '').toUpperCase();
 
+    // Same-country route -- there's no entry in the pair cache (it's only
+    // ever built for distinct country pairs), and falling through to the
+    // "unknown route" fallback below would price a local shipment as if it
+    // were a ~9,000km intercontinental one. Domestic gets its own flat rate.
+    if (origin && origin === destination) return DOMESTIC_LANE_PRICE;
+
     const cached = routeBasePriceCache.get(pairKey(origin, destination));
     if (cached !== undefined) return cached;
 
@@ -151,4 +169,4 @@ function getLaneBasePrice(originCountry, destinationCountry) {
     return Math.round(rawLaneFormula(9000) * 100) / 100;
 }
 
-module.exports = { getLaneBasePrice, CONFLICT_ZONE_COUNTRIES };
+module.exports = { getLaneBasePrice, CONFLICT_ZONE_COUNTRIES, LOCAL_SHIPPING_COUNTRIES };
