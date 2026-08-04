@@ -666,7 +666,7 @@ router.patch('/shipments/:id/custody-transfer', protect, async (req, res) => {
         notifyShipment(shipment, {
             type: 'custody_transfer',
             title: 'Shipment Custody Transferred',
-            message: `Shipment ${shipment.trackingNumber} has been transferred to a new recipient (${recipient.name}) and contact email, per your request.`,
+            message: `Custody of shipment ${shipment.trackingNumber} has been formally transferred to ${recipient.name}, in accordance with your request.`,
             link: SHIPMENTS_TAB_LINK
         });
 
