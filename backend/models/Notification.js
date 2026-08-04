@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     type: {
         type: String,
-        enum: ['shipment_created', 'shipment_status', 'shipment_rejected', 'password_changed', 'admin_message', 'fee_charge', 'installment_reminder'],
+        enum: ['shipment_created', 'shipment_status', 'shipment_rejected', 'password_changed', 'admin_message', 'fee_charge', 'installment_reminder', 'custody_transfer'],
         required: true
     },
     title: { type: String, required: true, trim: true, maxlength: 150 },

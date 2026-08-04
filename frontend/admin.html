@@ -753,6 +753,46 @@
                 <button type="button" id="saveShipmentFeesBtn" class="btn" style="width:100%;">Save Fee Settings</button>
             </div>
 
+            <div id="custodyTransferSection" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <h4 style="margin-bottom: 12px;">Transfer Custody</h4>
+                <p class="form-hint">Use this when the customer has emailed asking to redirect the shipment to a new contact or recipient. Replaces the current contact email and delivery address -- safe to use again later if custody changes hands more than once.</p>
+                <div class="form-group">
+                    <label for="custodyContactEmail">New Contact Email *</label>
+                    <input type="email" id="custodyContactEmail" class="form-control" placeholder="contact@example.com">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="custodyRecipientName">Recipient Name *</label>
+                        <input type="text" id="custodyRecipientName" class="form-control" placeholder="Full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="custodyRecipientPhone">Phone</label>
+                        <input type="text" id="custodyRecipientPhone" class="form-control" placeholder="Phone number">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="custodyRecipientAddress">Street Address</label>
+                    <input type="text" id="custodyRecipientAddress" class="form-control" placeholder="Street address">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="custodyRecipientCity">City *</label>
+                        <input type="text" id="custodyRecipientCity" class="form-control" placeholder="City">
+                    </div>
+                    <div class="form-group">
+                        <label for="custodyRecipientPostalCode">Postal Code</label>
+                        <input type="text" id="custodyRecipientPostalCode" class="form-control" placeholder="Postal code">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="custodyRecipientCountry">Country *</label>
+                    <select id="custodyRecipientCountry" class="form-control"></select>
+                </div>
+                <p id="custodyTransferError" class="form-error" style="display:none;"></p>
+                <p id="custodyTransferSuccess" class="form-error form-success" style="display:none;"></p>
+                <button type="button" id="transferCustodyBtn" class="btn" style="width:100%;">Transfer Custody</button>
+            </div>
+
             <div class="quote-form-actions">
                 <button type="button" id="shipmentDetailDocBtn" class="btn quote-btn-primary">View Invoice</button>
             </div>

@@ -322,6 +322,7 @@ window.viewShipmentDetail = function(id) {
     if (docBtn) docBtn.textContent = isAwaitingConfirmation(s.status) ? 'View Invoice' : 'View Receipt';
 
     renderShipmentFeesSection(s);
+    renderCustodyTransferSection(s);
 
     document.getElementById('shipmentDetailModal').classList.add('active');
 };
@@ -386,6 +387,88 @@ document.getElementById('saveShipmentFeesBtn')?.addEventListener('click', async 
         renderShipmentFeesSection(updatedShipment);
     } catch (err) {
         console.error('Error saving shipment fee settings:', err);
+        errorEl.textContent = 'Could not reach the server. Please try again.';
+        errorEl.style.display = 'block';
+    } finally {
+        this.disabled = false;
+    }
+});
+
+// =============================================
+// CUSTODY TRANSFER (inside the Shipment Details modal) -- the customer
+// emails the company directly to request this; admin applies it here. Not a
+// toggle -- pre-filled with the shipment's current contact/recipient so
+// admin can see what's changing, and safe to run again later if custody
+// changes hands more than once. See PATCH /api/dashboard/shipments/:id/custody-transfer.
+// =============================================
+function renderCustodyTransferSection(s) {
+    document.getElementById('custodyTransferError').style.display = 'none';
+    document.getElementById('custodyTransferSuccess').style.display = 'none';
+
+    document.getElementById('custodyContactEmail').value = s.contactEmail || s.sender?.email || '';
+    document.getElementById('custodyRecipientName').value = s.recipient?.name || '';
+    document.getElementById('custodyRecipientPhone').value = s.recipient?.phone || '';
+    document.getElementById('custodyRecipientAddress').value = s.recipient?.address || '';
+    document.getElementById('custodyRecipientCity').value = s.recipient?.city || '';
+    document.getElementById('custodyRecipientPostalCode').value = s.recipient?.postalCode || '';
+
+    const countrySelect = document.getElementById('custodyRecipientCountry');
+    if (countrySelect && !countrySelect.options.length) populateCountrySelect(countrySelect, 'Select country');
+    if (countrySelect) countrySelect.value = s.recipient?.country || '';
+
+    const transferBtn = document.getElementById('transferCustodyBtn');
+    if (transferBtn) transferBtn.disabled = s.status === 'delivered';
+}
+
+document.getElementById('transferCustodyBtn')?.addEventListener('click', async function() {
+    if (!currentDetailShipment) return;
+
+    const errorEl = document.getElementById('custodyTransferError');
+    const successEl = document.getElementById('custodyTransferSuccess');
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+
+    const contactEmail = document.getElementById('custodyContactEmail').value.trim();
+    const recipient = {
+        name: document.getElementById('custodyRecipientName').value.trim(),
+        phone: document.getElementById('custodyRecipientPhone').value.trim(),
+        address: document.getElementById('custodyRecipientAddress').value.trim(),
+        city: document.getElementById('custodyRecipientCity').value.trim(),
+        postalCode: document.getElementById('custodyRecipientPostalCode').value.trim(),
+        country: document.getElementById('custodyRecipientCountry').value
+    };
+
+    if (!contactEmail || !recipient.name || !recipient.city || !recipient.country) {
+        errorEl.textContent = 'Contact email, recipient name, city, and country are required.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    this.disabled = true;
+    try {
+        const res = await fetch(`/api/dashboard/shipments/${currentDetailShipment._id}/custody-transfer`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ contactEmail, recipient })
+        });
+        const result = await res.json();
+        if (!result.success) {
+            errorEl.textContent = result.message || 'Could not transfer custody. Please try again.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        const idx = lastLoadedShipments.findIndex(x => x._id === result.data._id);
+        if (idx !== -1) lastLoadedShipments[idx] = result.data;
+
+        // Re-render the whole modal off the updated record (rows, fees,
+        // and this section all reflect the new contact/recipient), then
+        // layer the success message on top since re-rendering just hid it.
+        window.viewShipmentDetail(result.data._id);
+        document.getElementById('custodyTransferSuccess').textContent = 'Custody transferred. The account holder and new contact have been emailed.';
+        document.getElementById('custodyTransferSuccess').style.display = 'block';
+    } catch (err) {
+        console.error('Error transferring custody:', err);
         errorEl.textContent = 'Could not reach the server. Please try again.';
         errorEl.style.display = 'block';
     } finally {

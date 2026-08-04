@@ -613,6 +613,70 @@ router.patch('/shipments/:id/status', protect, async (req, res) => {
 });
 
 // =============================================
+// TRANSFER CUSTODY (Admin only)
+// =============================================
+// Not a request/approval workflow -- the customer emails the company
+// directly to ask for this, outside the app, and admin applies it here
+// straight into the shipment record. A direct overwrite, not a toggle: safe
+// to call again later with a different recipient if custody changes hands
+// more than once during a shipment's life.
+router.patch('/shipments/:id/custody-transfer', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const shipment = await Shipment.findById(req.params.id);
+        if (!shipment) {
+            return res.status(404).json({ success: false, message: 'Shipment not found' });
+        }
+        if (shipment.status === 'delivered') {
+            return res.status(400).json({ success: false, message: 'This shipment has already been delivered -- custody can no longer be transferred.' });
+        }
+
+        const { contactEmail, recipient } = req.body;
+        if (!contactEmail || !recipient?.name || !recipient?.city || !recipient?.country) {
+            return res.status(400).json({ success: false, message: 'Contact email, recipient name, city, and country are required to transfer custody.' });
+        }
+
+        const previousRecipientName = shipment.recipient?.name;
+
+        shipment.contactEmail = contactEmail;
+        shipment.recipient = {
+            name: recipient.name,
+            company: recipient.company || '',
+            address: recipient.address || '',
+            city: recipient.city,
+            country: recipient.country,
+            postalCode: recipient.postalCode || '',
+            phone: recipient.phone || ''
+        };
+
+        shipment.trackingHistory.push({
+            status: shipment.status,
+            location: shipment.currentLocation?.city,
+            description: `Custody transferred${previousRecipientName ? ` from ${previousRecipientName}` : ''} to ${recipient.name}, per customer request.`,
+            timestamp: new Date()
+        });
+
+        await shipment.save();
+
+        // Fires after contactEmail/recipient are already updated above, so
+        // this reaches the account owner + the NEW contact -- not the old one.
+        notifyShipment(shipment, {
+            type: 'custody_transfer',
+            title: 'Shipment Custody Transferred',
+            message: `Shipment ${shipment.trackingNumber} has been transferred to a new recipient (${recipient.name}) and contact email, per your request.`,
+            link: SHIPMENTS_TAB_LINK
+        });
+
+        res.json({ success: true, data: shipment });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
 // DELETE SHIPMENT (Admin only)
 // =============================================
 router.delete('/shipments/:id', protect, async (req, res) => {
