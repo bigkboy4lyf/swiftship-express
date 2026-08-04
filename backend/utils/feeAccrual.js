@@ -1,6 +1,6 @@
 const Shipment = require('../models/Shipment');
 const FeeSettings = require('../models/FeeSettings');
-const { notifyUser } = require('./notifications');
+const { notifyShipment } = require('./notifications');
 
 const FEE_TYPES = ['demurrage', 'storage'];
 const FEE_LABELS = { demurrage: 'Demurrage', storage: 'Storage' };
@@ -81,7 +81,7 @@ function notifyFeeCharge(shipment, type, { activated, rate, accrued }) {
         : `A ${label} fee of $${rate.toFixed(2)}/day has been applied to shipment ${shipment.trackingNumber} because it remains unpaid. `
             + `You now owe $${accrued.toFixed(2)} in ${label} fees.`;
 
-    notifyUser(shipment.userId, {
+    notifyShipment(shipment, {
         type: 'fee_charge',
         title: `${FEE_LABELS[type]} Fee ${activated ? 'Activated' : 'Applied'}`,
         message,

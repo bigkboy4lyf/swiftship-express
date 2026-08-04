@@ -5,10 +5,8 @@ const User = require('../models/User');
 const { calculateShippingPrice, estimateDeliveryDate } = require('../utils/pricing');
 const { LOCAL_SHIPPING_COUNTRIES } = require('../utils/countryDistancePricing');
 const sendEmail = require('../utils/sendEmail');
-const { quoteEmail } = require('../utils/emailTemplates');
+const { quoteEmail, SUPPORT_EMAIL } = require('../utils/emailTemplates');
 const { notifyUser, statusLabel } = require('../utils/notifications');
-
-const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
 
 
 // =============================================

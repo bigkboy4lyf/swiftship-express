@@ -8,11 +8,9 @@ const { FEE_TYPES, setShipmentFeeActive, getFeesAccrued, getTotalOwed, getBalanc
 const { protect } = require('../middleware/auth');
 const { documentVerificationCode } = require('../utils/verification');
 const sendEmail = require('../utils/sendEmail');
-const { quoteEmail, receiptSubmittedEmail, otpEmail } = require('../utils/emailTemplates');
+const { quoteEmail, receiptSubmittedEmail, otpEmail, SUPPORT_EMAIL } = require('../utils/emailTemplates');
 const { issueOtp, canResend, verifyOtp, clearOtp } = require('../utils/otp');
-const { notifyUser, statusLabel } = require('../utils/notifications');
-
-const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
+const { notifyUser, notifyShipment, statusLabel } = require('../utils/notifications');
 
 // Every shipment-related notification links here -- dashboard.html's "My
 // Shipments" tab shows every shipment for both customers and admins acting
@@ -35,10 +33,10 @@ function advanceToProcessing(shipment, historyDescription) {
         timestamp: new Date()
     });
 
-    // Fire-and-forget: notifyUser never throws, and the notification's
+    // Fire-and-forget: notifyShipment never throws, and the notification's
     // content only needs the in-memory fields already set above, not the
     // save() that happens afterward in the caller.
-    notifyUser(shipment.userId, {
+    notifyShipment(shipment, {
         type: 'shipment_status',
         title: 'Shipment Update',
         message: `${shipment.trackingNumber}: ${historyDescription}`,
@@ -364,7 +362,7 @@ router.patch('/shipments/:id/reject', protect, async (req, res) => {
 
         // Notified before the delete below -- the record (and its userId)
         // won't exist to reference afterward.
-        notifyUser(shipment.userId, {
+        notifyShipment(shipment, {
             type: 'shipment_rejected',
             title: 'Shipment Request Declined',
             message: `Your shipment request ${shipment.trackingNumber} was declined. Please contact support if you have questions.`,
@@ -496,7 +494,7 @@ router.patch('/shipments/:id/receipt/confirm', protect, async (req, res) => {
             // Confirming a full payment already notifies via advanceToProcessing
             // above -- an installment payment deserves the same courtesy
             // instead of only showing up in tracking history.
-            notifyUser(shipment.userId, {
+            notifyShipment(shipment, {
                 type: 'shipment_status',
                 title: 'Payment Received',
                 message: `A payment of $${amount.toFixed(2)} was confirmed on shipment ${shipment.trackingNumber}. Remaining balance: $${remaining.toFixed(2)}.`,
@@ -548,7 +546,7 @@ router.patch('/shipments/:id/receipt/reject', protect, async (req, res) => {
         shipment.paymentReceipt.rejectionReason = reason.trim();
         shipment.paymentReceipt.resolvedAt = new Date();
 
-        notifyUser(shipment.userId, {
+        notifyShipment(shipment, {
             type: 'shipment_status',
             title: 'Payment Receipt Rejected',
             message: `Your payment receipt for shipment ${shipment.trackingNumber} was rejected: ${reason.trim()}. Please submit a new receipt.`,
@@ -600,7 +598,7 @@ router.patch('/shipments/:id/status', protect, async (req, res) => {
             shipment.actualDelivery = new Date();
         }
 
-        notifyUser(shipment.userId, {
+        notifyShipment(shipment, {
             type: 'shipment_status',
             title: 'Shipment Update',
             message: `${shipment.trackingNumber} is now ${statusLabel(status)}${location ? ` (${String(location)})` : ''}.`,

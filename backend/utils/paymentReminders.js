@@ -1,5 +1,5 @@
 const Shipment = require('../models/Shipment');
-const { notifyUser } = require('./notifications');
+const { notifyShipment } = require('./notifications');
 const { getBalanceDue, isFullyPaid, unpaidExpr, ACCRUAL_ELIGIBLE_STATUSES } = require('./feeAccrual');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -33,7 +33,7 @@ async function runInstallmentReminders() {
         if (now < dueAt) continue;
 
         const balanceDue = getBalanceDue(shipment);
-        notifyUser(shipment.userId, {
+        notifyShipment(shipment, {
             type: 'installment_reminder',
             title: 'Installment Balance Reminder',
             message: `Shipment ${shipment.trackingNumber} still has an outstanding balance of $${balanceDue.toFixed(2)}. `

@@ -9,6 +9,16 @@ const ASSET_BASE_URL = process.env.ASSET_BASE_URL
     || 'https://raw.githubusercontent.com/bigkboy4lyf/swiftship-express/main/frontend/img';
 const LOGO_URL = `${ASSET_BASE_URL}/email-logo.png`;
 
+// Same "one line to change once there's a live domain" deal as ASSET_BASE_URL
+// above -- used to link back to the dashboard from emails fired by
+// background jobs (fee accrual, payment reminders) that have no `req` to
+// read a host from.
+const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:5000';
+
+// Single source of truth for the support inbox -- was previously copy-pasted
+// as a local const in both routes/shipments.js and routes/dashboard.js.
+const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
+
 // Shared branded wrapper for every outgoing email, so a customer's inbox
 // consistently looks like it came from SwiftShip Express regardless of which
 // flow (verification, password reset, etc.) triggered it. Built with inline
@@ -110,4 +120,27 @@ function receiptSubmittedEmail({ trackingNumber, customerName, customerEmail }) 
     `);
 }
 
-module.exports = { brandedEmail, otpEmail, quoteEmail, receiptSubmittedEmail };
+// General-purpose notice for anything that happens to a shipment after
+// booking -- status changes, approval/rejection, payment confirmations,
+// fee activation, balance reminders. One template instead of one per event
+// because they're all the same shape: a heading, a sentence of what
+// happened, and a link back to the shipment. See
+// utils/notifications.js#notifyShipment, the single call site that pairs
+// this with the matching in-app notification.
+function shipmentUpdateEmail({ heading, message, trackingNumber }) {
+    return brandedEmail(`
+        <h2 style="margin: 0 0 12px; color: #222; font-size: 1.3rem;">${heading}</h2>
+        <p style="margin: 0 0 22px; color: #555; font-size: 0.95rem; line-height: 1.5;">${message}</p>
+        ${trackingNumber ? `
+        <div style="background: #f4f6f8; border-radius: 8px; padding: 14px 18px; margin-bottom: 22px;">
+            <p style="margin: 0 0 4px; font-size: 0.85rem; color: #777;">Tracking Number</p>
+            <p style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0056b3; letter-spacing: 0.02em;">${trackingNumber}</p>
+        </div>` : ''}
+        <p style="margin: 0 0 22px; color: #555; font-size: 0.9rem;">
+            <a href="${APP_BASE_URL}/dashboard" style="color: #0056b3;">View this shipment in your dashboard</a>
+        </p>
+        <p style="margin: 0; color: #999; font-size: 0.8rem;">Questions? You can't reply directly to this email, but you can always reach us at ${SUPPORT_EMAIL}.</p>
+    `);
+}
+
+module.exports = { brandedEmail, otpEmail, quoteEmail, receiptSubmittedEmail, shipmentUpdateEmail, SUPPORT_EMAIL };

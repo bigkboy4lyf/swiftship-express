@@ -1,4 +1,7 @@
 const Notification = require('../models/Notification');
+const User = require('../models/User');
+const sendEmail = require('./sendEmail');
+const { shipmentUpdateEmail } = require('./emailTemplates');
 
 // Kept separate from frontend/js/script.js's STATUS_LABELS (that one drives
 // UI text and can't be required from Node) -- this is the same mapping for
@@ -47,4 +50,26 @@ async function notifyUsers(userIds, { type, title, message, link = '', createdBy
     }
 }
 
-module.exports = { notifyUser, notifyUsers, statusLabel };
+// Fires both the in-app notification and the matching email for something
+// that happened to a shipment (status change, payment, fee, reminder...),
+// so every call site states what happened exactly once instead of building
+// the same message twice. Best-effort like notifyUser/sendEmail.inBackground
+// -- a shipment update must still succeed even if either notification fails,
+// so this never throws and callers don't need to await it.
+async function notifyShipment(shipment, { type, title, message, link = '' }) {
+    notifyUser(shipment.userId, { type, title, message, link });
+    try {
+        const accountUser = await User.findById(shipment.userId).select('email');
+        sendEmail.toShipmentContacts(
+            shipment,
+            accountUser?.email,
+            title,
+            shipmentUpdateEmail({ heading: title, message, trackingNumber: shipment.trackingNumber }),
+            'Shipment update'
+        );
+    } catch (error) {
+        console.error('Failed to resolve shipment email recipients:', error);
+    }
+}
+
+module.exports = { notifyUser, notifyUsers, notifyShipment, statusLabel };
