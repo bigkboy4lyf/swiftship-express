@@ -4,7 +4,9 @@ const nodemailer = require('nodemailer');
 // Explicit timeouts matter here: without them, a flaky SMTP connection can hang
 // well past what's reasonable for a request a user is waiting on (e.g. registration).
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.hostinger.com',
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
@@ -15,7 +17,7 @@ const transporter = nodemailer.createTransport({
 });
 
 /**
- * Sends an email from the configured Gmail account.
+ * Sends an email from the configured Hostinger account.
  * @param {string} to - recipient address
  * @param {string} subject
  * @param {string} html
@@ -33,8 +35,8 @@ async function sendEmail(to, subject, html, bcc) {
 }
 
 // Fires the send without making the caller's HTTP response wait on it -- real
-// SMTP round trips (Gmail included) can take anywhere from under a second to
-// 20+ seconds, which callers like shipment creation shouldn't block on.
+// SMTP round trips can take anywhere from under a second to 20+ seconds,
+// which callers like shipment creation shouldn't block on.
 sendEmail.inBackground = function(to, subject, html, context, bcc) {
     sendEmail(to, subject, html, bcc).catch(err => {
         console.error(`${context} email failed to send:`, err);
