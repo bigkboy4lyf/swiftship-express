@@ -5,6 +5,8 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const { notifyUser, notifyUsers } = require('../utils/notifications');
+const sendEmail = require('../utils/sendEmail');
+const { adminMessageEmail } = require('../utils/emailTemplates');
 
 const MAX_TITLE_LENGTH = 150;
 const MAX_MESSAGE_LENGTH = 1000;
@@ -80,6 +82,10 @@ router.delete('/:id', protect, async (req, res) => {
 
 // =============================================
 // ADMIN: MANUALLY SEND A NOTIFICATION -- to one specific user or every user
+// (also emails the recipient(s) -- see utils/sendEmail.js#inBackground and
+// utils/emailTemplates.js#adminMessageEmail. Fire-and-forget on purpose: a
+// slow/failed SMTP send must never delay or break this response, same
+// "best effort" policy notifyShipment already uses for shipment emails.)
 // =============================================
 router.post('/', protect, async (req, res) => {
     try {
@@ -100,10 +106,14 @@ router.post('/', protect, async (req, res) => {
         }
 
         const payload = { type: 'admin_message', title, message, link, createdBy: req.user.id };
+        const emailHtml = adminMessageEmail({ heading: title, message, link });
 
         if (target === 'all') {
-            const users = await User.find().select('_id');
+            const users = await User.find().select('_id email');
             await notifyUsers(users.map(u => u._id), payload);
+            users.forEach(u => {
+                if (u.email) sendEmail.inBackground(u.email, title, emailHtml, 'Admin broadcast notification');
+            });
             return res.status(201).json({ success: true, message: `Notification sent to ${users.length} user(s)` });
         }
 
@@ -111,12 +121,13 @@ router.post('/', protect, async (req, res) => {
         if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ success: false, message: 'A valid recipient is required' });
         }
-        const recipient = await User.findById(userId).select('_id name');
+        const recipient = await User.findById(userId).select('_id name email');
         if (!recipient) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         await notifyUser(userId, payload);
+        if (recipient.email) sendEmail.inBackground(recipient.email, title, emailHtml, 'Admin notification');
         res.status(201).json({ success: true, message: `Notification sent to ${recipient.name || 'user'}` });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });

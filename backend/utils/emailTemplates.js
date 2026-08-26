@@ -143,4 +143,22 @@ function shipmentUpdateEmail({ heading, message, trackingNumber }) {
     `);
 }
 
-module.exports = { brandedEmail, otpEmail, quoteEmail, receiptSubmittedEmail, shipmentUpdateEmail, SUPPORT_EMAIL };
+// Manual admin broadcast/DM sent from the admin Notifications tab -- mirrors
+// shipmentUpdateEmail's shape but with an optional link button instead of a
+// tracking-number block, since admin messages aren't always about a
+// shipment. See backend/routes/notifications.js POST / (admin-only route)
+// and backend/utils/sendEmail.js#inBackground for the non-blocking send.
+function adminMessageEmail({ heading, message, link }) {
+    const url = link ? (/^https?:\/\//i.test(link) ? link : `${APP_BASE_URL}/${link.replace(/^\/+/, '')}`) : null;
+    return brandedEmail(`
+        <h2 style="margin: 0 0 12px; color: #222; font-size: 1.3rem;">${heading}</h2>
+        <p style="margin: 0 0 22px; color: #555; font-size: 0.95rem; line-height: 1.5;">${message}</p>
+        ${url ? `
+        <p style="margin: 0 0 22px;">
+            <a href="${url}" style="display: inline-block; background: #0056b3; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 0.9rem;">View in Dashboard</a>
+        </p>` : ''}
+        <p style="margin: 0; color: #999; font-size: 0.8rem;">Questions? You can't reply directly to this email, but you can always reach us at ${SUPPORT_EMAIL}.</p>
+    `);
+}
+
+module.exports = { brandedEmail, otpEmail, quoteEmail, receiptSubmittedEmail, shipmentUpdateEmail, adminMessageEmail, SUPPORT_EMAIL };
