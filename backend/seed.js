@@ -10,7 +10,7 @@ const SEED_USER_ID = '000000000000000000000000';
 
 const testShipments = [
     {
-        trackingNumber: 'AWB123456789',
+        trackingNumber: 'AWB-123456789',
         userId: SEED_USER_ID,
         status: 'in_transit',
         serviceType: 'express',
@@ -53,7 +53,7 @@ const testShipments = [
         estimatedDelivery: new Date(Date.now() + 2*24*60*60*1000)
     },
     {
-        trackingNumber: 'AWB987654321',
+        trackingNumber: 'AWB-987654321',
         userId: SEED_USER_ID,
         status: 'out_for_delivery',
         serviceType: 'standard',
@@ -92,7 +92,7 @@ const testShipments = [
         estimatedDelivery: new Date(Date.now() + 6*60*60*1000)
     },
     {
-        trackingNumber: 'AWB567890123',
+        trackingNumber: 'AWB-567890123',
         userId: SEED_USER_ID,
         status: 'delivered',
         serviceType: 'international',

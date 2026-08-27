@@ -108,7 +108,7 @@
                     name="trackingNumber" 
                     id="trackingInput" 
                     class="tracking-input" 
-                    placeholder="Enter your tracking number (e.g., AWB123456789)"
+                    placeholder="Enter your tracking number (e.g., AWB-123456789)"
                     required 
                     autocomplete="on"
                 >
@@ -249,14 +249,14 @@
                 <p>Track up to 10 shipments at once. Enter tracking numbers separated by commas.</p>
                 
                 <form class="tracking-form" id="trackingForm">
-                    <input type="text" class="tracking-input" placeholder="Enter your tracking number (e.g., AWB123456789)" required>
+                    <input type="text" class="tracking-input" placeholder="Enter your tracking number (e.g., AWB-123456789)" required>
                     <button type="submit" class="tracking-btn">Track Package</button>
                 </form>
                 
                 <div id="trackingResult" style="margin-top: 25px; text-align: left; display: none;">
                     <h4>Tracking Results:</h4>
                     <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px; border-left: 4px solid var(--accent);">
-                        <p><strong>Tracking #:</strong> <span id="trackNum">AWB123456789</span></p>
+                        <p><strong>Tracking #:</strong> <span id="trackNum">AWB-123456789</span></p>
                         <p><strong>Status:</strong> <span id="trackStatus" style="color: var(--accent); font-weight: 600;">In Transit</span></p>
                         <p><strong>Last Update:</strong> <span id="trackUpdate">Package departed from London distribution center</span></p>
                         <p><strong>Estimated Delivery:</strong> <span id="trackDelivery">Tomorrow by 5:00 PM</span></p>
