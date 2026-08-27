@@ -252,7 +252,7 @@ router.post('/shipments', protect, async (req, res) => {
 
         // Generate tracking number
         if (!shipmentData.trackingNumber) {
-            shipmentData.trackingNumber = 'SS' + Date.now().toString().slice(-9);
+            shipmentData.trackingNumber = 'AWB' + Date.now().toString().slice(-9);
         }
 
         // Admin-created shipments enter directly at the sorting facility,

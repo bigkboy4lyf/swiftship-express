@@ -152,19 +152,19 @@ const trackingForm = document.getElementById('trackingForm');
 const trackingResult = document.getElementById('trackingResult');
 
 const demoTrackingData = {
-    "SS123456789": {
+    "AWB123456789": {
         status: "in_transit",
         update: "Package departed from London distribution center",
         delivery: "Tomorrow by 5:00 PM",
         location: "London, UK"
     },
-    "SS987654321": {
+    "AWB987654321": {
         status: "out_for_delivery",
         update: "Package is with the delivery driver in your area",
         delivery: "Today by 3:00 PM",
         location: "Local Hub"
     },
-    "SS567890123": {
+    "AWB567890123": {
         status: "delivered",
         update: "Package was delivered to front door",
         delivery: "Yesterday at 2:30 PM",

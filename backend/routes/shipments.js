@@ -73,8 +73,8 @@ router.post('/create', async (req, res) => {
         }
         const shipmentType = isLocal ? 'local' : 'international';
 
-        // Generate a professional tracking number: SS + 9 random digits
-        const trackingNumber = 'SS' + Math.floor(100000000 + Math.random() * 900000000);
+        // Generate a professional airway bill number: AWB + 9 random digits
+        const trackingNumber = 'AWB' + Math.floor(100000000 + Math.random() * 900000000);
 
         // A shipment can bundle several items (packageDetails.items). When it
         // does, the top-level package fields become the aggregate across all
