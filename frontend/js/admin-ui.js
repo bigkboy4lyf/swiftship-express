@@ -1114,7 +1114,7 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
         trackingNumber: document.getElementById('trackingNumber').value,
         status: document.getElementById('shipmentStatus').value,
         userId: userId,
-        serviceType: document.getElementById('shipmentServiceType').value,
+        serviceType: document.getElementById('adminServiceType').value,
         basePriceOverride: optionalNumber('basePriceOverride'),
         surchargeOverride: optionalNumber('surchargeOverride'),
         shipmentType,
