@@ -1063,6 +1063,12 @@ document.querySelectorAll('.modal').forEach(modal => {
 document.getElementById('shipmentForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    const submitButton = this.querySelector('button[type="submit"]');
+    if (!this.checkValidity()) {
+        this.reportValidity();
+        return;
+    }
+
     const userId = document.getElementById('shipmentUserId').value;
     if (!userId) {
         alert('Please select a user.');
@@ -1146,6 +1152,10 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
     };
 
     try {
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Creating...';
+        }
         const res = await fetch('/api/dashboard/shipments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -1161,6 +1171,11 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
         }
     } catch (error) {
         alert('Error creating shipment: ' + error.message);
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Save Shipment';
+        }
     }
 });
 
