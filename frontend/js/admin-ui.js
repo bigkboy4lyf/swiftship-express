@@ -1104,21 +1104,24 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
         serviceType: document.getElementById('shipmentServiceType').value,
         basePriceOverride: optionalNumber('basePriceOverride'),
         surchargeOverride: optionalNumber('surchargeOverride'),
-        sender: {
-            city: originCity || '',
-            country: originCountry || ''
-        },
         shipmentType,
         contactEmail: document.getElementById('contactEmail').value,
         sender: {
             name: document.getElementById('senderName').value,
+            address: document.getElementById('senderAddress').value,
+            city: document.getElementById('senderCity').value,
+            postalCode: document.getElementById('senderPostalCode').value,
+            phone: document.getElementById('senderPhone').value,
             email: document.getElementById('contactEmail').value,
-            country: originCountry,
-            city: getCountryName(originCountry)
+            country: originCountry
         },
         recipient: {
-            name: `${document.getElementById('senderName').value} - Recipient`,
-            city: getCountryName(destinationCountry),
+            name: document.getElementById('recipientName').value,
+            address: document.getElementById('recipientAddress').value,
+            city: document.getElementById('recipientCity').value,
+            postalCode: document.getElementById('recipientPostalCode').value,
+            phone: document.getElementById('recipientPhone').value,
+            email: document.getElementById('recipientEmail').value,
             country: destinationCountry
         },
         package: {
