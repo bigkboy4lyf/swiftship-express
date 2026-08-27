@@ -505,6 +505,49 @@
                             <button type="submit" class="btn">Save Storage Rate</button>
                         </form>
                     </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Payment Methods</h3>
+                        </div>
+                        <p class="placeholder-text" style="margin-top: -10px;">
+                            Turn a payment option off to gray it out for customers at checkout. A reason is required when disabling -- it's shown to customers in place of that option.
+                        </p>
+
+                        <form id="cardPaymentSettingsForm" class="fee-settings-form">
+                            <div class="form-group fee-settings-toggle-row">
+                                <label for="cardPaymentEnabled">
+                                    <input type="checkbox" id="cardPaymentEnabled" checked>
+                                    Card payments enabled
+                                </label>
+                            </div>
+                            <div class="form-group" id="cardPaymentReasonGroup" style="display:none;">
+                                <label>Reason shown to customers</label>
+                                <input type="text" id="cardPaymentReason" maxlength="300" placeholder="e.g. Card payments temporarily unavailable for maintenance">
+                            </div>
+                            <p id="cardPaymentSuccess" class="form-error form-success" style="display:none;"></p>
+                            <p id="cardPaymentError" class="form-error" style="display:none;"></p>
+                            <button type="submit" class="btn">Save Card Payment Setting</button>
+                        </form>
+
+                        <hr style="margin: 24px 0; border-color: var(--border);">
+
+                        <form id="bankTransferPaymentSettingsForm" class="fee-settings-form">
+                            <div class="form-group fee-settings-toggle-row">
+                                <label for="bankTransferPaymentEnabled">
+                                    <input type="checkbox" id="bankTransferPaymentEnabled" checked>
+                                    Bank transfer enabled
+                                </label>
+                            </div>
+                            <div class="form-group" id="bankTransferPaymentReasonGroup" style="display:none;">
+                                <label>Reason shown to customers</label>
+                                <input type="text" id="bankTransferPaymentReason" maxlength="300" placeholder="e.g. Bank transfer temporarily unavailable">
+                            </div>
+                            <p id="bankTransferPaymentSuccess" class="form-error form-success" style="display:none;"></p>
+                            <p id="bankTransferPaymentError" class="form-error" style="display:none;"></p>
+                            <button type="submit" class="btn">Save Bank Transfer Setting</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

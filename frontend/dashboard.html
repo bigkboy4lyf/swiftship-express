@@ -942,16 +942,22 @@
             </div>
 
             <div id="paymentMethodCardPanel" class="payment-method-panel">
-                <p style="color: var(--gray); margin-bottom: 18px;">Pay securely by credit or debit card. You'll be taken to our secure checkout to complete payment.</p>
-                <button type="button" class="btn quote-btn-primary" id="continueToCardBtn" style="width:100%;">Continue to Card Checkout</button>
+                <p id="cardPaymentUnavailableNote" class="quote-limited-service-note" style="display:none;"></p>
+                <div id="cardPaymentAvailableContent">
+                    <p style="color: var(--gray); margin-bottom: 18px;">Pay securely by credit or debit card. You'll be taken to our secure checkout to complete payment.</p>
+                    <button type="button" class="btn quote-btn-primary" id="continueToCardBtn" style="width:100%;">Continue to Card Checkout</button>
+                </div>
             </div>
 
             <div id="paymentMethodBankPanel" class="payment-method-panel" style="display:none;">
-                <p class="quote-limited-service-note">
-                    <i class="fas fa-info-circle"></i> Recommended for shipments to destinations with limited courier or card-processing service, such as regions affected by conflict -- but available for any destination.
-                </p>
-                <dl class="profile-detail-list" id="bankTransferBody"></dl>
-                <button type="button" class="btn quote-btn-primary" id="confirmBankPaymentBtn" style="width:100%; margin-top: 6px;">I've Made This Payment</button>
+                <p id="bankPaymentUnavailableNote" class="quote-limited-service-note" style="display:none;"></p>
+                <div id="bankPaymentAvailableContent">
+                    <p class="quote-limited-service-note">
+                        <i class="fas fa-info-circle"></i> Recommended for shipments to destinations with limited courier or card-processing service, such as regions affected by conflict -- but available for any destination.
+                    </p>
+                    <dl class="profile-detail-list" id="bankTransferBody"></dl>
+                    <button type="button" class="btn quote-btn-primary" id="confirmBankPaymentBtn" style="width:100%; margin-top: 6px;">I've Made This Payment</button>
+                </div>
             </div>
         </div>
     </div>

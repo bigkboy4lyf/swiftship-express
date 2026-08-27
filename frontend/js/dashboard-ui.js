@@ -1435,6 +1435,49 @@ document.getElementById('printInvoiceBtn')?.addEventListener('click', () => wind
 // is just recommended (not required) for limited-service destinations, which
 // only affects which tab opens by default.
 // =============================================
+let paymentSettingsCache = null;
+
+async function loadPaymentSettingsForCheckout() {
+    try {
+        const res = await fetch('/api/dashboard/payment-settings', { headers: getHeaders() });
+        const result = await res.json();
+        if (result.success) paymentSettingsCache = result.data;
+    } catch (err) {
+        console.error('Error loading payment settings:', err);
+    }
+}
+
+function applyPaymentMethodAvailability() {
+    const settings = paymentSettingsCache || {};
+    const cardState = settings.card || { enabled: true };
+    const bankState = settings.bankTransfer || { enabled: true };
+
+    const cardTab = document.getElementById('paymentTabCard');
+    const bankTab = document.getElementById('paymentTabBank');
+    cardTab.disabled = cardState.enabled === false;
+    cardTab.classList.toggle('payment-method-tab-disabled', cardState.enabled === false);
+    bankTab.disabled = bankState.enabled === false;
+    bankTab.classList.toggle('payment-method-tab-disabled', bankState.enabled === false);
+
+    const cardNote = document.getElementById('cardPaymentUnavailableNote');
+    const cardContent = document.getElementById('cardPaymentAvailableContent');
+    const cardUnavailable = cardState.enabled === false;
+    cardNote.style.display = cardUnavailable ? 'block' : 'none';
+    if (cardUnavailable) {
+        cardNote.innerHTML = `<i class="fas fa-info-circle"></i> Card payments are temporarily unavailable. ${escapeHtml(cardState.disabledReason || '')}`;
+    }
+    cardContent.style.display = cardUnavailable ? 'none' : '';
+
+    const bankNote = document.getElementById('bankPaymentUnavailableNote');
+    const bankContent = document.getElementById('bankPaymentAvailableContent');
+    const bankUnavailable = bankState.enabled === false;
+    bankNote.style.display = bankUnavailable ? 'block' : 'none';
+    if (bankUnavailable) {
+        bankNote.innerHTML = `<i class="fas fa-info-circle"></i> Bank transfer is temporarily unavailable. ${escapeHtml(bankState.disabledReason || '')}`;
+    }
+    bankContent.style.display = bankUnavailable ? 'none' : '';
+}
+
 function selectPaymentMethod(method) {
     document.getElementById('paymentTabCard').classList.toggle('active', method === 'card');
     document.getElementById('paymentTabBank').classList.toggle('active', method === 'bank');
@@ -1442,14 +1485,33 @@ function selectPaymentMethod(method) {
     document.getElementById('paymentMethodBankPanel').style.display = method === 'bank' ? '' : 'none';
 }
 
-document.getElementById('paymentTabCard')?.addEventListener('click', () => selectPaymentMethod('card'));
-document.getElementById('paymentTabBank')?.addEventListener('click', () => selectPaymentMethod('bank'));
+document.getElementById('paymentTabCard')?.addEventListener('click', () => {
+    if (document.getElementById('paymentTabCard').disabled) return;
+    selectPaymentMethod('card');
+});
+document.getElementById('paymentTabBank')?.addEventListener('click', () => {
+    if (document.getElementById('paymentTabBank').disabled) return;
+    selectPaymentMethod('bank');
+});
 
-document.getElementById('payNowBtn')?.addEventListener('click', () => {
+document.getElementById('payNowBtn')?.addEventListener('click', async () => {
     const s = currentInvoiceShipment;
     if (!s) return;
 
-    selectPaymentMethod(isLimitedServiceCountry(s.recipient?.country) ? 'bank' : 'card');
+    await loadPaymentSettingsForCheckout();
+    applyPaymentMethodAvailability();
+
+    const cardEnabled = paymentSettingsCache?.card?.enabled !== false;
+    const bankEnabled = paymentSettingsCache?.bankTransfer?.enabled !== false;
+    const preferred = isLimitedServiceCountry(s.recipient?.country) ? 'bank' : 'card';
+    const defaultMethod = (preferred === 'bank' && bankEnabled) ? 'bank'
+        : (preferred === 'card' && cardEnabled) ? 'card'
+        : cardEnabled ? 'card'
+        : bankEnabled ? 'bank'
+        : null;
+
+    if (defaultMethod) selectPaymentMethod(defaultMethod);
+
     document.getElementById('paymentMethodModal').classList.add('active');
     loadBankTransferDetails(s);
 });

@@ -1723,6 +1723,15 @@ table.data-table tbody tr.row-static:hover {
     background: rgba(0, 86, 179, 0.06);
 }
 
+.payment-method-tab-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.payment-method-tab-disabled:hover {
+    border-color: var(--border);
+}
+
 .payment-method-panel {
     margin-top: 4px;
 }

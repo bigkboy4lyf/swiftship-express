@@ -4,6 +4,7 @@ const Shipment = require('../models/Shipment');
 const User = require('../models/User');
 const PaymentAccount = require('../models/PaymentAccount');
 const FeeSettings = require('../models/FeeSettings');
+const PaymentSettings = require('../models/PaymentSettings');
 const { FEE_TYPES, setShipmentFeeActive, getFeesAccrued, getTotalOwed, getBalanceDue, isFullyPaid } = require('../utils/feeAccrual');
 const { protect } = require('../middleware/auth');
 const { documentVerificationCode } = require('../utils/verification');
@@ -1116,6 +1117,54 @@ router.patch('/fee-settings/:type', protect, async (req, res) => {
 
         const settings = await FeeSettings.getSingleton();
         settings[type].ratePerDay = round2(rate);
+        settings.updatedAt = new Date();
+        settings.updatedBy = req.user.id;
+        await settings.save();
+
+        res.json({ success: true, data: settings });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+});
+
+// =============================================
+// PAYMENT METHOD SETTINGS -- lets admin gray out a payment option
+// platform-wide (e.g. card processor down, bank transfer paused). Read by
+// any logged-in user (not just admin) since the Pay Now modal needs this to
+// decide what to offer at checkout; only admin can change it.
+// =============================================
+const PAYMENT_METHODS = ['card', 'bankTransfer'];
+
+router.get('/payment-settings', protect, async (req, res) => {
+    try {
+        const settings = await PaymentSettings.getSingleton();
+        res.json({ success: true, data: settings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.patch('/payment-settings/:method', protect, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
+
+        const { method } = req.params;
+        if (!PAYMENT_METHODS.includes(method)) {
+            return res.status(400).json({ success: false, message: 'Unknown payment method' });
+        }
+
+        const enabled = !!req.body.enabled;
+        const disabledReason = String(req.body.disabledReason || '').trim();
+
+        if (!enabled && !disabledReason) {
+            return res.status(400).json({ success: false, message: 'A reason is required when disabling a payment method' });
+        }
+
+        const settings = await PaymentSettings.getSingleton();
+        settings[method].enabled = enabled;
+        settings[method].disabledReason = enabled ? '' : disabledReason;
         settings.updatedAt = new Date();
         settings.updatedBy = req.user.id;
         await settings.save();

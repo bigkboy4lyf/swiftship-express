@@ -159,6 +159,7 @@ function switchTab(tabId) {
     }
     if (tabId === 'admin-settings') {
         loadFeeSettings();
+        loadPaymentSettings();
     }
 
     closeSidebarDrawer();
@@ -1693,3 +1694,100 @@ function setupFeeSettingsForm(type) {
 
 setupFeeSettingsForm('demurrage');
 setupFeeSettingsForm('storage');
+
+// =============================================
+// PAYMENT METHOD SETTINGS -- lets admin gray out card or bank transfer
+// platform-wide with a customer-facing reason. Read by the Pay Now modal in
+// dashboard-ui.js so a disabled option shows as unavailable instead of
+// being silently offered.
+// =============================================
+const PAYMENT_SETTINGS_CONFIG = {
+    card: {
+        checkboxId: 'cardPaymentEnabled', reasonGroupId: 'cardPaymentReasonGroup', reasonId: 'cardPaymentReason',
+        successId: 'cardPaymentSuccess', errorId: 'cardPaymentError', formId: 'cardPaymentSettingsForm'
+    },
+    bankTransfer: {
+        checkboxId: 'bankTransferPaymentEnabled', reasonGroupId: 'bankTransferPaymentReasonGroup', reasonId: 'bankTransferPaymentReason',
+        successId: 'bankTransferPaymentSuccess', errorId: 'bankTransferPaymentError', formId: 'bankTransferPaymentSettingsForm'
+    }
+};
+
+async function loadPaymentSettings() {
+    try {
+        const res = await fetch('/api/dashboard/payment-settings', { headers: authHeaders() });
+        const result = await res.json();
+        if (!result.success) return;
+
+        Object.entries(PAYMENT_SETTINGS_CONFIG).forEach(([method, ids]) => {
+            const state = result.data[method] || {};
+            const checkbox = document.getElementById(ids.checkboxId);
+            const reasonGroup = document.getElementById(ids.reasonGroupId);
+            const reasonInput = document.getElementById(ids.reasonId);
+            checkbox.checked = state.enabled !== false;
+            reasonInput.value = state.disabledReason || '';
+            reasonGroup.style.display = checkbox.checked ? 'none' : 'block';
+        });
+    } catch (err) {
+        console.error('Error loading payment settings:', err);
+    }
+}
+
+function setupPaymentSettingsForm(method) {
+    const { checkboxId, reasonGroupId, reasonId, successId, errorId, formId } = PAYMENT_SETTINGS_CONFIG[method];
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    const checkbox = document.getElementById(checkboxId);
+    const reasonGroup = document.getElementById(reasonGroupId);
+
+    checkbox.addEventListener('change', () => {
+        reasonGroup.style.display = checkbox.checked ? 'none' : 'block';
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const successEl = document.getElementById(successId);
+        const errorEl = document.getElementById(errorId);
+        successEl.style.display = 'none';
+        errorEl.style.display = 'none';
+
+        const enabled = checkbox.checked;
+        const reason = document.getElementById(reasonId).value.trim();
+
+        if (!enabled && !reason) {
+            errorEl.textContent = 'A reason is required when disabling this payment method.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/dashboard/payment-settings/${method}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                body: JSON.stringify({ enabled, disabledReason: reason })
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                successEl.textContent = 'Settings saved.';
+                successEl.style.display = 'block';
+            } else {
+                errorEl.textContent = result.message || 'Could not save settings. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        } catch (err) {
+            console.error(`Error saving ${method} payment settings:`, err);
+            errorEl.textContent = 'Could not reach the server. Please try again.';
+            errorEl.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+}
+
+setupPaymentSettingsForm('card');
+setupPaymentSettingsForm('bankTransfer');
