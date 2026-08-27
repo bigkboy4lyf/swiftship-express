@@ -1077,6 +1077,11 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
     const dimArray = dimensions.toLowerCase().split('x').map(value => parseFloat(value.trim()) || 0);
     const shipmentType = adminShipmentTypeToggle.isLocalMode() ? 'local' : 'international';
 
+    if (!originCountry || !destinationCountry) {
+        alert('Please select both the origin and destination countries.');
+        return;
+    }
+
     if (!items.length || items.some(item => !item.description || !item.weight)) {
         alert('Please describe every item and provide its weight.');
         return;
@@ -1094,7 +1099,9 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
 
     const optionalNumber = id => {
         const value = document.getElementById(id).value.trim();
-        return value === '' ? undefined : Number(value);
+        if (value === '') return undefined;
+        const number = Number(value);
+        return Number.isFinite(number) && number >= 0 ? number : undefined;
     };
 
     const shipmentData = {
