@@ -8,6 +8,7 @@ const PaymentSettings = require('../models/PaymentSettings');
 const { FEE_TYPES, setShipmentFeeActive, getFeesAccrued, getTotalOwed, getBalanceDue, isFullyPaid } = require('../utils/feeAccrual');
 const { protect } = require('../middleware/auth');
 const { documentVerificationCode } = require('../utils/verification');
+const { calculateShippingPrice } = require('../utils/pricing');
 const sendEmail = require('../utils/sendEmail');
 const { quoteEmail, receiptSubmittedEmail, otpEmail, SUPPORT_EMAIL } = require('../utils/emailTemplates');
 const { issueOtp, canResend, verifyOtp, clearOtp } = require('../utils/otp');
@@ -253,6 +254,29 @@ router.post('/shipments', protect, async (req, res) => {
         // Generate tracking number
         if (!shipmentData.trackingNumber) {
             shipmentData.trackingNumber = 'AWB-' + Date.now().toString().slice(-9);
+        }
+
+        // Admin-created shipments use the same pricing protocol as customer
+        // shipments, with optional admin overrides for base and surcharge.
+        if (role === 'admin') {
+            const calculatedPricing = calculateShippingPrice({
+                originCountry: shipmentData.sender?.country,
+                destinationCountry: shipmentData.recipient?.country,
+                serviceType: shipmentData.serviceType || 'standard',
+                weight: shipmentData.package?.weight,
+                insuranceValue: shipmentData.package?.value,
+                basePriceOverride: shipmentData.basePriceOverride,
+                surchargeOverride: shipmentData.surchargeOverride
+            });
+            shipmentData.serviceType = shipmentData.serviceType || 'standard';
+            shipmentData.pricing = {
+                basePrice: calculatedPricing.basePrice,
+                insuranceCost: calculatedPricing.insuranceCost,
+                surcharge: calculatedPricing.surcharge
+            };
+            shipmentData.totalPrice = calculatedPricing.totalPrice;
+            delete shipmentData.basePriceOverride;
+            delete shipmentData.surchargeOverride;
         }
 
         // Admin-created shipments enter directly at the sorting facility,

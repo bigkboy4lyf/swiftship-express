@@ -34,14 +34,20 @@ function estimateDeliveryDate(serviceType, fromDate = new Date()) {
     return new Date(fromDate.getTime() + maxDays * 24 * 60 * 60 * 1000);
 }
 
-function calculateShippingPrice({ originCountry, destinationCountry, serviceType, weight, insuranceValue }) {
+function calculateShippingPrice({ originCountry, destinationCountry, serviceType, weight, insuranceValue, basePriceOverride, surchargeOverride }) {
     const laneBasePrice = getLaneBasePrice(originCountry, destinationCountry);
 
     const safeWeight = parseFloat(weight) || 1;
     const computedBase = laneBasePrice + (safeWeight * 0.5 * 2) * (BASE_RATES[serviceType] || 1.0);
-    const basePrice = Math.max(computedBase, 15);
+    const parsedBaseOverride = Number(basePriceOverride);
+    const basePrice = Number.isFinite(parsedBaseOverride) && parsedBaseOverride >= 0
+        ? parsedBaseOverride
+        : Math.max(computedBase, 15);
     const insuranceCost = (parseFloat(insuranceValue) || 0) * 0.01;
-    const surcharge = basePrice * 0.075;
+    const parsedSurchargeOverride = Number(surchargeOverride);
+    const surcharge = Number.isFinite(parsedSurchargeOverride) && parsedSurchargeOverride >= 0
+        ? parsedSurchargeOverride
+        : basePrice * 0.075;
     const totalPrice = basePrice + insuranceCost + surcharge;
 
     const round2 = n => parseFloat(n.toFixed(2));

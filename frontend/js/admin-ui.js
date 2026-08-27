@@ -1061,15 +1061,32 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
     }
 
     const [city, country] = document.getElementById('destination').value.split(',').map(s => s.trim());
+    const [originCity, originCountry] = document.getElementById('origin').value.split(',').map(s => s.trim());
+
+    const optionalNumber = id => {
+        const value = document.getElementById(id).value.trim();
+        return value === '' ? undefined : Number(value);
+    };
 
     const shipmentData = {
         trackingNumber: document.getElementById('trackingNumber').value,
         status: document.getElementById('shipmentStatus').value,
         userId: userId,
+        serviceType: document.getElementById('shipmentServiceType').value,
+        basePriceOverride: optionalNumber('basePriceOverride'),
+        surchargeOverride: optionalNumber('surchargeOverride'),
+        sender: {
+            city: originCity || '',
+            country: originCountry || ''
+        },
         recipient: {
             name: document.getElementById('customerName').value,
             city: city || '',
-            country: country || 'USA'
+            country: country || ''
+        },
+        package: {
+            weight: Number(document.getElementById('shipmentWeight').value),
+            value: Number(document.getElementById('shipmentValue').value)
         },
         currentLocation: {
             city: 'Processing Center',
