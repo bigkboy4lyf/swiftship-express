@@ -8,7 +8,7 @@ const PaymentSettings = require('../models/PaymentSettings');
 const { FEE_TYPES, setShipmentFeeActive, getFeesAccrued, getTotalOwed, getBalanceDue, isFullyPaid } = require('../utils/feeAccrual');
 const { protect } = require('../middleware/auth');
 const { documentVerificationCode } = require('../utils/verification');
-const { calculateShippingPrice } = require('../utils/pricing');
+const { calculateShippingPrice, estimateDeliveryDate } = require('../utils/pricing');
 const sendEmail = require('../utils/sendEmail');
 const { quoteEmail, receiptSubmittedEmail, otpEmail, SUPPORT_EMAIL } = require('../utils/emailTemplates');
 const { issueOtp, canResend, verifyOtp, clearOtp } = require('../utils/otp');
@@ -243,13 +243,12 @@ router.post('/shipments', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'User ID is required' });
         }
 
-        // Set status based on role: customer-created shipments need admin
-        // sign-off first (pending_approval). Shipments an admin creates
-        // directly skip that step and go straight into the pipeline at
-        // 'processing', same place an approved customer shipment lands.
-        if (!shipmentData.status) {
-            shipmentData.status = role === 'admin' ? 'processing' : 'pending_approval';
-        }
+        // Every new shipment -- whether a customer requests a quote or an
+        // admin creates one directly -- starts at pending_approval and
+        // waits on payment/admin sign-off before it enters the pipeline.
+        // See PATCH /shipments/:id/approve and /receipt/confirm for how it
+        // advances from here into 'processing'.
+        shipmentData.status = 'pending_approval';
 
         // Generate tracking number
         if (!shipmentData.trackingNumber) {
@@ -279,21 +278,20 @@ router.post('/shipments', protect, async (req, res) => {
             delete shipmentData.surchargeOverride;
         }
 
-        // Admin-created shipments enter directly at the sorting facility,
-        // same as a freshly-approved customer shipment.
-        if (shipmentData.status === 'processing' && !shipmentData.currentLocation) {
-            shipmentData.currentLocation = { facility: 'Sorting Facility', city: 'Sorting Facility', timestamp: new Date() };
+        // Same estimate the quote calculator shows the customer, computed
+        // the same way (see routes/shipments.js#/create) so a shipment
+        // created here doesn't show a blank "N/A" delivery estimate.
+        if (!shipmentData.estimatedDelivery) {
+            shipmentData.estimatedDelivery = estimateDeliveryDate(shipmentData.serviceType || 'standard');
         }
 
-        // Add initial tracking history
-        const statusDesc = shipmentData.status === 'pending_approval'
-            ? 'Awaiting shipment confirmation'
-            : 'Shipment created - now processing at sorting facility';
-
+        // Add initial tracking history -- mirrors the quote route: nothing
+        // is at a facility yet since the shipment is still awaiting
+        // approval/payment, so location is wherever the sender is.
         shipmentData.trackingHistory = [{
-            status: shipmentData.status,
-            location: shipmentData.currentLocation?.city || 'Sorting Facility',
-            description: statusDesc,
+            status: 'pending_approval',
+            location: shipmentData.sender?.city || '',
+            description: 'Awaiting shipment confirmation',
             timestamp: new Date()
         }];
 

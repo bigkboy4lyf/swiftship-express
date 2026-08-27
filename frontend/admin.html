@@ -683,18 +683,7 @@
                     <input type="number" id="surchargeOverride" min="0" step="0.01" placeholder="Use 7.5% protocol rate">
                 </div>
 
-                <div class="form-group">
-                    <label>Status</label>
-                    <select id="shipmentStatus">
-                        <option value="processing" selected>Processing</option>
-                        <option value="pending">Pending</option>
-                        <option value="picked_up">Picked Up</option>
-                        <option value="in_transit">In Transit</option>
-                        <option value="out_for_delivery">Out For Delivery</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="delayed">Delayed</option>
-                    </select>
-                </div>
+                <p class="form-hint">This creates a quote awaiting payment/approval, same as a customer-requested shipment. Use the shipment's status controls afterward to move it through the pipeline.</p>
 
                 <button type="submit" class="btn">Save Shipment</button>
             </form>

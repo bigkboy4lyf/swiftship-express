@@ -1112,7 +1112,6 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
 
     const shipmentData = {
         trackingNumber: document.getElementById('trackingNumber').value,
-        status: document.getElementById('shipmentStatus').value,
         userId: userId,
         serviceType: document.getElementById('adminServiceType').value,
         basePriceOverride: optionalNumber('basePriceOverride'),
