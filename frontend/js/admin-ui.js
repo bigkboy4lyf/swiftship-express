@@ -1036,12 +1036,23 @@ function openShipmentModal() {
     document.getElementById('shipmentModal').classList.add('active');
 }
 
+const adminShipmentTypeToggle = setupShipmentTypeToggle({
+    radioName: 'adminShipmentType',
+    originSelectId: 'adminOrigin',
+    destinationSelectId: 'adminDestination',
+    noteId: 'adminLocalCountryNote',
+    serviceTypeSelectId: 'adminServiceType'
+});
+initItemsRepeater(document.getElementById('adminItemsContainer'), document.getElementById('adminAddItemBtn'));
+
 document.getElementById('addShipmentBtn')?.addEventListener('click', openShipmentModal);
 document.getElementById('addShipmentBtnTab')?.addEventListener('click', openShipmentModal);
+document.getElementById('createShipmentSidebarBtn')?.addEventListener('click', openShipmentModal);
 
 document.getElementById('closeShipmentModal')?.addEventListener('click', () => {
     document.getElementById('shipmentModal').classList.remove('active');
     document.getElementById('shipmentForm').reset();
+    setTimeout(() => document.querySelector('input[name="adminShipmentType"][value="international"]')?.dispatchEvent(new Event('change')), 0);
 });
 
 // Clicking the dimmed backdrop closes whichever modal is open
@@ -1060,8 +1071,28 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
         return;
     }
 
-    const [city, country] = document.getElementById('destination').value.split(',').map(s => s.trim());
-    const [originCity, originCountry] = document.getElementById('origin').value.split(',').map(s => s.trim());
+    const originCountry = document.getElementById('adminOrigin').value;
+    const destinationCountry = document.getElementById('adminDestination').value;
+    const items = collectItems(document.getElementById('adminItemsContainer'));
+    const { totalWeight, totalValue, description, category } = summarizeItems(items);
+    const dimensions = document.getElementById('adminDimensions').value || '0x0x0';
+    const dimArray = dimensions.toLowerCase().split('x').map(value => parseFloat(value.trim()) || 0);
+    const shipmentType = adminShipmentTypeToggle.isLocalMode() ? 'local' : 'international';
+
+    if (!items.length || items.some(item => !item.description || !item.weight)) {
+        alert('Please describe every item and provide its weight.');
+        return;
+    }
+
+    if (shipmentType === 'local' && !isLocalShippingCountry(originCountry)) {
+        alert('Local shipping is only available within a supported country.');
+        return;
+    }
+
+    if (shipmentType === 'international' && originCountry === destinationCountry) {
+        alert('Origin and destination cannot be the same for an international shipment.');
+        return;
+    }
 
     const optionalNumber = id => {
         const value = document.getElementById(id).value.trim();
@@ -1079,14 +1110,26 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
             city: originCity || '',
             country: originCountry || ''
         },
+        shipmentType,
+        contactEmail: document.getElementById('contactEmail').value,
+        sender: {
+            name: document.getElementById('senderName').value,
+            email: document.getElementById('contactEmail').value,
+            country: originCountry,
+            city: getCountryName(originCountry)
+        },
         recipient: {
-            name: document.getElementById('customerName').value,
-            city: city || '',
-            country: country || ''
+            name: `${document.getElementById('senderName').value} - Recipient`,
+            city: getCountryName(destinationCountry),
+            country: destinationCountry
         },
         package: {
-            weight: Number(document.getElementById('shipmentWeight').value),
-            value: Number(document.getElementById('shipmentValue').value)
+            weight: totalWeight,
+            value: totalValue,
+            description,
+            category,
+            dimensions: { length: dimArray[0], width: dimArray[1], height: dimArray[2] },
+            items
         },
         currentLocation: {
             city: 'Processing Center',

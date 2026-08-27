@@ -41,6 +41,10 @@
                     <i class="fas fa-shipping-fast"></i>
                     <span>All Shipments</span>
                 </div>
+                <button type="button" class="sidebar-menu-item" id="createShipmentSidebarBtn">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Create Shipment</span>
+                </button>
                 <div class="sidebar-menu-item" data-tab="admin-users">
                     <i class="fas fa-users"></i>
                     <span>Users</span>
@@ -576,39 +580,49 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Customer Name</label>
-                    <input type="text" id="customerName" required>
+                    <label>Sender Name</label>
+                    <input type="text" id="senderName" required>
                 </div>
 
                 <div class="form-group">
-                    <label>Destination</label>
-                    <input type="text" id="destination" placeholder="City, Country" required>
+                    <label>Contact Email</label>
+                    <input type="email" id="contactEmail" required>
                 </div>
 
                 <div class="form-group">
-                    <label>Origin</label>
-                    <input type="text" id="origin" placeholder="City, Country" required>
+                    <label>Shipment Type</label>
+                    <label><input type="radio" name="adminShipmentType" value="international" checked> International</label>
+                    <label><input type="radio" name="adminShipmentType" value="local"> Local (Domestic)</label>
+                    <p id="adminLocalCountryNote" style="display:none;"></p>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="adminOrigin">Origin Country</label>
+                        <select id="adminOrigin" required><option value="">Select country</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminDestination">Destination Country</label>
+                        <select id="adminDestination" required><option value="">Select country</option></select>
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Service Type</label>
-                    <select id="shipmentServiceType">
-                        <option value="standard">Standard</option>
-                        <option value="express">Express</option>
-                        <option value="economy">Economy</option>
-                        <option value="international">International Priority</option>
-                        <option value="cargo">Cargo</option>
-                    </select>
+                    <label for="adminServiceType">Shipping Service</label>
+                    <select id="adminServiceType" required></select>
                 </div>
 
                 <div class="form-group">
-                    <label>Package Weight (kg)</label>
-                    <input type="number" id="shipmentWeight" min="0" step="0.01" value="1" required>
+                    <label for="adminDimensions">Package Dimensions (cm)</label>
+                    <input type="text" id="adminDimensions" placeholder="L x W x H (e.g., 30x20x15)">
                 </div>
 
-                <div class="form-group">
-                    <label>Declared Value</label>
-                    <input type="number" id="shipmentValue" min="0" step="0.01" value="0" required>
+                <div class="quote-items-section">
+                    <div class="quote-items-header">
+                        <label>What are you shipping? *</label>
+                        <button type="button" id="adminAddItemBtn" class="quote-add-item-btn"><i class="fas fa-plus"></i> Add Another Item</button>
+                    </div>
+                    <div id="adminItemsContainer"></div>
                 </div>
 
                 <div class="form-group">
@@ -624,8 +638,8 @@
                 <div class="form-group">
                     <label>Status</label>
                     <select id="shipmentStatus">
+                        <option value="processing" selected>Processing</option>
                         <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
                         <option value="picked_up">Picked Up</option>
                         <option value="in_transit">In Transit</option>
                         <option value="out_for_delivery">Out For Delivery</option>
