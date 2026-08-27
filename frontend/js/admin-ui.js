@@ -1045,9 +1045,7 @@ const adminShipmentTypeToggle = setupShipmentTypeToggle({
 });
 initItemsRepeater(document.getElementById('adminItemsContainer'), document.getElementById('adminAddItemBtn'));
 
-document.getElementById('addShipmentBtn')?.addEventListener('click', openShipmentModal);
 document.getElementById('addShipmentBtnTab')?.addEventListener('click', openShipmentModal);
-document.getElementById('createShipmentSidebarBtn')?.addEventListener('click', openShipmentModal);
 
 document.getElementById('closeShipmentModal')?.addEventListener('click', () => {
     document.getElementById('shipmentModal').classList.remove('active');
