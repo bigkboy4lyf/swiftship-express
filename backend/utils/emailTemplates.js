@@ -17,7 +17,7 @@ const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:5000';
 
 // Single source of truth for the support inbox -- was previously copy-pasted
 // as a local const in both routes/shipments.js and routes/dashboard.js.
-const SUPPORT_EMAIL = 'helpdesk.swiftship@gmail.com';
+const SUPPORT_EMAIL = 'support@swiftshipexpressco.org';
 
 // Shared branded wrapper for every outgoing email, so a customer's inbox
 // consistently looks like it came from SwiftShip Express regardless of which
