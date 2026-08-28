@@ -1430,8 +1430,8 @@ function openInvoiceOrReceipt(s) {
                 format: 'CODE128',
                 lineColor: '#000',
                 background: 'transparent',
-                width: 2,
-                height: 50,
+                width: 1.3,
+                height: 36,
                 displayValue: false,
                 margin: 0
             });
