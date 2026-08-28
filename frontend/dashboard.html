@@ -913,6 +913,10 @@
                     <span>Verification Code</span>
                     <strong id="invoiceVerificationCode">&mdash;</strong>
                 </div>
+                <div class="invoice-doc-barcode" id="invoiceBarcodeSection" style="display:none;">
+                    <svg id="invoiceBarcode"></svg>
+                    <span id="invoiceBarcodeNumber"></span>
+                </div>
                 <p class="invoice-doc-fineprint">This document was generated electronically by SwiftShip Express and is valid without a signature. Any alteration of the amounts or details above will not match the verification code.</p>
             </div>
 
@@ -983,6 +987,7 @@
     <script src="js/tickets-store.js"></script>
     <script src="js/chat-widget.js"></script>
     <script src="js/notifications.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
     <script src="js/dashboard-ui.js"></script>
 </body>
 </html>

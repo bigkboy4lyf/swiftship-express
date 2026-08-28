@@ -1298,6 +1298,28 @@ function openInvoiceOrReceipt(s) {
 
     document.getElementById('invoiceVerificationCode').textContent = s.verificationCode || 'N/A';
 
+    // Barcode is a receipt-only feature -- an invoice hasn't been paid/
+    // approved yet, so there's nothing settled to hand a scannable
+    // proof-of-shipment for.
+    const barcodeSection = document.getElementById('invoiceBarcodeSection');
+    if (barcodeSection) {
+        if (!isDocInvoice && s.trackingNumber && window.JsBarcode) {
+            barcodeSection.style.display = '';
+            document.getElementById('invoiceBarcodeNumber').textContent = s.trackingNumber;
+            JsBarcode('#invoiceBarcode', s.trackingNumber, {
+                format: 'CODE128',
+                lineColor: '#000',
+                background: 'transparent',
+                width: 2,
+                height: 50,
+                displayValue: false,
+                margin: 0
+            });
+        } else {
+            barcodeSection.style.display = 'none';
+        }
+    }
+
     document.getElementById('invoiceReceiptModal').classList.add('active');
 }
 
