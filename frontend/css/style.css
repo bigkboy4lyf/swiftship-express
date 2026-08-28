@@ -84,6 +84,18 @@ a {
     border: none;
     cursor: pointer;
     transition: all 0.3s ease;
+    /* .quote-btn-primary is an <a>, .quote-btn-secondary is a <button>.
+       Anchors inherit body's line-height (1.6); <button> gets the
+       browser's own UA line-height instead, which inheritance doesn't
+       override. Same padding, same font-size, but two different line
+       boxes -- that's what was actually making one button shorter than
+       the other, not the border. Pin both explicitly so every .btn
+       (anchor or button) computes the same height. */
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
 }
 
 .btn:hover:not(:disabled) {
