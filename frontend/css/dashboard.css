@@ -1117,6 +1117,18 @@ table.data-table tbody tr.row-static:hover {
        screen is too narrow for both. */
     .quote-form-actions .btn {
         flex: 1 1 0;
+        /* Equal width now means the longer label ("Track This Shipment")
+           has less room per character than the shorter one ("View
+           Receipt"), so it alone wraps to a second line and grows taller
+           than its neighbor. Smaller font + tighter horizontal padding
+           keeps both on one line at normal phone widths; nowrap+ellipsis
+           is just a safety net for anything narrower than that. */
+        font-size: 0.85rem;
+        padding-left: 14px;
+        padding-right: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .modal-content {
