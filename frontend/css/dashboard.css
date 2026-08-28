@@ -1664,7 +1664,10 @@ table.data-table tbody tr.row-static:hover {
     flex: 1;
     background: var(--primary);
     color: white;
-    border: none;
+    /* Transparent border, not "none" -- .quote-btn-secondary has a real
+       1px border, so this keeps both buttons' box size identical instead
+       of the secondary button rendering 2px taller/wider. */
+    border: 1px solid transparent;
 }
 
 .quote-btn-secondary {
