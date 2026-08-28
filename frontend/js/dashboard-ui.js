@@ -343,9 +343,14 @@ window.viewShipmentDetail = function(id) {
         // naturally reverts back to "View Invoice" on its own.
         const paymentPending = s.paymentReceipt?.status === 'pending';
         docBtn.disabled = paymentPending;
+        // Must match the isDocInvoice logic in openInvoiceOrReceipt below:
+        // a shipment still carries an invoice (not a receipt) whenever it's
+        // awaiting approval OR still has a balance due (e.g. partial payment,
+        // or fees accrued after approval).
+        const stillOwesBalance = getShipmentBilling(s).balanceDue > 0.001;
         docBtn.textContent = paymentPending
             ? 'Payment Processing'
-            : (isAwaitingConfirmation(s.status) ? 'View Invoice' : 'View Receipt');
+            : ((isAwaitingConfirmation(s.status) || stillOwesBalance) ? 'View Invoice' : 'View Receipt');
     }
 
     document.getElementById('shipmentDetailModal').classList.add('active');

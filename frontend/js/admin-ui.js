@@ -320,7 +320,14 @@ window.viewShipmentDetail = function(id) {
     `).join('');
 
     const docBtn = document.getElementById('shipmentDetailDocBtn');
-    if (docBtn) docBtn.textContent = isAwaitingConfirmation(s.status) ? 'View Invoice' : 'View Receipt';
+    if (docBtn) {
+        // Must match the isDocInvoice logic in openInvoiceOrReceipt below:
+        // a shipment still carries an invoice (not a receipt) whenever it's
+        // awaiting approval OR still has a balance due (e.g. partial payment,
+        // or fees accrued after approval).
+        const stillOwesBalance = getShipmentBilling(s).balanceDue > 0.001;
+        docBtn.textContent = (isAwaitingConfirmation(s.status) || stillOwesBalance) ? 'View Invoice' : 'View Receipt';
+    }
 
     renderShipmentFeesSection(s);
     renderCustodyTransferSection(s);
