@@ -2198,23 +2198,30 @@ table.data-table tbody tr.row-static:hover {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 3px;
     flex: 0 0 auto;
-    padding: 6px 10px;
+    padding: 6px 8px;
     background: var(--surface-alt);
     border: 1px dashed var(--border);
     border-radius: 6px;
 }
 
+/* JsBarcode is generated small already (width:0.8, height:26 in
+   dashboard-ui.js/admin-ui.js) -- this just renders it at its natural
+   size instead of stretching it, which is what made it look oversized
+   and cartoonish before. max-width is only a safety net for very
+   narrow screens. */
 .invoice-doc-barcode svg {
-    height: 34px;
+    display: block;
+    height: 26px;
     width: auto;
+    max-width: 100%;
 }
 
 .invoice-doc-barcode span {
     font-family: 'Courier New', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.08em;
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
     color: var(--text-muted);
     white-space: nowrap;
 }
