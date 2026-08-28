@@ -60,10 +60,28 @@ async function notifyShipment(shipment, { type, title, message, link = '' }) {
     notifyUser(shipment.userId, { type, title, message, link });
     try {
         const accountUser = await User.findById(shipment.userId).select('email');
+        // Callers reuse generic titles ("Shipment Update", "Payment Received",
+        // etc.) across many events on the same shipment. Gmail (and most mail
+        // clients) group messages into one collapsed thread when the subject
+        // matches an earlier message to the same recipient, so two distinct
+        // updates were showing up folded under "Hide quoted text" instead of
+        // as separate emails. Appending the tracking number plus a per-send
+        // timestamp keeps the subject human-readable while guaranteeing each
+        // notification email is unique enough that it won't get threaded with
+        // the last one. The in-app notification `title` is untouched --
+        // this only affects the outgoing email subject.
+        const emailSubject = shipment.trackingNumber
+            ? `${title} - ${shipment.trackingNumber} (${new Date().toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit'
+              })})`
+            : title;
         sendEmail.toShipmentContacts(
             shipment,
             accountUser?.email,
-            title,
+            emailSubject,
             shipmentUpdateEmail({ heading: title, message, trackingNumber: shipment.trackingNumber }),
             'Shipment update'
         );
