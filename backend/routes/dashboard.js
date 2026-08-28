@@ -250,6 +250,20 @@ router.post('/shipments', protect, async (req, res) => {
         // advances from here into 'processing'.
         shipmentData.status = 'pending_approval';
 
+        // Admin can optionally backdate/forward-date when a shipment was
+        // "created" (e.g. entering a shipment that was actually requested
+        // over the phone yesterday) -- customers can't, since letting a
+        // customer set their own createdAt would let them misrepresent when
+        // a shipment was requested. `createdAt` has a schema default of
+        // Date.now, so validate whatever's left through to a real Date;
+        // anything unparseable is dropped rather than saved as garbage.
+        if (role === 'admin' && shipmentData.createdAt) {
+            const parsed = new Date(shipmentData.createdAt);
+            shipmentData.createdAt = Number.isNaN(parsed.getTime()) ? undefined : parsed;
+        } else {
+            delete shipmentData.createdAt;
+        }
+
         // Generate tracking number
         if (!shipmentData.trackingNumber) {
             shipmentData.trackingNumber = 'AWB-' + Date.now().toString().slice(-9);
@@ -287,12 +301,15 @@ router.post('/shipments', protect, async (req, res) => {
 
         // Add initial tracking history -- mirrors the quote route: nothing
         // is at a facility yet since the shipment is still awaiting
-        // approval/payment, so location is wherever the sender is.
+        // approval/payment, so location is wherever the sender is. Uses the
+        // admin-provided createdAt (if any) so the first history entry's
+        // timestamp matches the shipment's stated creation time instead of
+        // always showing "now".
         shipmentData.trackingHistory = [{
             status: 'pending_approval',
             location: shipmentData.sender?.city || '',
             description: 'Awaiting shipment confirmation',
-            timestamp: new Date()
+            timestamp: shipmentData.createdAt || new Date()
         }];
 
         const shipment = new Shipment(shipmentData);

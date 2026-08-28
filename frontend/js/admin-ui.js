@@ -1117,6 +1117,14 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
         return Number.isFinite(number) && number >= 0 ? number : undefined;
     };
 
+    // datetime-local gives a value like "2026-08-28T16:11" with no timezone,
+    // which the browser means in *local* time -- `new Date(...)` on that
+    // string parses it as local time too, so this round-trips correctly
+    // without a manual UTC conversion. Sent as an ISO string; left out of
+    // the payload entirely when blank so the backend falls back to "now".
+    const shipmentTimestampValue = document.getElementById('shipmentTimestamp').value;
+    const shipmentTimestamp = shipmentTimestampValue ? new Date(shipmentTimestampValue).toISOString() : undefined;
+
     const shipmentData = {
         trackingNumber: document.getElementById('trackingNumber').value,
         userId: userId,
@@ -1125,6 +1133,7 @@ document.getElementById('shipmentForm')?.addEventListener('submit', async functi
         surchargeOverride: optionalNumber('surchargeOverride'),
         shipmentType,
         contactEmail: document.getElementById('contactEmail').value,
+        createdAt: shipmentTimestamp,
         sender: {
             name: document.getElementById('senderName').value,
             address: document.getElementById('senderAddress').value,
