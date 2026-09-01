@@ -1326,8 +1326,8 @@ function openInvoiceOrReceipt(s) {
                 format: 'CODE128',
                 lineColor: '#000',
                 background: 'transparent',
-                width: 0.8,
-                height: 26,
+                width: 2,
+                height: 50,
                 displayValue: false,
                 margin: 0
             });
