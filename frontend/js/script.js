@@ -1,4 +1,29 @@
 // =============================================
+// SESSION EXPIRY HANDLING (applies to every fetch() call on every page that
+// loads this file -- dashboard, admin panel, chat widget, notifications,
+// etc. -- without needing to touch each of those files individually).
+// The backend's 30-day token expiry (see backend/middleware/auth.js) means a
+// tab left open long enough will start getting silent 401s on every
+// authenticated call; this catches that in one place and bounces the user
+// back to login instead of leaving the page quietly broken.
+// =============================================
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    const response = await originalFetch(...args);
+    if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Only bounce if we're not already on the login page -- account.html
+        // itself makes unauthenticated calls (e.g. a failed login attempt
+        // correctly returns 401) that must NOT trigger a redirect loop.
+        if (!window.location.pathname.endsWith('account.html')) {
+            window.location.href = 'account.html?expired=1';
+        }
+    }
+    return response;
+};
+
+// =============================================
 // DEVICE ID (used to recognize this browser on login -- see auth.js's
 // new-device check). Generated once and persisted; not a secret, just a
 // stable identifier for "have we OTP-verified this browser before."
