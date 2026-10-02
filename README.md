@@ -40,3 +40,4 @@ frontend/   Static site (pages, css, js) served by the backend
 - `npm run dev` — start the backend with auto-reload (nodemon)
 - `npm start` — start the backend
 - `node backend/seed.js` — populate the database with sample shipments
+ 
