@@ -5,7 +5,7 @@
 // pointing at the app's own hosted copy of frontend/img/email-logo.png
 // instead of this GitHub fallback. Nothing else about the templates needs
 // to change.
-const ASSET_BASE_URL = process.env.ASSET_BASE_URL; //'https://raw.githubusercontent.com/bigkboy4lyf/swiftship-express/main/frontend/img'
+const ASSET_BASE_URL = 'https://raw.githubusercontent.com/bigkboy4lyf/swiftship-express/main/frontend/img' || process.env.ASSET_BASE_URL;
 const LOGO_URL = `${ASSET_BASE_URL}/email-logo.png`;
 
 // Same "one line to change once there's a live domain" deal as ASSET_BASE_URL
